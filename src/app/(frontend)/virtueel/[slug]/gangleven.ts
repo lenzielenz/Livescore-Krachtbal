@@ -254,7 +254,7 @@ export function bouwGangleven(
       tz: b.z - a.z,
     }
   }
-  const wandelaars = Array.from({ length: licht ? 8 : 32 }, (_, i) => ({
+  const wandelaars = Array.from({ length: licht ? 6 : 32 }, (_, i) => ({
     s0: toeval() * L,
     v: (1.0 + toeval() * 0.5) * (i % 2 ? 1 : -1),
     baan: i % 2 ? 2.0 : 2.75,

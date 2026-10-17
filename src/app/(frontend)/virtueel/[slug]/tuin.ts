@@ -3,7 +3,7 @@ import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferG
 
 import { GEVEL, inPoort, type Rechthoek } from '@/lib/virtueel'
 import { bijSpelersgebouwen } from './kleedkamer'
-import { gevelOmtrek } from './omgeving'
+import { gevelOmtrek, type Omgeving } from './omgeving'
 import { canvasTex, rnd } from './stadion'
 
 // De tuinafwerking rond het stadion, in de stijl van een verzorgd huis bij avond: geen kale tegels
@@ -13,6 +13,8 @@ import { canvasTex, rnd } from './stadion'
 //    bloemen in rood, roze, wit, geel en paars ervoor en erop;
 //  • licht: de grondspots voor de gevel (omgeving.ts) staan nu tussen de planten en lichten ze warm
 //    aan; om de zoveel meter een tuinlampje in de boordsteen met een warme lichtplas op het plein;
+//  • op het plein ronde bloemeneilanden met een boompje tussen de lantaarns; op de parking een haag
+//    met boordsteen en bomen, witte belijning, een zachte schaduw onder elke auto en lantaarns;
 //  • schaduw: de border is donker tegen de muur en lichter naar voren, de struiken onderaan donker,
 //    en een zachte schaduwrand op de tegels langs de boordsteen. Alles vooraf "gebakken" in kleuren
 //    en verlopen: geen echte lichten of schaduwkaarten, dus het kost bijna niets per beeld.
@@ -32,7 +34,10 @@ const WARM = new THREE.Color('#ffc98a')
 
 export type Tuin = { obstakels: Rechthoek[] }
 
-export function bouwTuin(scene: THREE.Scene, opt: { bestaand: Rechthoek[]; bakken?: { x: number; z: number; w: number; y: number }[] }): Tuin {
+export function bouwTuin(
+  scene: THREE.Scene,
+  opt: { bestaand: Rechthoek[]; bakken?: { x: number; z: number; w: number; y: number }[]; parking?: Omgeving['parking'] },
+): Tuin {
   const toeval = rnd(4242)
   const obstakels: Rechthoek[] = []
   const pts = gevelOmtrek(0.5)
@@ -182,15 +187,6 @@ export function bouwTuin(scene: THREE.Scene, opt: { bestaand: Rechthoek[]; bakke
     b.translate(p.x + p.nx * af - p.nz * 0.15 * t, KANT_H / 2, p.z + p.nz * af + p.nx * 0.15 * t)
     eindes.push(b)
   })
-  if (kant.pos.length) {
-    const keiMat = new THREE.MeshLambertMaterial({ map: keiTex, vertexColors: true, side: THREE.DoubleSide })
-    scene.add(new THREE.Mesh(eindes.length ? mergeGeometries([geo(kant), ...eindes.map((e) => e.toNonIndexed())]) : geo(kant), keiMat))
-    scene.add(new THREE.Mesh(geo(bed), new THREE.MeshLambertMaterial({ map: aardeTex, vertexColors: true })))
-    const schaduw = new THREE.Mesh(geo(rand), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(verloop), color: '#000', transparent: true, depthWrite: false }))
-    schaduw.renderOrder = -1
-    scene.add(schaduw)
-  }
-
   // ---------- planten ----------
   type Plant = { x: number; y: number; z: number; r: number; kleur: THREE.Color; bloeit: boolean }
   const planten: Plant[] = []
@@ -291,7 +287,146 @@ export function bouwTuin(scene: THREE.Scene, opt: { bestaand: Rechthoek[]; bakke
     }
   }
 
+  // ---------- plein: bloemeneilanden tussen de lantaarns ----------
+  // De lantaarns staan om de 16 m langs de gevel, 12 m ervoor (omgeving.ts). Halverwege twee
+  // lantaarns komt een rond eiland: boordsteen, aarde, struiken, bloemen en een boompje dat warm
+  // aangelicht wordt. Zo krijgt het plein het ritme van een boulevard.
+  const extraPlassen: { x: number; z: number; s: number }[] = []
+  const stammen: { x: number; z: number; h: number }[] = []
+  const vrij = (x: number, z: number, r: number) =>
+    !opt.bestaand.some((o) => x + r > o.x0 && x - r < o.x1 && z + r > o.z0 && z - r < o.z1) &&
+    !obstakels.some((o) => x + r > o.x0 && x - r < o.x1 && z + r > o.z0 && z - r < o.z1)
+  const boom = (x: number, z: number, h: number, kroon: number) => {
+    stammen.push({ x, z, h })
+    const k = new THREE.Color(GROEN[Math.floor(toeval() * 3)]).multiplyScalar(1.1).lerp(tint.copy(WARM).multiplyScalar(0.55), 0.18)
+    planten.push({ x, y: h + kroon * 0.45, z, r: kroon, kleur: k, bloeit: false })
+    planten.push({ x: x + kroon * 0.35, y: h + kroon * 0.95, z: z - kroon * 0.2, r: kroon * 0.65, kleur: k.clone().multiplyScalar(1.12), bloeit: false })
+    extraPlassen.push({ x, z, s: 1.9 })
+  }
+  const eiland = (cx: number, cz: number, R: number) => {
+    const N = 20
+    const Ro = R + 0.28
+    const H = KANT_H * 0.85
+    const P = (r: number, a: number, y: number) => [cx + Math.cos(a) * r, y, cz + Math.sin(a) * r]
+    const C = [cx, AARDE_H, cz]
+    for (let k = 0; k < N; k++) {
+      const a0 = (k / N) * Math.PI * 2
+      const a1 = ((k + 1) / N) * Math.PI * 2
+      const u0 = (a0 * Ro) / 1.8
+      const u1 = (a1 * Ro) / 1.8
+      quad(kant, P(Ro, a0, 0), P(Ro, a1, 0), P(Ro, a1, H), P(Ro, a0, H), [[u0, 0], [u1, 0], [u1, 1], [u0, 1]], [0.45, 0.45, 1, 1])
+      quad(kant, P(Ro, a0, H), P(Ro, a1, H), P(R, a1, H), P(R, a0, H), [[u0, 0.75], [u1, 0.75], [u1, 1], [u0, 1]], [1.1, 1.1, 1.1, 1.1])
+      quad(kant, P(R, a0, H), P(R, a1, H), P(R, a1, AARDE_H), P(R, a0, AARDE_H), [[u0, 1], [u1, 1], [u1, 0.5], [u0, 0.5]], [0.9, 0.9, 0.5, 0.5])
+      quad(bed, P(R, a1, AARDE_H), P(R, a0, AARDE_H), C, C, [[u1, 0], [u0, 0], [u0, 1], [u1, 1]], [0.95, 0.95, 0.45, 0.45])
+      quad(rand, P(Ro + 0.9, a1, 0.025), P(Ro + 0.9, a0, 0.025), P(Ro, a0, 0.025), P(Ro, a1, 0.025), [[0, 0], [0, 0], [0, 1], [0, 1]])
+    }
+    // Een krans struiken, bloemen ervoor, en het boompje in het midden.
+    const n = 7
+    for (let j = 0; j < n; j++) {
+      const a = (j / n) * Math.PI * 2 + toeval() * 0.4
+      const rr = 0.38 + toeval() * 0.14
+      const x = cx + Math.cos(a) * R * 0.6
+      const z = cz + Math.sin(a) * R * 0.6
+      const kleur = new THREE.Color(GROEN[Math.floor(toeval() * GROEN.length)]).multiplyScalar(0.95)
+      planten.push({ x, y: AARDE_H + rr * 0.55, z, r: rr, kleur, bloeit: toeval() < 0.6 })
+    }
+    const k = bloemKleur()
+    for (let j = 0; j < 30; j++) {
+      const a = (j / 30) * Math.PI * 2
+      const rr = R * (0.84 + toeval() * 0.08)
+      bloemen.push({ x: cx + Math.cos(a) * rr, y: AARDE_H + 0.1 + toeval() * 0.12, z: cz + Math.sin(a) * rr, s: 0.85 + toeval() * 0.3, kleur: (j % 10 < 7 ? k : bloemKleur()).clone() })
+    }
+    boom(cx, cz, 2.3, 1.15)
+    obstakels.push({ x0: cx - Ro, x1: cx + Ro, z0: cz - Ro, z1: cz + Ro })
+  }
+  // Kandidaten om de meter langs de gevel, 12 m ervoor; een eiland komt waar het ver genoeg van een
+  // lantaarn (zelfde plaatsing als omgeving.ts), een poort en het vorige eiland staat.
+  const lantaarnPlek = gevelOmtrek(16).map((p) => ({ x: p.x + p.nx * 12, z: p.z + p.nz * 12 }))
+  const eilanden: { x: number; z: number }[] = []
+  for (const p of gevelOmtrek(1)) {
+    if (Math.abs(p.nx) > 0.34 && Math.abs(p.nz) > 0.34) continue
+    if ([-6, 0, 6].some((k) => inPoort(GEVEL, p.x + p.nx - p.nz * k, p.z + p.nz + p.nx * k))) continue
+    const x = p.x + p.nx * 12
+    const z = p.z + p.nz * 12
+    // De toegang naar de hoofdingang (fonteinen, bakken, standen) blijft vrij.
+    if (z > GEVEL.B && Math.abs(x) < 26) continue
+    if (lantaarnPlek.some((l) => Math.hypot(l.x - x, l.z - z) < 5.5)) continue
+    if (eilanden.some((e) => Math.hypot(e.x - x, e.z - z) < 14)) continue
+    if (bijSpelersgebouwen(x, z) || !vrij(x, z, 3.2)) continue
+    eilanden.push({ x, z })
+    eiland(x, z, 1.9)
+  }
+
+  // ---------- parking: hagen met boordsteen, belijning, schaduw onder de auto's, lantaarns ----------
+  const blokken: THREE.BufferGeometry[] = []
+  const kantBlok = (cx: number, cz: number, lx: number, lz: number, h: number) => {
+    const g = new THREE.BoxGeometry(lx, h, lz).toNonIndexed()
+    const uv = g.attributes.uv
+    for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * (Math.max(lx, lz) / 1.8))
+    const pos = g.attributes.position
+    const kl = new Float32Array(pos.count * 3)
+    for (let i = 0; i < pos.count; i++) kl.fill(pos.getY(i) > 0 ? 1 : 0.5, i * 3, i * 3 + 3)
+    g.setAttribute('color', new THREE.BufferAttribute(kl, 3))
+    g.translate(cx, h / 2, cz)
+    blokken.push(g)
+  }
+  const lantaarns: { x: number; z: number }[] = []
+  // Een haag in een smalle border langs z, van z0 tot z1 (x0..x1 is de buitenkant van de boordsteen).
+  const haag = (x0: number, x1: number, z0: number, z1: number, metBomen: boolean) => {
+    const H = KANT_H * 0.85
+    const d = 0.22
+    kantBlok(x0 + d / 2, (z0 + z1) / 2, d, z1 - z0, H)
+    kantBlok(x1 - d / 2, (z0 + z1) / 2, d, z1 - z0, H)
+    kantBlok((x0 + x1) / 2, z0 + d / 2, x1 - x0 - 2 * d, d, H)
+    kantBlok((x0 + x1) / 2, z1 - d / 2, x1 - x0 - 2 * d, d, H)
+    const a = [x0 + d, AARDE_H, z1 - d]
+    const b = [x1 - d, AARDE_H, z1 - d]
+    const c = [x1 - d, AARDE_H, z0 + d]
+    const e = [x0 + d, AARDE_H, z0 + d]
+    quad(bed, a, b, c, e, [[0, 0], [1, 0], [1, (z1 - z0) / 2], [0, (z1 - z0) / 2]], [0.8, 0.8, 0.8, 0.8])
+    const mx = (x0 + x1) / 2
+    const breed = x1 - x0
+    for (let z = z0 + 0.6; z < z1 - 0.5; z += 0.7) {
+      const rr = Math.min(0.55, breed * 0.42) * (0.92 + toeval() * 0.16)
+      const kleur = new THREE.Color(GROEN[toeval() < 0.7 ? 1 : 3]).multiplyScalar(0.9 + toeval() * 0.15)
+      planten.push({ x: mx + (toeval() - 0.5) * 0.1, y: AARDE_H + rr * 0.6, z, r: rr, kleur, bloeit: toeval() < 0.12 })
+    }
+    if (metBomen) for (let z = z0 + 6; z < z1 - 3; z += 12) boom(mx, z, 2.6, 1.3)
+    for (let z = z0 + 12; z < z1 - 3; z += 15) lantaarns.push({ x: mx, z: z - 6 })
+    obstakels.push({ x0, x1, z0, z1 })
+  }
+  const pk = opt.parking
+  const lijnen: THREE.Matrix4[] = []
+  const autoSchaduw: THREE.Matrix4[] = []
+  if (pk && pk.rijen.length >= 3) {
+    // Tussen de twee middelste rijen (de auto's staan er met hun neus naar elkaar).
+    const hx = (pk.rijen[1] + pk.rijen[2]) / 2
+    haag(hx - 0.5, hx + 0.5, pk.z0 + 3, pk.z1 - 3, true)
+    // Langs de pleinkant, met twee doorgangen.
+    for (const [z0, z1] of [
+      [pk.z0 + 2, -12],
+      [-6, 10],
+      [16, pk.z1 - 2],
+    ] as const) {
+      const x1 = pk.x0 - 0.3
+      if (vrij(x1 - 0.7, (z0 + z1) / 2, 0.6)) haag(x1 - 1.3, x1, z0, z1, false)
+    }
+    // Witte belijning tussen de plaatsen, en een zachte schaduw onder elke auto.
+    for (const rx of pk.rijen) for (let i = 0; i <= 11; i++) lijnen.push(new THREE.Matrix4().makeTranslation(rx, 0.012, -28 + i * 5.3 - 2.65))
+    for (const [x, z, ry] of pk.autos) autoSchaduw.push(new THREE.Matrix4().compose(new THREE.Vector3(x, 0.018, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ry), new THREE.Vector3(1, 1, 1)))
+  }
+
   for (const p of planten) if (p.bloeit) zetBloemen(p.x, p.y, p.z, p.r, 8 + Math.floor(toeval() * 8))
+
+  if (kant.pos.length) {
+    const keiMat = new THREE.MeshLambertMaterial({ map: keiTex, vertexColors: true, side: THREE.DoubleSide })
+    scene.add(new THREE.Mesh(eindes.length || blokken.length ? mergeGeometries([geo(kant), ...eindes.map((e) => e.toNonIndexed()), ...blokken]) : geo(kant), keiMat))
+    scene.add(new THREE.Mesh(geo(bed), new THREE.MeshLambertMaterial({ map: aardeTex, vertexColors: true })))
+    const schaduw = new THREE.Mesh(geo(rand), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(verloop), color: '#000', transparent: true, depthWrite: false }))
+    schaduw.renderOrder = -1
+    scene.add(schaduw)
+  }
+
 
   // Struiken: een zacht afgeronde bol met wat reliëf, onderaan donker (gebakken schaduw), en per
   // struik een kleur.
@@ -338,7 +473,7 @@ export function bouwTuin(scene: THREE.Scene, opt: { bestaand: Rechthoek[]; bakke
   const plasMat = new THREE.MeshBasicMaterial({ map: plasTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })
   const bedSpots = spots.filter((sp) => pts.some((p, i) => in_[i] && (p.x + p.nx * 1.75 - sp.x) ** 2 + (p.z + p.nz * 1.75 - sp.z) ** 2 < 0.3))
   const lampjes = pts.filter((p, i) => in_[i] && i % 12 === 6 && in_[(i + 2) % pts.length] && in_[(i - 2 + pts.length) % pts.length])
-  const plassen = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2), plasMat, bedSpots.length + lampjes.length)
+  const plassen = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2), plasMat, bedSpots.length + lampjes.length + extraPlassen.length + lantaarns.length)
   bedSpots.forEach((sp, i) => {
     m4.compose(v.set(sp.x, AARDE_H + 0.01, sp.z), q.identity(), schaal.set(1.7, 1, 1.7))
     plassen.setMatrixAt(i, m4)
@@ -353,7 +488,63 @@ export function bouwTuin(scene: THREE.Scene, opt: { bestaand: Rechthoek[]; bakke
     m4.compose(v.set(p.x + p.nx * (BUITEN + 0.9), 0.03, p.z + p.nz * (BUITEN + 0.9)), q, schaal.set(1.6, 1, 1.2))
     plassen.setMatrixAt(bedSpots.length + i, m4)
   })
+  let pi = bedSpots.length + lampjes.length
+  for (const e of extraPlassen) {
+    m4.compose(v.set(e.x, AARDE_H + 0.012, e.z), q.identity(), schaal.set(e.s, 1, e.s))
+    plassen.setMatrixAt(pi++, m4)
+  }
+  for (const l of lantaarns) {
+    m4.compose(v.set(l.x, 0.03, l.z), q.identity(), schaal.set(4.2, 1, 4.2))
+    plassen.setMatrixAt(pi++, m4)
+  }
   scene.add(plassen, lampMesh)
+
+  // Stammen van de boompjes, en de lantaarns op de parking (een paal met een warme kop; het licht
+  // is de plas eronder, geen echte lamp).
+  if (stammen.length) {
+    const stamMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.09, 0.14, 1, 7).translate(0, 0.5, 0), new THREE.MeshLambertMaterial({ color: '#5a3d26' }), stammen.length)
+    stammen.forEach((st, i) => {
+      m4.compose(v.set(st.x, AARDE_H, st.z), q.identity(), schaal.set(1, st.h, 1))
+      stamMesh.setMatrixAt(i, m4)
+    })
+    scene.add(stamMesh)
+  }
+  if (lantaarns.length) {
+    const paal = new THREE.InstancedMesh(
+      mergeGeometries([new THREE.CylinderGeometry(0.07, 0.1, 4.6, 6).translate(0, 2.3 + AARDE_H, 0), new THREE.BoxGeometry(0.5, 0.12, 0.32).translate(0, 4.62 + AARDE_H, 0)]),
+      new THREE.MeshLambertMaterial({ color: '#2b2f36' }),
+      lantaarns.length,
+    )
+    const kop = new THREE.InstancedMesh(new THREE.BoxGeometry(0.42, 0.04, 0.26).translate(0, 4.54 + AARDE_H, 0), new THREE.MeshBasicMaterial({ color: '#ffe2b0', toneMapped: false }), lantaarns.length)
+    lantaarns.forEach((l, i) => {
+      m4.makeTranslation(l.x, 0, l.z)
+      paal.setMatrixAt(i, m4)
+      kop.setMatrixAt(i, m4)
+    })
+    scene.add(paal, kop)
+  }
+  if (lijnen.length) {
+    const lijn = new THREE.InstancedMesh(new THREE.PlaneGeometry(4.4, 0.11).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#c9ced6' }), lijnen.length)
+    lijnen.forEach((m, i) => lijn.setMatrixAt(i, m))
+    scene.add(lijn)
+  }
+  if (autoSchaduw.length) {
+    const vlek = document.createElement('canvas')
+    vlek.width = 64
+    vlek.height = 32
+    const g = vlek.getContext('2d')!
+    g.filter = 'blur(5px)'
+    g.fillStyle = 'rgba(0,0,0,.75)'
+    g.fillRect(8, 6, 48, 20)
+    const schaduw = new THREE.InstancedMesh(
+      new THREE.PlaneGeometry(5.2, 2.6).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(vlek), color: '#000', transparent: true, depthWrite: false }),
+      autoSchaduw.length,
+    )
+    autoSchaduw.forEach((m, i) => schaduw.setMatrixAt(i, m))
+    schaduw.renderOrder = -1
+    scene.add(schaduw)
+  }
 
   return { obstakels }
 }

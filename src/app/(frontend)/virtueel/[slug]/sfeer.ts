@@ -191,13 +191,13 @@ export function bouwSfeer(scene: THREE.Scene, opt: { thema: StadionThema; licht:
   // ---------- supporters: wachtrijen en een zingende groep met sjaals ----------
   const mensen: { x: number; z: number; ry: number; zingt: boolean }[] = []
   for (const r of rijen) {
-    const n = 2 + Math.floor(toeval() * 3)
+    const n = 2 + Math.floor(toeval() * 2)
     for (let i = 0; i < n; i++) {
       const v = new THREE.Vector3((toeval() - 0.5) * 0.4, 0, i * 0.85).applyAxisAngle(Y, r.ry)
       mensen.push({ x: r.x + v.x, z: r.z + v.z, ry: r.ry + Math.PI, zingt: false })
     }
   }
-  const groepN = licht ? 14 : 60
+  const groepN = licht ? 8 : 60
   for (let i = 0; i < groepN; i++) {
     const a = toeval() * Math.PI * 2
     const r = Math.sqrt(toeval()) * 5

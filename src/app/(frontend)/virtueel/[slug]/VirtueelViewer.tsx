@@ -793,9 +793,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xdbeafe, size: 1.5, sizeAttenuation: false, transparent: true, opacity: 0.7, fog: false })))
     }
 
-    // Licht: zacht hemellicht en één "maanlicht" met schaduwen; de lichtmasten staan in stadion.ts.
-    scene.add(new THREE.HemisphereLight('#b9d4ff', '#1d3b26', 0.75))
-    const zon = new THREE.DirectionalLight('#fff4dc', 1.6)
+    // Licht: zacht hemellicht en één "maanlicht"; meer echte lampen zijn er niet. Elke echte lamp
+    // wordt voor elke pixel van elk belicht voorwerp doorgerekend, dus de lichtmasten, spots en
+    // lampjes zijn nep-licht (gloed, bundels, lichtplassen). Zonder de vier mastspots iets feller.
+    scene.add(new THREE.HemisphereLight('#b9d4ff', '#1d3b26', licht ? 1.05 : 0.75))
+    const zon = new THREE.DirectionalLight('#fff4dc', licht ? 2.1 : 1.6)
     zon.position.set(-14, 30, 18)
     zon.castShadow = false
     zon.shadow.mapSize.set(licht ? 1024 : 2048, licht ? 1024 : 2048)
@@ -989,7 +991,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       ...(bakman?.obstakels ?? []),
     ]
     // De tuinafwerking: een plantenborder met boordsteen, bloemen en warm licht rond de gevel.
-    obstakels.push(...bouwTuin(scene, { bestaand: obstakels, bakken: buitenkant.bakken }).obstakels)
+    obstakels.push(...bouwTuin(scene, { bestaand: obstakels, bakken: buitenkant.bakken, parking: omgeving.parking }).obstakels)
     bron('Tuin')
     // De Hollywood-sterren in de zuidgang: enkel op vrije vloer (niet onder een vitrine, zuil of de lift).
     const sterren = bouwSterren(scene, {

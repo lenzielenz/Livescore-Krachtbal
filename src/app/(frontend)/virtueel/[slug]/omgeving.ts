@@ -23,6 +23,8 @@ export type Omgeving = {
   obstakels: Rechthoek[]
   /** Waar "Buiten" begint: op het plein, met de hoofdingang voor je. */
   start: { x: number; z: number; yaw: number }
+  /** De parking (oostkant): de rand en waar de auto's staan (x, z, draaiing), voor tuin.ts. */
+  parking: { x0: number; x1: number; z0: number; z1: number; rijen: number[]; autos: [number, number, number][] }
 }
 
 type PuntOpGevel = { x: number; z: number; nx: number; nz: number; s: number }
@@ -128,12 +130,15 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
 
   // ---------- grond: plein, toegangsweg, straat en parking ----------
   const tegels = tekstCanvas(256, 256, (g) => {
-    g.fillStyle = '#3f4652'
+    // Natuursteen in halfsteens verband, warm grijs met wat variatie per steen (zoals een
+    // verzorgde oprit), en donkere voegen.
+    g.fillStyle = '#2f2c29'
     g.fillRect(0, 0, 256, 256)
     for (let y = 0; y < 256; y += 32)
       for (let x = (y / 32) % 2 ? 16 : 0; x < 256; x += 32) {
-        const v = 58 + Math.floor(toeval() * 14)
-        g.fillStyle = `rgb(${v},${v + 4},${v + 12})`
+        const v = 60 + Math.floor(toeval() * 16)
+        const warm = Math.floor(toeval() * 6)
+        g.fillStyle = `rgb(${v + 6 + warm},${v + 3},${v - 2})`
         g.fillRect(x + 1, y + 1, 30, 30)
       }
   })
@@ -663,8 +668,8 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   scene.add(plassen)
 
   // ---------- supporters die naar de ingang stappen ----------
-  // Wandelaars zijn het duurste volk (± 700 driehoeken per persoon): een stroom van 30 volstaat.
-  const aantal = licht ? 30 : 170
+  // Wandelaars zijn het duurste volk (± 700 driehoeken per persoon): een stroom van 20 volstaat.
+  const aantal = licht ? 20 : 170
   // Divers volk (volk.ts): mannen, vrouwen, kinderen, kinderwagens, groot en klein. Elke wandelaar
   // loopt langs zijn eigen +z, 34 m lang, en begint dan opnieuw achteraan; benen en armen zwaaien mee.
   const wandel = `float faseW = fract(sin(dot(instanceMatrix[3].xz, vec2(12.9898, 78.233))) * 43758.5453);
@@ -732,8 +737,9 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   // ---------- parking met auto's ----------
   const autoGeo = mergeGeometries([new THREE.BoxGeometry(1.8, 0.7, 4.2).translate(0, 0.55, 0), new THREE.BoxGeometry(1.6, 0.55, 2.2).translate(0, 1.15, -0.2)])
   const plaatsen: [number, number, number][] = []
+  const rijX = [0, 1, 2, 3].map((rij) => pX0 + 4 + rij * 10 + (rij % 2) * 4.5)
   for (let rij = 0; rij < 4; rij++)
-    for (let i = 0; i < 11; i++) if (toeval() < (licht ? 0.5 : 0.8)) plaatsen.push([pX0 + 4 + rij * 10 + (rij % 2) * 4.5, -28 + i * 5.3, rij % 2 ? Math.PI : 0])
+    for (let i = 0; i < 11; i++) if (toeval() < (licht ? 0.5 : 0.8)) plaatsen.push([rijX[rij], -28 + i * 5.3, rij % 2 ? Math.PI : 0])
   const autos = new THREE.InstancedMesh(autoGeo, new THREE.MeshStandardMaterial({ metalness: 0.5, roughness: 0.35 }), plaatsen.length)
   const autoKleuren = ['#e5e7eb', '#111827', '#9ca3af', '#1d4ed8', '#b91c1c', '#065f46', '#78350f', '#f8fafc'].map((c) => new THREE.Color(c))
   plaatsen.forEach(([x, z, r], i) => {
@@ -786,6 +792,7 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   return {
     obstakels,
     start: { x: 0, z: B + 26, yaw: Math.PI },
+    parking: { x0: pX0, x1: pX0 + 40, z0: -34, z1: 26, rijen: rijX, autos: plaatsen },
     update(seconden) {
       tijd.value = seconden
       bandTex.offset.x = -(seconden * 0.04) % 1

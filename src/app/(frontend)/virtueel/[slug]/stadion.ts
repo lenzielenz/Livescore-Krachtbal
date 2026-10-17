@@ -620,7 +620,7 @@ export function bouwStadion(
   bg.fillStyle = bgr
   bg.fillRect(0, 0, 8, 256)
   const bundelMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(bundelC), transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })
-  const masten: { lamp: THREE.MeshBasicMaterial; halo: THREE.Sprite; spot: THREE.SpotLight; bundel: THREE.Mesh }[] = []
+  const masten: { lamp: THREE.MeshBasicMaterial; halo: THREE.Sprite; spot: THREE.SpotLight | null; bundel: THREE.Mesh }[] = []
   for (const [mx, mz] of [[-hx - 9, -hz - 14], [hx + 9, -hz - 14], [-hx - 9, hz + 12], [hx + 9, hz + 12]] as const) {
     const paal = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.4, 26, 8), metaal)
     paal.position.set(mx, 13, mz)
@@ -632,8 +632,11 @@ export function bouwStadion(
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: gloed, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }))
     halo.scale.set(14, 14, 1)
     halo.position.copy(kop.position)
-    const spot = new THREE.SpotLight('#fff2d6', 420, 120, 0.6, 0.6, 1.4)
-    spot.position.copy(kop.position)
+    // Een echte schijnwerper rekent de belichting na voor élke pixel van élk belicht voorwerp, ook
+    // in de kelder en de gangen. Op een licht toestel (en dat is nu iedereen) doen de gloed, de
+    // bundel en de lichtplas op het veld het werk: nep-licht dat bijna niets kost.
+    const spot = licht ? null : new THREE.SpotLight('#fff2d6', 420, 120, 0.6, 0.6, 1.4)
+    spot?.position.copy(kop.position)
     // De bundel van de lampkop naar het midden van het veld.
     const naarVeld = new THREE.Vector3(mx * 0.35, 0, mz * 0.35).sub(kop.position)
     const lengte = naarVeld.length()
@@ -641,11 +644,13 @@ export function bouwStadion(
     bundel.position.copy(kop.position)
     bundel.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), naarVeld.normalize())
     masten.push({ lamp, halo, spot, bundel })
-    scene.add(paal, kop, halo, spot, spot.target, bundel)
+    scene.add(paal, kop, halo, bundel)
+    if (spot) scene.add(spot, spot.target)
   }
 
   // ---------- het veld: lichtplassen van de masten en dug-outs ----------
-  const plasMat = new THREE.MeshBasicMaterial({ map: gloed, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })
+  // Zonder echte mastspots (licht) dragen de lichtplassen het veldlicht: iets feller.
+  const plasMat = new THREE.MeshBasicMaterial({ map: gloed, transparent: true, opacity: licht ? 0.24 : 0.16, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })
   const plassen = masten.map((m) => {
     const plas = new THREE.Mesh(new THREE.CircleGeometry(13, 32).rotateX(-Math.PI / 2), plasMat.clone())
     plas.position.set(m.halo.position.x * 0.35, 0.025, m.halo.position.z * 0.35)
@@ -931,7 +936,7 @@ export function bouwStadion(
         if (show >= 0) {
           // Om beurten, rond het veld.
           const aan = Math.floor(show * 14) % masten.length === i ? 1 : 0.25
-          m.spot.intensity = 420 * aan + 80
+          if (m.spot) m.spot.intensity = 420 * aan + 80
           m.halo.scale.setScalar(10 + 12 * aan)
           m.lamp.color.copy(aan > 0.5 ? showKleur : wit)
           bm.color.copy(showKleur)
@@ -939,12 +944,12 @@ export function bouwStadion(
           ;(plassen[i].material as THREE.MeshBasicMaterial).opacity = 0.08 + 0.2 * aan
         } else {
           const adem = 0.5 + 0.5 * Math.sin(seconden * 0.8 + i * 1.6)
-          m.spot.intensity = 400 + 40 * adem
+          if (m.spot) m.spot.intensity = 400 + 40 * adem
           m.halo.scale.setScalar(13 + 2.5 * adem)
           m.lamp.color.copy(wit)
           bm.color.copy(wit)
           bm.opacity = 0.22 + 0.1 * adem
-          ;(plassen[i].material as THREE.MeshBasicMaterial).opacity = 0.13 + 0.04 * adem
+          ;(plassen[i].material as THREE.MeshBasicMaterial).opacity = (licht ? 0.21 : 0.13) + 0.04 * adem
         }
       })
       if (seconden - laatsteBord > 0.25) {

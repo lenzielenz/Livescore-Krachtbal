@@ -683,7 +683,7 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
       blok(x - 2.55, x + 2.55, z - 0.8, z + 0.8)
     })
     groep.add(bt)
-    for (let i = 0; i < 14; i++) dansers.push({ x: x1 - 7 - toeval() * 6, z: cz - 6 + toeval() * 12, fase: toeval() * 6 })
+    for (let i = 0; i < 8; i++) dansers.push({ x: x1 - 7 - toeval() * 6, z: cz - 6 + toeval() * 12, fase: toeval() * 6 })
     lichtPlas(cx, cz, 14, thema.primair, 0.22)
   }
 
@@ -1026,7 +1026,7 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
   {
     type Mens = { x: number; z: number; ry: number; danst: boolean; fase: number }
     const mensen: Mens[] = []
-    for (const t of trucks) for (let i = 0; i < 2; i++) mensen.push({ x: truckX + 3.2 + i * 0.9, z: t.z + 0.4 + (toeval() - 0.5) * 0.8, ry: -Math.PI / 2, danst: false, fase: 0 })
+    for (const t of trucks) for (let i = 0; i < 1; i++) mensen.push({ x: truckX + 3.2 + i * 0.9, z: t.z + 0.4 + (toeval() - 0.5) * 0.8, ry: -Math.PI / 2, danst: false, fase: 0 })
     for (const d of dansers) mensen.push({ x: d.x, z: d.z, ry: Math.PI / 2, danst: true, fase: d.fase })
     // Rond de tafels, langs het pad, aan het rad en de draaimolen.
     const rondom: [number, number, number][] = [
