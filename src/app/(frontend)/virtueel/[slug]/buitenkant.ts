@@ -296,7 +296,7 @@ export function bouwBuitenkant(
     update(seconden) {
       const show = lichtshow(seconden)
       // Portalen en torenkronen ademen in de clubkleur, en flitsen mee tijdens de lichtshow.
-      const adem = 0.75 + 0.25 * Math.sin(seconden * 1.4)
+      const adem = 0.55 + 0.3 * Math.sin(seconden * 1.4)
       kleur.copy(show >= 0 ? (Math.floor(seconden * 8) % 2 ? primair : wit) : primair).multiplyScalar(show >= 0 ? 1.2 : adem)
       portaalMat.color.copy(kleur)
       clubLicht.color.copy(kleur)

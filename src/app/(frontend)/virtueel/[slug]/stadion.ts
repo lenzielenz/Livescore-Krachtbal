@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 import { eigenHerkomst, lichtshow, type StadionThema, type Veld } from '@/lib/virtueel'
+import { hoogteVerloop } from './nacht'
 
 // Het stadion rond het veld van Virtueel krachtbal, in de kleuren van de club die kijkt: tribunes
 // met stoeltjes en publiek, een overdekte hoofdtribune met de clubnaam, ledborden met de reclame
@@ -153,7 +154,7 @@ export function bouwStadion(
   const beton = new THREE.MeshLambertMaterial({ color: '#4b5563' })
   const donker = new THREE.MeshLambertMaterial({ color: '#111827' })
   const metaal = new THREE.MeshStandardMaterial({ color: '#9ca3af', metalness: 0.6, roughness: 0.4 })
-  const clubMat = new THREE.MeshLambertMaterial({ color: primair })
+  const clubMat = hoogteVerloop(new THREE.MeshLambertMaterial({ color: primair }), { tot: 3.5, min: 0.6 })
 
   // ---------- reclameborden rond het veld ----------
   const rc = document.createElement('canvas')
