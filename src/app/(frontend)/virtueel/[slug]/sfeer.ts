@@ -5,6 +5,7 @@ import { GEVEL, inPoort, type Rechthoek, type StadionThema } from '@/lib/virtuee
 import { canvasTex, rnd, rondLogo } from './stadion'
 import { bouwVolk } from './volk'
 import { bouwVerkoopwagen } from './voertuig'
+import { hoogteVerloop, kleurTrap } from './nacht'
 
 // De aankleding rond het stadion: wat een wedstrijddag speciaal maakt nog vóór je binnen bent.
 // Een welkomstboog en een loper in clubkleur naar de hoofdingang, lichtslingers, een frituur, een
@@ -45,10 +46,31 @@ export function bouwSfeer(scene: THREE.Scene, opt: { thema: StadionThema; licht:
   const q = new THREE.Quaternion()
   const Y = new THREE.Vector3(0, 1, 0)
   const metaal = new THREE.MeshStandardMaterial({ color: '#9ca3af', metalness: 0.6, roughness: 0.4 })
-  const clubMat = new THREE.MeshLambertMaterial({ color: primair, emissive: primair, emissiveIntensity: 0.15 })
+  // De clubkleur in trappen: pilaren in het donkere midden, het bord erboven lichter, en alles
+  // donkerder naar de grond toe (geen egaal rood of blauw van boven tot onder).
+  const trap = kleurTrap(primair)
+  const clubMat = hoogteVerloop(new THREE.MeshLambertMaterial({ color: trap.midden, emissive: trap.donker, emissiveIntensity: 0.1 }), { tot: 7, min: 0.5 })
+  const pijlerMat = hoogteVerloop(new THREE.MeshLambertMaterial({ color: trap.donker, emissive: trap.diep, emissiveIntensity: 0.1 }), { tot: 8, min: 0.45 })
 
   // ---------- loper en welkomstboog ----------
-  const loper = new THREE.Mesh(new THREE.PlaneGeometry(5, 27), new THREE.MeshLambertMaterial({ color: primair, emissive: primair, emissiveIntensity: 0.12 }))
+  // De loper: fluweel met een lichter midden, donkere randen en fijne dwarse banen.
+  const loperTex = canvasTex(
+    canvas(64, 256, (g) => {
+      const gr = g.createLinearGradient(0, 0, 64, 0)
+      gr.addColorStop(0, '#' + trap.diep.getHexString())
+      gr.addColorStop(0.18, '#' + trap.donker.getHexString())
+      gr.addColorStop(0.5, '#' + trap.midden.getHexString())
+      gr.addColorStop(0.82, '#' + trap.donker.getHexString())
+      gr.addColorStop(1, '#' + trap.diep.getHexString())
+      g.fillStyle = gr
+      g.fillRect(0, 0, 64, 256)
+      g.fillStyle = 'rgba(0,0,0,.16)'
+      for (let y = 0; y < 256; y += 32) g.fillRect(0, y, 64, 3)
+    }),
+  )
+  loperTex.wrapT = THREE.RepeatWrapping
+  loperTex.repeat.set(1, 5)
+  const loper = new THREE.Mesh(new THREE.PlaneGeometry(5, 27), new THREE.MeshLambertMaterial({ map: loperTex, color: '#ffffff', emissive: trap.diep, emissiveIntensity: 0.12 }))
   loper.rotation.x = -Math.PI / 2
   loper.position.set(0, 0.02, B + 14.5)
   const loperRand = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 27), new THREE.MeshLambertMaterial({ color: secundair }))
@@ -58,7 +80,7 @@ export function bouwSfeer(scene: THREE.Scene, opt: { thema: StadionThema; licht:
 
   const boogZ = B + 24
   for (const x of [-8, 8]) {
-    const pijler = new THREE.Mesh(new THREE.BoxGeometry(1.2, 8, 1.2), clubMat)
+    const pijler = new THREE.Mesh(new THREE.BoxGeometry(1.2, 8, 1.2), pijlerMat)
     pijler.position.set(x, 4, boogZ)
     const voet = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.6, 1.6), metaal)
     voet.position.set(x, 0.3, boogZ)
@@ -308,7 +330,7 @@ export function bouwSfeer(scene: THREE.Scene, opt: { thema: StadionThema; licht:
   }
   const banieren = new THREE.InstancedMesh(
     new THREE.PlaneGeometry(2.4, 8.4, 1, 8),
-    metTijd(new THREE.MeshLambertMaterial({ map: banierTex, emissive: '#ffffff', emissiveMap: banierTex, emissiveIntensity: 0.35, side: THREE.DoubleSide, alphaTest: 0.5 }), tijd, 'transformed.z += sin(uTijd * 1.4 + position.y * 0.6 + instanceMatrix[3][0]) * 0.08 * (4.2 - position.y) / 8.4;'),
+    metTijd(hoogteVerloop(new THREE.MeshLambertMaterial({ map: banierTex, emissive: '#ffffff', emissiveMap: banierTex, emissiveIntensity: 0.22, side: THREE.DoubleSide, alphaTest: 0.5 }), { van: 2, tot: 10, min: 0.6 }), tijd, 'transformed.z += sin(uTijd * 1.4 + position.y * 0.6 + instanceMatrix[3][0]) * 0.08 * (4.2 - position.y) / 8.4;'),
     banierPlek.length,
   )
   banierPlek.forEach((m, i) => banieren.setMatrixAt(i, m))

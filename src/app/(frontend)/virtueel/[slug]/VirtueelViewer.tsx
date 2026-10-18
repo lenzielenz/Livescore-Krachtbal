@@ -740,7 +740,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // hebben een zacht vlekje en hun ring onder zich (maakFiguur); de rest stond in het licht.
     renderer.shadowMap.enabled = false
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.05
+    renderer.toneMappingExposure = 0.95
     renderer.domElement.className = 'vk-canvas'
     el.prepend(renderer.domElement)
 
@@ -817,8 +817,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // Licht: zacht hemellicht en één "maanlicht"; meer echte lampen zijn er niet. Elke echte lamp
     // wordt voor elke pixel van elk belicht voorwerp doorgerekend, dus de lichtmasten, spots en
     // lampjes zijn nep-licht (gloed, bundels, lichtplassen). Zonder de vier mastspots iets feller.
-    scene.add(new THREE.HemisphereLight('#b9d4ff', '#1d3b26', licht ? 1.05 : 0.75))
-    const zon = new THREE.DirectionalLight('#fff4dc', licht ? 2.1 : 1.6)
+    // 's Avonds: laag hemellicht en een zacht maanlicht, zodat er echte donkere plekken zijn en de
+    // lichtplassen en lampen eruit springen (was 1,05 / 2,1: alles baadde in licht).
+    scene.add(new THREE.HemisphereLight('#9db8e6', '#18281f', licht ? 0.7 : 0.5))
+    const zon = new THREE.DirectionalLight('#e8eeff', licht ? 1.05 : 1.0)
     zon.position.set(-14, 30, 18)
     zon.castShadow = false
     zon.shadow.mapSize.set(licht ? 1024 : 2048, licht ? 1024 : 2048)

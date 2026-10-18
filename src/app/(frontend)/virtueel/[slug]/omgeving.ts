@@ -8,6 +8,7 @@ import { FANDORP } from './fandorp'
 import { OEFEN } from './oefencomplex'
 import { bouwVolk } from './volk'
 import { canvasTex, rnd, rondLogo } from './stadion'
+import { hoogteVerloop, kleurTrap } from './nacht'
 import { bouwAutos } from './voertuig'
 
 // De buitenkant van het stadion: zodat wie rondkijkt of rondwandelt het gevoel heeft dat dit zíjn
@@ -224,15 +225,19 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
     lamelProfiel.quadraticCurveTo(-w, -d, -w + r, -d)
   }
   const lamelGeo = new THREE.ExtrudeGeometry(lamelProfiel, { depth: H - 3.2, bevelEnabled: false, curveSegments: 4 }).rotateX(-Math.PI / 2).translate(0, 0.2, 0)
-  const lamellen = new THREE.InstancedMesh(lamelGeo, new THREE.MeshLambertMaterial({ emissive: primair, emissiveIntensity: 0.18 }), lamelPunten.length)
+  const lamellen = new THREE.InstancedMesh(lamelGeo, hoogteVerloop(new THREE.MeshLambertMaterial({ emissive: primair, emissiveIntensity: 0.07 }), { tot: 7, min: 0.42 }), lamelPunten.length)
   const m4 = new THREE.Matrix4()
   const q = new THREE.Quaternion()
   const een = new THREE.Vector3(1, 1, 1)
+  // De lamellen in een ritme met diepte: de clubkleur in drie trappen en de tweede kleur, zodat de
+  // gevel niet uit één egaal vlak bestaat.
+  const lamelTrap = kleurTrap(primair)
+  const lamelKleuren = [lamelTrap.midden, lamelTrap.donker, lamelTrap.midden, secundair, lamelTrap.donker, lamelTrap.licht, lamelTrap.diep, secundair]
   lamelPunten.forEach((p, i) => {
     q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(p.nx, p.nz))
     m4.compose(new THREE.Vector3(p.x + p.nx * 1.0, 0, p.z + p.nz * 1.0), q, een)
     lamellen.setMatrixAt(i, m4)
-    lamellen.setColorAt(i, i % 4 === 3 ? secundair : primair)
+    lamellen.setColorAt(i, lamelKleuren[i % lamelKleuren.length])
   })
   scene.add(lamellen)
   // Een ledstrip op de voorkant van elke lamel: hier lopen de lichtgolven rond het stadion (zie update).
@@ -386,7 +391,7 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   )
   const additief = (map: THREE.Texture, opacity: number) =>
     new THREE.MeshBasicMaterial({ map, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })
-  const waaiers = new THREE.InstancedMesh(new THREE.PlaneGeometry(3.2, 11.5).translate(0, 5.75, 0), additief(waaierTex, 0.75), spotPunten.length)
+  const waaiers = new THREE.InstancedMesh(new THREE.PlaneGeometry(3.2, 11.5).translate(0, 5.75, 0), additief(waaierTex, 0.45), spotPunten.length)
   const spots = new THREE.InstancedMesh(
     mergeGeometries([new THREE.CylinderGeometry(0.22, 0.26, 0.14, 14).translate(0, 0.07, 0)]),
     new THREE.MeshStandardMaterial({ color: '#4b5563', metalness: 0.7, roughness: 0.35 }),
@@ -649,7 +654,7 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   })
   const gloedGeo = new THREE.BufferGeometry()
   gloedGeo.setAttribute('position', new THREE.BufferAttribute(gloedPos, 3))
-  const gloed = new THREE.Points(gloedGeo, new THREE.PointsMaterial({ map: new THREE.CanvasTexture(gloedC), size: 4, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }))
+  const gloed = new THREE.Points(gloedGeo, new THREE.PointsMaterial({ map: new THREE.CanvasTexture(gloedC), size: 2.8, opacity: 0.55, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }))
   scene.add(palen, paalLeds, kappen, gloed)
   // Een warme lichtplas onder elke lantaarn (geen echte lampen: die zijn duur), op het plein.
   const plasGeo = new THREE.CircleGeometry(4.5, 24)

@@ -7,6 +7,7 @@ import { krachtbalGeometrie, krachtbalTextuur } from './krachtbal'
 import { rondeDoos } from './rond'
 import { rnd } from './stadion'
 import { bouwVolk } from './volk'
+import { hoogteVerloop, kleurTrap } from './nacht'
 import { bouwVerkoopwagen, nachtOmgeving } from './voertuig'
 
 // Het fandorp: aan de overkant van de straat, recht tegenover de hoofdingang, zoals bij een echt
@@ -82,8 +83,12 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
   }
   const P = new THREE.Color(thema.primair)
   const S = new THREE.Color(thema.secundair)
-  const clubMat = new THREE.MeshStandardMaterial({ color: thema.primair, roughness: 0.45 })
-  const club2Mat = new THREE.MeshStandardMaterial({ color: thema.secundair, roughness: 0.45 })
+  // De clubkleur in trappen: constructies (pilaren, rad) in het donkere midden, accenten lichter, en
+  // alles donkerder naar de grond toe.
+  const trapP = kleurTrap(thema.primair)
+  const trapS = kleurTrap(thema.secundair)
+  const clubMat = hoogteVerloop(new THREE.MeshStandardMaterial({ color: trapP.donker, roughness: 0.5 }), { tot: 5, min: 0.5 })
+  const club2Mat = hoogteVerloop(new THREE.MeshStandardMaterial({ color: trapS.donker, roughness: 0.5 }), { tot: 5, min: 0.55 })
   const witMat = new THREE.MeshStandardMaterial({ color: '#f8fafc', roughness: 0.6 })
   const staal = new THREE.MeshStandardMaterial({ color: '#cbd5e1', metalness: 0.6, roughness: 0.35 })
   const donker = new THREE.MeshStandardMaterial({ color: '#1f2937', metalness: 0.3, roughness: 0.6 })
@@ -170,13 +175,43 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
   grond.position.y = 0.008
   grond.receiveShadow = !licht
   groep.add(grond)
-  const grind = new THREE.MeshLambertMaterial({ color: '#b8a98a' })
+  // Grind dat 's avonds donker is: bruingrijs met korrel en vlekken, niet bijna wit. De randen en de
+  // plekken waar veel gelopen wordt zijn nog iets donkerder.
+  const grindTex = tex(256, 256, (g) => {
+    g.fillStyle = '#6b6354'
+    g.fillRect(0, 0, 256, 256)
+    for (let i = 0; i < 2600; i++) {
+      const l = 70 + toeval() * 60
+      g.fillStyle = `rgba(${l + 14},${l + 6},${l - 8},${0.35 + toeval() * 0.4})`
+      g.fillRect(toeval() * 256, toeval() * 256, 1 + toeval() * 2.4, 1 + toeval() * 2)
+    }
+    for (let i = 0; i < 26; i++) {
+      g.fillStyle = `rgba(30,26,20,${0.05 + toeval() * 0.08})`
+      g.beginPath()
+      g.ellipse(toeval() * 256, toeval() * 256, 14 + toeval() * 40, 8 + toeval() * 24, toeval() * 3, 0, Math.PI * 2)
+      g.fill()
+    }
+  })
+  grindTex.wrapS = grindTex.wrapT = THREE.RepeatWrapping
+  const padRand = new THREE.MeshLambertMaterial({ color: '#2f2b24' })
   const pad = (x0: number, x1: number, z0: number, z1: number) => {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), grind)
+    // De korrel herhaalt op wereldmaat (om de 5 m), ook op een lang, smal pad.
+    const t = grindTex.clone()
+    t.repeat.set((x1 - x0) / 5, (z1 - z0) / 5)
+    t.needsUpdate = true
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), new THREE.MeshLambertMaterial({ map: t, color: '#b9ac96' }))
     m.rotation.x = -Math.PI / 2
     m.position.set((x0 + x1) / 2, 0.018, (z0 + z1) / 2)
     m.receiveShadow = !licht
     groep.add(m)
+    // Een donkere, zachte rand langs het pad (het gras en de aarde ernaast), twee smalle stroken.
+    for (const kant of [0, 1]) {
+      const lang = x1 - x0 > z1 - z0
+      const r = new THREE.Mesh(new THREE.PlaneGeometry(lang ? x1 - x0 : 0.45, lang ? 0.45 : z1 - z0), padRand)
+      r.rotation.x = -Math.PI / 2
+      r.position.set(lang ? (x0 + x1) / 2 : kant ? x1 - 0.22 : x0 + 0.22, 0.021, lang ? (kant ? z1 - 0.22 : z0 + 0.22) : (z0 + z1) / 2)
+      groep.add(r)
+    }
   }
   pad(-3, 3, opt.straatZ + 4.5, 109)
   pad(-50, 50, 90, 94)
