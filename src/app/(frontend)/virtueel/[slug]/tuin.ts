@@ -5,6 +5,7 @@ import { GEVEL, inPoort, type Rechthoek } from '@/lib/virtueel'
 import { bijSpelersgebouwen } from './kleedkamer'
 import { gevelOmtrek, type Omgeving } from './omgeving'
 import { canvasTex, rnd } from './stadion'
+import { lichtBron } from './lichtkaart'
 
 // De tuinafwerking rond het stadion, in de stijl van een verzorgd huis bij avond: geen kale tegels
 // tegen de gevel, maar een plantenborder rondom.
@@ -355,6 +356,7 @@ export function bouwTuin(
     if (bijSpelersgebouwen(x, z) || !vrij(x, z, 3.2)) continue
     eilanden.push({ x, z })
     eiland(x, z, 1.9)
+    lichtBron(x, z, 5, '#ffc27a', 0.6)
   }
 
   // ---------- parking: hagen met boordsteen, belijning, schaduw onder de auto's, lantaarns ----------
@@ -481,6 +483,8 @@ export function bouwTuin(
   const lampGeo = new THREE.BoxGeometry(0.22, 0.07, 0.03)
   const lampMesh = new THREE.InstancedMesh(lampGeo, new THREE.MeshBasicMaterial({ color: '#ffe2b0', toneMapped: false }), Math.max(1, lampjes.length))
   lampMesh.count = lampjes.length
+  for (const p of lampjes) lichtBron(p.x + p.nx * (BUITEN + 0.9), p.z + p.nz * (BUITEN + 0.9), 3.4, '#ffd9a0', 0.5)
+  for (const l of lantaarns) lichtBron(l.x, l.z, 8.5, '#ffb45e', 0.95)
   lampjes.forEach((p, i) => {
     q.setFromAxisAngle(Y, Math.atan2(p.nx, p.nz))
     m4.compose(v.set(p.x + p.nx * (BUITEN + 0.012), KANT_H * 0.55, p.z + p.nz * (BUITEN + 0.012)), q, schaal.setScalar(1))

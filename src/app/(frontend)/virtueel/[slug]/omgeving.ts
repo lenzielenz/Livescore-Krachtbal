@@ -10,6 +10,7 @@ import { bouwVolk } from './volk'
 import { canvasTex, rnd, rondLogo } from './stadion'
 import { hoogteVerloop, kleurTrap } from './nacht'
 import { bouwAutos } from './voertuig'
+import { lichtBron } from './lichtkaart'
 
 // De buitenkant van het stadion: zodat wie rondkijkt of rondwandelt het gevoel heeft dat dit zíjn
 // stadion is. Een gevel rondom met lamellen in de clubkleuren en een doorlopende ledband met de
@@ -399,6 +400,8 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   )
   const lenzen = new THREE.InstancedMesh(new THREE.CircleGeometry(0.17, 14).rotateX(-Math.PI / 2).translate(0, 0.145, 0), new THREE.MeshBasicMaterial({ toneMapped: false }), spotPunten.length)
   const wit = new THREE.Color('#fff4dd')
+  // De grondspots laten de voet van de gevel oplichten: wit, en elke derde in de clubkleur.
+  spotPunten.forEach((p, i) => lichtBron(p.x + p.nx * 1.75, p.z + p.nz * 1.75, 5.2, i % 3 === 1 ? primair : '#ffe9c4', 0.55))
   spotPunten.forEach((p, i) => {
     q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(p.nx, p.nz))
     // Net voor de muur (die ligt op 0,6 m), achter de lamellen.
@@ -637,6 +640,8 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   // Elke paal krijgt een oplichtende ledzuil halverwege: daar lopen de kleurgolven over het plein.
   const paalLeds = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.135, 0.135, 1.4, 12, 1, true).translate(0, 2.4, 0), new THREE.MeshBasicMaterial({ toneMapped: false }), lampPos.length)
   const gloedPos = new Float32Array(lampPos.length * 3)
+  // Elke lantaarn is een lichtbron voor de lichtkaart: een warme plas op het plein (lichtkaart.ts).
+  for (const [x, z] of lampPos) lichtBron(x, z, 10.5, '#ffb45e', 1.0)
   lampPos.forEach(([x, z], i) => {
     m4.makeTranslation(x, 0, z)
     palen.setMatrixAt(i, m4)

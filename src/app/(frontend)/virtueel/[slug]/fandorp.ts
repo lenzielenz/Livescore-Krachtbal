@@ -9,6 +9,7 @@ import { rnd } from './stadion'
 import { bouwVolk } from './volk'
 import { hoogteVerloop, kleurTrap } from './nacht'
 import { bouwVerkoopwagen, nachtOmgeving } from './voertuig'
+import { lichtBron } from './lichtkaart'
 
 // Het fandorp: aan de overkant van de straat, recht tegenover de hoofdingang, zoals bij een echt
 // stadion op wedstrijddag. Een zebrapad en een poort met de clubnaam brengen je erin. Daar:
@@ -102,6 +103,8 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
     g.fillRect(0, 0, 64, 64)
   })
   const lichtPlas = (x: number, z: number, r: number, kleur: string, sterk = 0.35) => {
+    // Naast de zachte plas op de grond is het ook een echte lichtbron voor de lichtkaart.
+    lichtBron(x, z, r * 1.7, kleur, 0.55 + sterk * 1.6)
     const m = new THREE.Mesh(new THREE.PlaneGeometry(r * 2, r * 2), new THREE.MeshBasicMaterial({ map: zacht, color: kleur, transparent: true, opacity: sterk, depthWrite: false, blending: THREE.AdditiveBlending }))
     m.rotation.x = -Math.PI / 2
     m.position.set(x, 0.04, z)
@@ -262,6 +265,8 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
   // ---------- het reuzenrad ----------
   const rad = (() => {
     const { x: RX, z: RZ, H, R, N } = RAD
+    // Het reuzenrad licht de hele omgeving op: een brede, warme plas rond de voet.
+    lichtBron(RX, RZ, 20, '#ffcf8a', 0.95)
     const D = 1.35 // halve afstand tussen de twee velgen
     // Het draaiende deel: twee velgen, spaken, assen en een binnenring, in wit gelakt staal.
     const delen: THREE.BufferGeometry[] = []
@@ -539,6 +544,7 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
     for (let z = 80; z <= 108; z += 7) palen.push([-4, z], [4, z])
     for (let x = -46; x <= -32; x += 7) palen.push([x, 81], [x, 110])
     for (const [x, z] of palen) {
+      lichtBron(x, z, 9, '#ffc27a', 0.85)
       deel(paalGeo, donker, x, 0, z)
       blok(x - 0.15, x + 0.15, z - 0.15, z + 0.15)
     }

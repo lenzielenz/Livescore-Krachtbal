@@ -15,6 +15,7 @@ import { bouwFotogalerij } from './fotogalerij'
 import { bouwWegwijzers, type Bestemming } from './wegwijzers'
 import { bouwGangleven } from './gangleven'
 import { bouwBuitenkant } from './buitenkant'
+import { bouwLichtkaart, lichtBron, wisLichtbronnen } from './lichtkaart'
 import { bouwTuin } from './tuin'
 import { bouwSterren } from './sterren'
 import { bouwVerdiep } from './verdiep'
@@ -740,7 +741,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // hebben een zacht vlekje en hun ring onder zich (maakFiguur); de rest stond in het licht.
     renderer.shadowMap.enabled = false
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 0.95
+    renderer.toneMappingExposure = 1.0
     renderer.domElement.className = 'vk-canvas'
     el.prepend(renderer.domElement)
 
@@ -819,8 +820,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // lampjes zijn nep-licht (gloed, bundels, lichtplassen). Zonder de vier mastspots iets feller.
     // 's Avonds: laag hemellicht en een zacht maanlicht, zodat er echte donkere plekken zijn en de
     // lichtplassen en lampen eruit springen (was 1,05 / 2,1: alles baadde in licht).
-    scene.add(new THREE.HemisphereLight('#9db8e6', '#18281f', licht ? 0.7 : 0.5))
-    const zon = new THREE.DirectionalLight('#e8eeff', licht ? 1.05 : 1.0)
+    scene.add(new THREE.HemisphereLight('#a9c2ee', '#1c2c24', licht ? 0.82 : 0.5))
+    const zon = new THREE.DirectionalLight('#e8eeff', licht ? 1.3 : 1.0)
     zon.position.set(-14, 30, 18)
     zon.castShadow = false
     zon.shadow.mapSize.set(licht ? 1024 : 2048, licht ? 1024 : 2048)
@@ -865,6 +866,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // Het stadion rondom, in de kleuren van de club die kijkt.
     const stadion = bouwStadion(scene, { veld, marge, thema, licht })
     bron('Stadion')
+    // Slim licht (lichtkaart.ts): de modules melden hun lichtbronnen aan, daarna bakken we ze in één kaart.
+    wisLichtbronnen()
     const omgeving = bouwOmgeving(scene, { thema, licht, logo: stadion.logo })
     bron('Omgeving')
     // Het oefencomplex ten noorden van het stadion, met een veld van dezelfde maat (geen wedstrijd).
@@ -995,6 +998,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const buitenkant = bouwBuitenkant(scene, { thema, licht })
     bron('Buitenkant')
     // Bakman, de held van KBC Sint-Michiels, op zijn sokkel op het plein (enkel in hun stadion).
+    if (/mich/i.test(thema.naam)) lichtBron(-40, GEVEL.B + 10, 9, '#fff0d6', 1.0)
     const bakman = /mich/i.test(thema.naam) ? bouwBakman(scene, { thema, licht, x: -40, z: GEVEL.B + 10, ry: 0.35 }) : null
     bron('Bakman')
     const obstakels = [
@@ -1370,6 +1374,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     bundel()
     // Niet tekenen wat je toch niet ziet: de gangen vanop het veld, het oefencomplex vanop het plein,
     // de heli vanuit de gang, en kleine dingen ver weg (zie zichtbaarheid.ts).
+    // Alle lichtbronnen zijn aangemeld: bak de kaart en laat de materialen ze lezen.
+    const lichtkaart = bouwLichtkaart()
+    lichtkaart.pas(scene)
     const zicht = (() => {
       const deel = (...namen: string[]) => scene.children.filter((c) => namen.includes(c.userData.bron as string))
       const kom = {
@@ -1886,6 +1893,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       fotogalerij?.update(nu / 1000)
       gangleven.update(nu / 1000)
       buitenkant.update(nu / 1000)
+      lichtkaart.update(nu / 1000)
       sterren.update(nu / 1000)
       kleedkamer.update(nu / 1000)
       // De spiegel in de kleedkamer: enkel aan als je er wandelend binnen bent, en dan sta jij erin.
@@ -2182,6 +2190,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       vuurwerk.dispose()
       feest.dispose()
       meter.dispose()
+      lichtkaart.dispose()
       supporters.dispose()
       samenRef.current = null
       vuurwerkRef.current = null
