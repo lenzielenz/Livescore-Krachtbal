@@ -1707,3 +1707,33 @@ body.kb-scherm .site-foot { display: none; }
 .match-toekomst-agenda a:hover { color: var(--accent); }
 .match-toekomst-hint { margin: 10px 0 0; text-align: center; font-size: 0.82rem; color: var(--dim); }
 .match-toekomst-hint a { color: var(--accent); }
+
+/* Federatie-testomgeving: opvallende band bovenaan (zie TestOmgevingBand.tsx). */
+.test-omgeving-band {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 14px;
+  padding: 7px 14px;
+  background: repeating-linear-gradient(135deg, #f4c542 0 14px, #e8b52a 14px 28px);
+  color: #1d1600;
+  font-size: 0.85rem;
+  text-align: center;
+}
+.test-omgeving-link {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #1d1600;
+  color: #f4c542;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+@media (max-width: 560px) {
+  .test-omgeving-band { padding: 5px 10px; font-size: 0.8rem; }
+  .test-omgeving-uitleg { display: none; }
+}

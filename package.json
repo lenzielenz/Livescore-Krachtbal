@@ -25,7 +25,8 @@
     "pwa:demo": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/pwa-demo.ts",
     "pwa:shots": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/pwa-screenshots.ts",
     "uitleg:demo": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/uitleg-demo.ts",
-    "uitleg:fotos": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/uitleg-screenshots.ts"
+    "uitleg:fotos": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/uitleg-screenshots.ts",
+    "testomgeving:opkuisen": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/testomgeving-opkuisen.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.85.0",

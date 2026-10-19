@@ -1,5 +1,7 @@
 # Deploy — Railway
 
+> Een tweede, gescheiden omgeving voor de federatiekant: zie [TESTOMGEVING.md](TESTOMGEVING.md).
+
 GitHub → Railway auto-deploy via **Railpack** (geen Dockerfile). Elke push naar `main` triggert een nieuwe build.
 
 ## Database: Postgres (productie) of SQLite (lokaal)
