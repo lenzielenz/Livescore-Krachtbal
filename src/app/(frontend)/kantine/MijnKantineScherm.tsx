@@ -162,35 +162,16 @@ export function MijnKantineScherm({
 
   return (
     <div className="kt-mijn">
-      <section className="kt-uitleg">
-        <span className="kt-uitleg-eyebrow">Eén keer instellen</span>
-        <h2 className="kt-uitleg-title">📺 Jouw kantinescherm in vier stappen</h2>
-        <p className="kt-uitleg-lead">
-          Kies wat je wil tonen en open daarna de vaste link op de tv. Wedstrijden, live standen en
-          de volgende speeldag worden automatisch bijgewerkt.
-        </p>
-        <div className="kt-uitleg-stappen" aria-label="Zo werkt het">
-          <span><b>1</b>Kies je scherm</span>
-          <span><b>2</b>Kies je club</span>
-          <span><b>3</b>Voeg extra&apos;s toe</span>
-          <span><b>4</b>Open op de tv</span>
-        </div>
-      </section>
-
-      <nav className="kt-stapnav" aria-label="Ga naar een stap">
-        <a href="#kantine-scherm"><b>1</b><span>Scherm</span></a>
-        <a href="#kantine-club"><b>2</b><span>Club</span></a>
-        <a href="#kantine-extra"><b>3</b><span>Extra&apos;s</span></a>
-        <a href="#kantine-tv"><b>4</b><span>Open tv</span></a>
-      </nav>
-
-      {/* ── Welk scherm ben je aan het instellen? ───────────────────────────────────────────── */}
-      <section id="kantine-scherm" className="kt-blok kt-profielen kt-stapblok">
-        <h3 className="kt-blok-title"><span className="kt-stapnummer">1</span> Kies je scherm</h3>
+      <div className="kt-mijn-kop">
+        <h2 className="kt-mijn-titel">Of stel je eigen scherm samen</h2>
         <p className="kt-blok-sub">
-          Gebruik één scherm of maak aparte schermen voor bijvoorbeeld de kantine en jeugdterreinen.
+          Meerdere clubs, losse ploegen of één affiche erbij — alles wordt meteen bewaard.
         </p>
-        <div className="kt-prof-rij">
+      </div>
+
+      {/* Meerdere tv's: kies eerst welk scherm je aanpast. Met één scherm staat dit onderaan. */}
+      {profielen.length > 1 && (
+        <div className="kt-prof-rij boven" role="group" aria-label="Welk scherm pas je aan?">
           {profielen.map((p) => (
             <button
               key={p.id}
@@ -205,43 +186,11 @@ export function MijnKantineScherm({
               📺 {p.naam}
             </button>
           ))}
-          {profielen.length < MAX_PROFIELEN && (
-            <button type="button" className="kt-prof-tab nieuw" onClick={voegToe}>
-              + Scherm erbij
-            </button>
-          )}
         </div>
-        <div className="kt-prof-acties">
-          {hernoemt ? (
-            <input
-              className="kt-prof-naam"
-              autoFocus
-              defaultValue={actief.naam}
-              onBlur={(e) => {
-                hernoem(e.currentTarget.value)
-                setHernoemt(false)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') e.currentTarget.blur()
-                if (e.key === 'Escape') setHernoemt(false)
-              }}
-              aria-label="Naam van dit scherm"
-            />
-          ) : (
-            <button type="button" className="kt-prof-knop" onClick={() => setHernoemt(true)}>
-              ✏️ Naam wijzigen
-            </button>
-          )}
-          {profielen.length > 1 && (
-            <button type="button" className="kt-prof-knop gevaar" onClick={verwijder}>
-              🗑 Dit scherm verwijderen
-            </button>
-          )}
-        </div>
-      </section>
+      )}
 
       <section id="kantine-club" className="kt-blok kt-stapblok">
-        <h3 className="kt-blok-title"><span className="kt-stapnummer">2</span> Kies je club</h3>
+        <h3 className="kt-blok-title"><span className="kt-stapnummer">1</span> Kies je club</h3>
         <p className="kt-blok-sub">Alle wedstrijden van je gekozen club verschijnen automatisch.</p>
         <div className="kt-chips">
           {clubs.map((c) => (
@@ -261,7 +210,7 @@ export function MijnKantineScherm({
       <details id="kantine-extra" className="kt-blok kt-keuze-details">
         <summary className="kt-keuze-summary">
           <span>
-            <strong>3A · Extra ploegen</strong>
+            <strong>Extra ploegen</strong>
             <small>Optioneel · voeg één ploeg apart toe</small>
           </span>
           <span className="kt-keuze-aantal">
@@ -310,7 +259,7 @@ export function MijnKantineScherm({
       <details className="kt-blok kt-keuze-details">
         <summary className="kt-keuze-summary">
           <span>
-            <strong>3B · Extra wedstrijden</strong>
+            <strong>Extra wedstrijden</strong>
             <small>Optioneel · voeg één specifieke wedstrijd toe</small>
           </span>
           <span className="kt-keuze-aantal">
@@ -372,7 +321,7 @@ export function MijnKantineScherm({
       </details>
 
       <section id="kantine-tv" className="kt-blok kt-blok-link kt-stapblok">
-        <h3 className="kt-blok-title"><span className="kt-stapnummer">4</span> Open &laquo;{actief.naam}&raquo; op de tv</h3>
+        <h3 className="kt-blok-title"><span className="kt-stapnummer">2</span> Open &laquo;{actief.naam}&raquo; op de tv</h3>
         {leeg ? (
           <p className="kt-blok-sub">
             Kies eerst hierboven je club — daarna verschijnt hier de vaste link voor je kantine-tv.
@@ -410,6 +359,44 @@ export function MijnKantineScherm({
               ? 'Nog niets gekozen'
               : `Bewaard — ${sel.clubIds.length} club(s), ${sel.teamIds.length} ploeg(en), ${sel.matchIds.length} losse wedstrijd(en)`}
         </p>
+      </section>
+
+      {/* ── Meerdere tv's (kantine, bestuurszaal, jeugdterrein): elk scherm een eigen link ── */}
+      <section className="kt-blok kt-profielen-onder">
+        <h3 className="kt-blok-title">📺 Meerdere tv&apos;s?</h3>
+        <p className="kt-blok-sub">Maak een apart scherm per tv, elk met een eigen link.</p>
+        <div className="kt-prof-acties">
+          {profielen.length < MAX_PROFIELEN && (
+            <button type="button" className="kt-prof-knop" onClick={voegToe}>
+              + Scherm erbij
+            </button>
+          )}
+          {hernoemt ? (
+            <input
+              className="kt-prof-naam"
+              autoFocus
+              defaultValue={actief.naam}
+              onBlur={(e) => {
+                hernoem(e.currentTarget.value)
+                setHernoemt(false)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur()
+                if (e.key === 'Escape') setHernoemt(false)
+              }}
+              aria-label="Naam van dit scherm"
+            />
+          ) : (
+            <button type="button" className="kt-prof-knop" onClick={() => setHernoemt(true)}>
+              ✏️ Naam «{actief.naam}» wijzigen
+            </button>
+          )}
+          {profielen.length > 1 && (
+            <button type="button" className="kt-prof-knop gevaar" onClick={verwijder}>
+              🗑 Dit scherm verwijderen
+            </button>
+          )}
+        </div>
       </section>
     </div>
   )

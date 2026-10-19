@@ -6,6 +6,7 @@ import { canvasTex, rnd, rondLogo } from './stadion'
 import { bouwVolk } from './volk'
 import { bouwVerkoopwagen } from './voertuig'
 import { hoogteVerloop, kleurTrap } from './nacht'
+import { lichtBron } from './lichtkaart'
 
 // De aankleding rond het stadion: wat een wedstrijddag speciaal maakt nog vóór je binnen bent.
 // Een welkomstboog en een loper in clubkleur naar de hoofdingang, lichtslingers, een frituur, een
@@ -79,6 +80,9 @@ export function bouwSfeer(scene: THREE.Scene, opt: { thema: StadionThema; licht:
   scene.add(loperRand, loper)
 
   const boogZ = B + 24
+  // De welkomstboog baadt het plein in clubkleur, de loper krijgt een warme gloed.
+  lichtBron(0, boogZ, 13, primair, 0.85)
+  lichtBron(0, B + 12, 10, '#ffc27a', 0.7)
   for (const x of [-8, 8]) {
     const pijler = new THREE.Mesh(new THREE.BoxGeometry(1.2, 8, 1.2), pijlerMat)
     pijler.position.set(x, 4, boogZ)
@@ -164,6 +168,7 @@ export function bouwSfeer(scene: THREE.Scene, opt: { thema: StadionThema; licht:
     const groep = new THREE.Group()
     groep.position.set(x, 0, z)
     groep.rotation.y = ry
+    lichtBron(x + Math.sin(ry) * 3, z + Math.cos(ry) * 3, 9, '#ffc27a', 1.0)
     // Een verkoopwagen met een echte vorm (voertuig.ts): afgeronde carrosserie, wielen met velgen,
     // chromen bumpers; een band in de clubkleur langs de zijkant.
     const romp = bouwVerkoopwagen({ lengte: 6.4, breedte: 2.8, hoogte: 2.6, kleur: '#e8eaee', bodem: 0.5 })

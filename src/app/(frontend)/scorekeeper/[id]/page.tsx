@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { POSITION_OPTIONS } from '@/collections/Players'
@@ -70,6 +70,8 @@ export default async function ScorekeeperPage({
   const isAnalyse = Boolean((matchDoc as { analyseOnly?: boolean } | null)?.analyseOnly)
   // Globale supporters-modus (één knop voor alle wedstrijden) — geldt niet voor privé-analyse.
   const supportersMode = !isAnalyse && (await isSupportersMode(payload))
+  // In supportersmodus staat de demo uit (zie demo/page.tsx) — ook via een oude link.
+  if (isDemo && supportersMode) redirect('/')
 
   // Supporters-modus: iedereen mag aantekenen, maar je moet wél ingelogd zijn om de score te
   // veranderen. Toon een nette inlog-uitnodiging i.p.v. een 401 verderop in de flow.
@@ -96,8 +98,8 @@ export default async function ScorekeeperPage({
     )
   }
 
-  // Vertrouwenslaag: tekent een ándere supporter deze wedstrijd al aan, dan mag jij niet muteren
-  // (zie mayScoreMatch). Zeg dat hier meteen, i.p.v. een volledig werkend ogend scorebord te tonen
+  // Vertrouwenslaag: tekent een ándere persoon deze wedstrijd al aan, dan mag jij niet muteren
+  // (zie claimHeld: op een lopende wedstrijd vervalt die claim niet, de actie-route dwingt dat af). Zeg dat hier meteen, i.p.v. een volledig werkend ogend scorebord te tonen
   // waarvan elke tik met een foutmelding eindigt. Bevestigen of betwisten kan wél — op de
   // wedstrijdpagina. Federatie/aantekenaars gaan altijd voor op de crowd.
   //
@@ -112,7 +114,7 @@ export default async function ScorekeeperPage({
     trust.claimActive &&
     trust.scorerId != null &&
     Number(trust.scorerId) !== Number((user as { id?: number } | null)?.id) &&
-    !hasRole(user, 'admin', 'federatie', 'scorekeeper')
+    !hasRole(user, 'admin', 'federatie')
   if (someoneElseScores) {
     return (
       <>
@@ -122,9 +124,10 @@ export default async function ScorekeeperPage({
           <p className="empty">
             <b>{trust.scorerName ?? 'Iemand anders'}</b> tekent deze wedstrijd al aan. Om te vermijden
             dat twee mensen door elkaar scoren, kan er maar één tegelijk aantekenen.
-            {supportersMode
-              ? ' Volg de wedstrijd mee en bevestig of betwist de stand op de wedstrijdpagina — geeft hij het aantekenen door (of valt hij stil), dan kan jij het overnemen.'
-              : ' Volg de wedstrijd mee op de wedstrijdpagina — valt hij stil, dan kan jij het na een tijdje overnemen.'}
+            {state.match.status === 'live'
+              ? ' Pas als die de wedstrijd terugzet met “Wedstrijd was nog niet bezig”, kan iemand anders overnemen.'
+              : ' Valt die stil vóór de aftrap, dan kan jij het na een tijdje overnemen.'}
+            {supportersMode ? ' Volg intussen mee en bevestig of betwist de stand op de wedstrijdpagina.' : ' Volg intussen mee op de wedstrijdpagina.'}
           </p>
           <p className="sk-login-actions">
             <Link href={`/match/${matchId}`} className="match-score-cta">

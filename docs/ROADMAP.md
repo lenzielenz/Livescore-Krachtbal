@@ -82,7 +82,8 @@ ploegprofiel. Dit is grotendeels *publiceren wat al bestaat*, geen nieuwe wiskun
 `/match/[id]`) staan publiek. 4 bestaat voor de jeugd (`/superster`) en staat nu ook
 per reeks onder de rangschikking (topscorers uit `buildSuperstars`). 5 is gebouwd:
 `clinchStatus` + `titelBoodschap` tonen boven de tabel of de leider al wiskundig
-kampioen is of hoeveel zeges ze nog nodig heeft, met 🏆 op de eerste rij.
+kampioen is of hoeveel zeges ze nog nodig heeft, met 🏆 op de eerste rij; verder
+van de meet een titelkans uit een simulatie van de rest van het seizoen (`titelKansen`).
 Blijft over: een volledige seizoensranglijst met conversie en xP-overperformers.
 
 ### ⚠️ Privacy-keuze vooraf (blokkerend)

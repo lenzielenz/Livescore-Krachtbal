@@ -547,6 +547,11 @@ export function Scorekeeper({
     act({ action: 'clock', running: !state.match.clockRunning, seconds: Math.floor(clock) })
   }
 
+  // Klok vergeten te starten? Per minuut bijstellen met −/+; lopen of stilstaan blijft zoals het was.
+  const klokBijstellen = (minuten: number) => {
+    act({ action: 'clock', seconds: Math.max(0, Math.floor(clock) + minuten * 60) })
+  }
+
   // Kies de ploeg die opzet → wedstrijd gaat live met een stilstaande klok,
   // zodat de timer vrij is en gestart kan worden wanneer ze willen.
   // allowUnready: enkel een admin die bewust de controle overslaat (testknop).
@@ -1259,6 +1264,12 @@ export function Scorekeeper({
               ))}
             </span>
           </div>
+          <div className="sk-clockwrap">
+          {isLive && !clockStale && (
+            <button type="button" className="sk-clockadj" disabled={busy || clock < 1} onClick={() => klokBijstellen(-1)} title="Eén minuut van de klok af" aria-label="Eén minuut van de klok af">
+              −
+            </button>
+          )}
           <button
             type="button"
             className={`sk-clock ${state.match.clockRunning ? 'running' : ''} ${isScheduled ? 'locked' : ''} ${clockStale ? 'stale' : ''}`}
@@ -1276,6 +1287,12 @@ export function Scorekeeper({
             {clockStale ? <span className="sk-clock-stale">⚠️ corrigeren</span> : fmtClock(clock)}
             <span className="sk-clock-ico">{isScheduled ? '🔒' : state.match.clockRunning ? '⏸' : '▶'}</span>
           </button>
+          {isLive && !clockStale && (
+            <button type="button" className="sk-clockadj" disabled={busy} onClick={() => klokBijstellen(1)} title="Eén minuut bij de klok (vergeten te starten?)" aria-label="Eén minuut bij de klok">
+              +
+            </button>
+          )}
+          </div>
           <div className="sk-team away">
             <span className="sk-tn">{state.teams.away.name}</span>
             <span className="sk-sc">{state.score.away}</span>

@@ -6,6 +6,9 @@ export type WeekendMatch = {
   side: 'home' | 'away'
   team: string
   opponent: string
+  /** Plaatsnaam van de tegenstander (Koekelare, Sijsele, Buggenhout…): kort, en altijd leesbaar
+   *  op de Story, waar een volle ploegnaam afgekapt werd ("D&W Koeke…"). */
+  place: string
   series: string
   /** Korte reekscode (bv. "1NAH") — vervangt de volle naam in het compacte weekendoverzicht,
    * zodat veel wedstrijden op één Story passen zonder lange woorden. */
@@ -87,4 +90,19 @@ export function nextPlayDayKeys(dates: Array<Date | string>, now = new Date()): 
   sunday.setUTCDate(sunday.getUTCDate() + 1)
   const sundayKey = brusselsDateKey(sunday)
   return keys.includes(sundayKey) ? [first, sundayKey] : [first]
+}
+
+/**
+ * De plaatsnaam van een club: het veld `plaats`, en anders een gok uit de clubnaam — zonder de
+ * afkorting vooraan (KBC, KBK, HO, D&W…) en zonder ploegletter achteraan ("KBC St. Michiels A"
+ * → "St. Michiels").
+ */
+export function clubPlaats(club: { plaats?: unknown; name?: unknown } | null | undefined, ploegNaam = ''): string {
+  const plaats = String(club?.plaats ?? '').trim()
+  if (plaats) return plaats.split(',')[0].trim()
+  const naam = String(club?.name ?? ploegNaam).trim()
+  const woorden = naam.split(/\s+/).filter(Boolean)
+  while (woorden.length > 1 && /^(?:[A-Z&'.]{1,5}|'t|t|T)$/.test(woorden[0])) woorden.shift()
+  while (woorden.length > 1 && /^(?:[A-Z]|[0-9]+|I{1,3})$/.test(woorden[woorden.length - 1])) woorden.pop()
+  return woorden.join(' ') || naam
 }

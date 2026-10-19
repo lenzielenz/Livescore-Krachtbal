@@ -4,6 +4,7 @@ import { hasRole } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { ensureDemoMatch } from '@/lib/demo'
 import { getPayloadClient } from '@/lib/payload-client'
+import { isSupportersMode } from '@/lib/score-mode'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +16,8 @@ export default async function DemoExpertPage() {
   if (!hasRole(user, 'admin')) redirect('/demo')
 
   const payload = await getPayloadClient()
+  // Supportersmodus: de demo staat uit (zie demo/page.tsx).
+  if (await isSupportersMode(payload)) redirect('/')
   const matchId = await ensureDemoMatch(payload)
   redirect(`/scorekeeper/${matchId}?expert=1`)
 }

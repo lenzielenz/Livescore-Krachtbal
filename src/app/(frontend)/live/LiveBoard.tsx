@@ -44,6 +44,8 @@ export type DayMatch = {
   /** Kijkers nu op de wedstrijdpagina — hetzelfde "oogje" als op het scorebord, hier als klein
    *  badge in de hoek van de kaart (zie day-channel.ts). Enkel gezet tijdens een live wedstrijd. */
   viewers?: number
+  /** Wie deze wedstrijd nu aantekent (zie day-channel.ts); null = niemand. */
+  scorerId?: number | null
 }
 
 const FAV_TEAMS_KEY = 'kb-fav-ploegen'
@@ -733,9 +735,12 @@ export function LiveBoard({
                   <Link href="/rangschikking" className="lb-empty-btn">
                     📊 Bekijk de stand
                   </Link>
-                  <Link href="/demo" className="lb-empty-btn">
-                    🎓 Probeer de demo
-                  </Link>
+                  {/* De demo is uit in supportersmodus: aantekenen kent iedereen intussen. */}
+                  {!supportersMode && (
+                    <Link href="/demo" className="lb-empty-btn">
+                      🎓 Probeer de demo
+                    </Link>
+                  )}
                 </div>
               </>
             )}
@@ -895,7 +900,9 @@ export function LiveBoard({
                         doorgeven mag niet eerst moeten ontdekken dat hij de rij kan openklikken.
                         Voor wedstrijden die nog moeten beginnen blijft de knop achter de ster: dat
                         zijn er op een speeldag tientallen, en die hoeven het bord niet vol te zetten. */}
-                    {supportersMode && (live || open) && m.status !== 'finished' && (
+                    {/* Tekent iemand anders deze wedstrijd al aan, dan verdwijnt de knop: er is
+                        maar één aantekenaar tegelijk (zie claimHeld in score-trust.ts). */}
+                    {supportersMode && (live || open) && m.status !== 'finished' && !(m.scorerId != null && String(m.scorerId) !== String(userId)) && (
                       <Link href={`/scorekeeper/${m.id}`} className="lb-score-cta">
                         <span className="lb-score-cta-ico" aria-hidden>✏️</span>
                         <span className="lb-score-cta-txt">

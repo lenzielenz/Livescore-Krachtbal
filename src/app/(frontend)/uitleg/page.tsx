@@ -1,9 +1,12 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
+import { getPayloadClient } from '@/lib/payload-client'
+import { isSupportersMode } from '@/lib/score-mode'
 import './uitleg.css'
 
-export const dynamic = 'force-static'
+// Dynamisch: in supportersmodus staat de demo uit, en dan verdwijnen de demo-knoppen hier ook.
+export const dynamic = 'force-dynamic'
 
 // Tutorial: de volledige flow van een wedstrijd, van registreren tot aftekenen.
 // Bedoeld als instap voor iedereen — supporters, clubs, scheidsrechters en federatie zien
@@ -173,7 +176,8 @@ const STEPS: Step[] = [
   },
 ]
 
-export default function UitlegPage() {
+export default async function UitlegPage() {
+  const demoUit = await isSupportersMode(await getPayloadClient()).catch(() => false)
   return (
     <>
       <SiteHeader active={null} />
@@ -239,7 +243,7 @@ export default function UitlegPage() {
                 )}
                 {s.actions && (
                   <div className="tut-actions">
-                    {s.actions.map((a) => (
+                    {s.actions.filter((a) => !(demoUit && a.href === '/demo')).map((a) => (
                       <Link key={a.href + a.label} href={a.href} className={`tut-btn ${a.primary ? 'primary' : ''}`}>
                         {a.label}
                       </Link>
@@ -254,16 +258,19 @@ export default function UitlegPage() {
         <div className="tut-outro">
           <h2>Klaar om te starten?</h2>
           <p>
-            Registreer je gratis als supporter, probeer meteen de demo om het aantekenen te voelen,
-            of bekijk de prijzen &amp; pakketten.
+            {demoUit
+              ? 'Registreer je gratis als supporter, of bekijk de prijzen & pakketten.'
+              : 'Registreer je gratis als supporter, probeer meteen de demo om het aantekenen te voelen, of bekijk de prijzen & pakketten.'}
           </p>
           <div className="tut-actions" style={{ justifyContent: 'center' }}>
             <Link href="/registreren" className="tut-btn primary">
               📝 Registreren
             </Link>
-            <Link href="/demo" className="tut-btn">
-              🎓 Demo proberen
-            </Link>
+            {!demoUit && (
+              <Link href="/demo" className="tut-btn">
+                🎓 Demo proberen
+              </Link>
+            )}
             <Link href="/prijzen" className="tut-btn">
               💎 Prijzen &amp; pakketten
             </Link>

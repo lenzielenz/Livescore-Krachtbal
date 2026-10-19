@@ -211,12 +211,53 @@ export function claimActive(t: MatchTrust, now: number = Date.now()): boolean {
 }
 
 /**
- * Mag deze gebruiker de wedstrijd (over)nemen als official scorer?
- * Vrij als niemand claimde of als de vorige claim uitgeteld is; de houder zelf mag altijd.
+ * Houdt iemand de wedstrijd vast als aantekenaar? Zolang de wedstrijd LIVE is, vervalt de claim
+ * niet: wie de wedstrijd startte, tekent ze ook af. Twee mensen die door elkaar scoren is erger
+ * dan een stilgevallen tafel — de houder kan op een ander toestel gewoon verder (de claim hangt
+ * aan de gebruiker, niet aan het toestel). Vrijgeven gebeurt enkel door "Wedstrijd was nog niet
+ * bezig" (resetMatch wist de claim). Vóór de start geldt de gewone inactiviteitsregel.
  */
-export function mayClaim(t: MatchTrust, userId: number, now: number = Date.now()): boolean {
+export function claimHeld(t: MatchTrust, live: boolean, now: number = Date.now()): boolean {
+  if (t.scorerId == null) return false
+  return live || claimActive(t, now)
+}
+
+/** Acties die een wedstrijd live zetten — wie die doet, wordt de aantekenaar. */
+const START_ACTIES = new Set(['start', 'simplestart', 'simplegoal'])
+
+/**
+ * Wat doet de actie-route met de aantekenclaim bij deze actie?
+ *  • 'blokkeer' — iemand anders tekent deze lopende wedstrijd aan;
+ *  • 'claim'    — na een gelukte actie wordt deze gebruiker de aantekenaar (hij start de
+ *                 wedstrijd, of tekent als eerste aan op een lopende wedstrijd zonder houder);
+ *  • 'vrij'     — niets te bewaken (demo, analyse, reset, of hij is zelf de houder).
+ * Admin/federatie worden nooit geblokkeerd: de noodrem voor een aantekenaar die vertrok zonder
+ * terug te zetten. Ze nemen de claim dan ook niet over.
+ */
+export function aantekenClaim(o: {
+  trust: MatchTrust
+  live: boolean
+  action: string
+  userId: number | null
+  federatie: boolean
+  vrijeWedstrijd: boolean
+  now?: number
+}): 'blokkeer' | 'claim' | 'vrij' {
+  if (o.userId == null || o.vrijeWedstrijd || o.action === 'reset') return 'vrij'
+  if (!o.live && !START_ACTIES.has(o.action)) return 'vrij'
+  if (o.trust.scorerId === o.userId) return 'vrij'
+  if (o.live && claimHeld(o.trust, true, o.now)) return o.federatie ? 'vrij' : 'blokkeer'
+  return 'claim'
+}
+
+/**
+ * Mag deze gebruiker de wedstrijd (over)nemen als official scorer?
+ * Vrij als niemand claimde of als de vorige claim uitgeteld is; de houder zelf mag altijd. Een
+ * claim op een lopende wedstrijd telt nooit uit (zie claimHeld).
+ */
+export function mayClaim(t: MatchTrust, userId: number, now: number = Date.now(), live = false): boolean {
   if (t.scorerId === userId) return true
-  return !claimActive(t, now)
+  return !claimHeld(t, live, now)
 }
 
 /** Claim de wedstrijd. Een nieuwe claim wist de stemmen: die gingen over de vórige stand. */
@@ -391,7 +432,7 @@ export interface TrustView {
   disputes: number
 }
 
-export function trustView(t: MatchTrust, opts: { official: boolean; now?: number }): TrustView {
+export function trustView(t: MatchTrust, opts: { official: boolean; now?: number; live?: boolean }): TrustView {
   const now = opts.now ?? Date.now()
   const label = trustLabel(t, { official: opts.official })
   const text = TRUST_TEXT[label]
@@ -402,7 +443,7 @@ export function trustView(t: MatchTrust, opts: { official: boolean; now?: number
     long: text.long,
     scorerId: t.scorerId,
     scorerName: t.scorerName,
-    claimActive: claimActive(t, now),
+    claimActive: claimHeld(t, opts.live ?? false, now),
     confirms: t.confirms.length,
     disputes: t.disputes.length,
   }

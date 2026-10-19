@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest'
 
 import {
+  aantekenClaim,
   applyMatchOutcome,
   castVote,
   CLAIM_IDLE_MS,
   claimActive,
+  claimHeld,
   claimScorer,
   confirmWeight,
   emptyTrust,
@@ -93,6 +95,17 @@ describe('claim van de official scorer', () => {
     expect(mayClaim(t, 9, T0 + 1000)).toBe(false)
     expect(mayClaim(t, 9, later)).toBe(true)
     expect(mayClaim(t, 4, T0 + 1000)).toBe(true) // de houder zelf mag altijd
+  })
+  it('op een lopende wedstrijd vervalt de claim nooit — enkel terugzetten geeft ze vrij', () => {
+    const t = claimScorer(emptyTrust(), supporter(4), T0)
+    const veelLater = T0 + 5 * CLAIM_IDLE_MS
+    expect(claimHeld(t, true, veelLater)).toBe(true)
+    expect(claimHeld(t, false, veelLater)).toBe(false)
+    expect(mayClaim(t, 9, veelLater, true)).toBe(false)
+    expect(mayClaim(t, 4, veelLater, true)).toBe(true)
+    expect(trustView(t, { official: true, now: veelLater, live: true }).claimActive).toBe(true)
+    // resetMatch wist de claim (scoreTrust = null): dan is de wedstrijd weer vrij.
+    expect(claimHeld(sanitizeTrust(null), true, veelLater)).toBe(false)
   })
   it('een aantekenactie van de houder houdt de claim levend', () => {
     let t = claimScorer(emptyTrust(), supporter(4), T0)
@@ -224,5 +237,33 @@ describe('trustView', () => {
     expect(v.claimActive).toBe(true)
     expect(v.confirms).toBe(1)
     expect(v.disputes).toBe(0)
+  })
+})
+
+describe('aantekenClaim — één aantekenaar per lopende wedstrijd', () => {
+  const houder = claimScorer(emptyTrust(), supporter(4), T0)
+  const basis = { live: true, action: 'simplegoal', federatie: false, vrijeWedstrijd: false, now: T0 + 5 * CLAIM_IDLE_MS }
+
+  it('blokkeert iemand anders op een lopende wedstrijd, ook na lange stilte', () => {
+    expect(aantekenClaim({ ...basis, trust: houder, userId: 9 })).toBe('blokkeer')
+    expect(aantekenClaim({ ...basis, trust: houder, userId: 9, action: 'clock' })).toBe('blokkeer')
+  })
+  it('laat de houder zelf gewoon verder doen', () => {
+    expect(aantekenClaim({ ...basis, trust: houder, userId: 4 })).toBe('vrij')
+  })
+  it('wie de wedstrijd start, wordt de aantekenaar', () => {
+    expect(aantekenClaim({ ...basis, live: false, action: 'simplestart', trust: emptyTrust(), userId: 9 })).toBe('claim')
+    expect(aantekenClaim({ ...basis, live: false, action: 'start', trust: houder, userId: 9 })).toBe('claim')
+  })
+  it('vóór de start claimen gewone acties niets', () => {
+    expect(aantekenClaim({ ...basis, live: false, action: 'setlineup', trust: emptyTrust(), userId: 9 })).toBe('vrij')
+  })
+  it('na terugzetten (claim gewist) kan iemand anders overnemen', () => {
+    expect(aantekenClaim({ ...basis, trust: sanitizeTrust(null), userId: 9 })).toBe('claim')
+  })
+  it('federatie/admin is de noodrem; demo en analyse zijn vrij; reset wordt hier niet bewaakt', () => {
+    expect(aantekenClaim({ ...basis, trust: houder, userId: 9, federatie: true })).toBe('vrij')
+    expect(aantekenClaim({ ...basis, trust: houder, userId: 9, vrijeWedstrijd: true })).toBe('vrij')
+    expect(aantekenClaim({ ...basis, trust: houder, userId: 9, action: 'reset' })).toBe('vrij')
   })
 })

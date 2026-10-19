@@ -1,3 +1,4 @@
+import { GOUDEN_KRACHTBAL } from './gouden-krachtbal'
 import { normalizeLogoFit, type LogoFit } from './logo-fit'
 import type { WeekendMatch } from './instagram-weekend'
 
@@ -63,6 +64,69 @@ function statChip(x: number, y: number, value: number, text: string, color: stri
   return `<circle cx="${x}" cy="${y - 7}" r="7" fill="${color}"/><text x="${x + 20}" y="${y}" fill="#f5f7fb" font-size="24" font-weight="800">${value}</text><text x="${x + 20 + String(value).length * 15 + 10}" y="${y}" fill="#aab7cb" font-size="20">${esc(text)}</text>`
 }
 
+// ── Krachtbal-beeldtaal ─────────────────────────────────────────────────────────────────────
+// Dezelfde bal als in het virtueel stadion (virtueel/[slug]/krachtbal.ts): acht lederen stroken
+// die aan beide kanten samenkomen in een klein rond kapje, met KRACHTBAL op de strook die naar
+// je kijkt. Hier van opzij gezien: de polen links en rechts, de naden zijn de meridianen.
+
+/** Hoe groot het kapje is (hoek vanaf de pool) — zelfde waarde als het 3D-model. */
+const KAP = 0.3
+/** cos/sin van de kaprand: waar de naden van de stroken eindigen. */
+const KAP_X = Math.cos(KAP)
+const KAP_Y = Math.sin(KAP)
+/** De zichtbare naden: stroken van 45°, de tekststrook gecentreerd naar voren (±22,5°). */
+const NADEN = [Math.cos((67.5 * Math.PI) / 180), Math.cos((22.5 * Math.PI) / 180)]
+
+const r1 = (n: number) => Math.round(n * 10) / 10
+
+/** Eén naad (meridiaan) van kaprand tot kaprand, boven (`dir` -1) of onder (+1) de as. */
+function naad(R: number, c: number, dir: 1 | -1): string {
+  const y = r1(dir * KAP_Y * R * c)
+  return `M${r1(-KAP_X * R)} ${y} A${r1(R)} ${r1(R * c)} 0 0 ${dir === -1 ? 1 : 0} ${r1(KAP_X * R)} ${y}`
+}
+
+/** Klein balletje als icoon (de pil bovenaan, de T/U-badge, de voettekst): bol + de twee
+ * naden rond de tekststrook + de kapjes, in een eigen kleur. */
+function balIcoon(cx: number, cy: number, r: number, kleur: string, opacity = 1): string {
+  const c = NADEN[0]
+  return `<g transform="translate(${r1(cx)} ${r1(cy)}) rotate(-20)" opacity="${opacity}">
+      <circle r="${r1(r)}" fill="${kleur}"/>
+      <circle r="${r1(r)}" fill="url(#bolschaduw)"/>
+      <path d="${naad(r, c, -1)} ${naad(r, c, 1)}" fill="none" stroke="#000" stroke-opacity=".45" stroke-width="${r1(Math.max(1, r * .09))}"/>
+      <line x1="${r1(-KAP_X * r)}" y1="${r1(-KAP_Y * r)}" x2="${r1(-KAP_X * r)}" y2="${r1(KAP_Y * r)}" stroke="#000" stroke-opacity=".45" stroke-width="${r1(Math.max(1, r * .09))}"/>
+      <line x1="${r1(KAP_X * r)}" y1="${r1(-KAP_Y * r)}" x2="${r1(KAP_X * r)}" y2="${r1(KAP_Y * r)}" stroke="#000" stroke-opacity=".45" stroke-width="${r1(Math.max(1, r * .09))}"/>
+    </g>`
+}
+
+/**
+ * Het krachtbalveld op ware verhouding, over de volle hoogte van de Story: 14 m breed, 26 m
+ * speelveld + twee doelgebieden van 10 m (reglementair, zie field.ts / FieldSchema.tsx). Met de
+ * doellijnen (die 1,2 m buiten de zijlijn steken), de vrijeworplijnen op 4 m, de middellijn, de
+ * zone-derden en de koraalrode buitenzone.
+ */
+const VELD_LENGTE_M = 26 + 2 * 10
+const PX_M = 1920 / VELD_LENGTE_M
+const VELD_B = 14 * PX_M
+const VELD_X = (1080 - VELD_B) / 2
+function veld(primary: string, secondary: string): string {
+  const y = (m: number) => r1(m * PX_M)
+  const x0 = r1(VELD_X)
+  const x1 = r1(VELD_X + VELD_B)
+  const buiten = 1.2 * PX_M
+  const lijn = (yy: number, w = 3) => `<line x1="${r1(x0 - buiten)}" y1="${yy}" x2="${r1(x1 + buiten)}" y2="${yy}" stroke="#f3f9f5" stroke-opacity=".5" stroke-width="${w}"/>`
+  const binnen = (yy: number, w = 2) => `<line x1="${x0}" y1="${yy}" x2="${x1}" y2="${yy}" stroke="#f3f9f5" stroke-opacity=".38" stroke-width="${w}"/>`
+  const derde = (xx: number) => `<line x1="${r1(xx)}" y1="${y(10)}" x2="${r1(xx)}" y2="${y(36)}" stroke="#f3f9f5" stroke-opacity=".2" stroke-width="1.5" stroke-dasharray="4 12"/>`
+  return `<rect x="${r1(x0 - buiten)}" y="0" width="${r1(VELD_B + 2 * buiten)}" height="1920" fill="#ff5d6c" opacity=".16"/>
+    <rect x="${x0}" y="0" width="${r1(VELD_B)}" height="1920" fill="url(#turf)"/>
+    <rect x="${x0}" y="0" width="${r1(VELD_B)}" height="1920" fill="url(#mow)"/>
+    <rect x="${x0}" y="0" width="${r1(VELD_B)}" height="${y(10)}" fill="${primary}" opacity=".16"/>
+    <rect x="${x0}" y="${y(36)}" width="${r1(VELD_B)}" height="${r1(1920 - 36 * PX_M)}" fill="${secondary}" opacity=".14"/>
+    <line x1="${x0}" y1="0" x2="${x0}" y2="1920" stroke="#f3f9f5" stroke-opacity=".42" stroke-width="3"/>
+    <line x1="${x1}" y1="0" x2="${x1}" y2="1920" stroke="#f3f9f5" stroke-opacity=".42" stroke-width="3"/>
+    ${lijn(y(10), 4)}${lijn(y(36), 4)}${binnen(y(14))}${binnen(y(32))}${binnen(y(23), 3)}
+    ${derde(VELD_X + VELD_B / 3)}${derde(VELD_X + (2 * VELD_B) / 3)}`
+}
+
 const ROWS_TOP = 520
 
 /** Ruime kaarten (één kolom) — leesbaar en fotogeniek voor een rustige speeldag. Boven
@@ -72,7 +136,7 @@ function renderSpaciousRows(rows: WeekendMatch[], primary: string, secondary: st
   const cardHeight = spacious ? 260 : 120
   // Gedeelde grootte voor de hele pagina — elke tegenstander en elke reeksnaam oogt daardoor even
   // groot, ook al lopen de tekstlengtes uiteen (een te lange naam kapt af, ze krimpt niet).
-  const opponentSize = fitSize(rows.map(m => m.opponent), spacious ? 38 : 29, spacious ? 710 : 590)
+  const opponentSize = fitSize(rows.map(m => m.place), spacious ? 44 : 32, spacious ? 710 : 590)
   const seriesSize = fitSize(rows.map(m => m.series), spacious ? 25 : 19, 710)
   let y = ROWS_TOP
   let group = ''
@@ -95,12 +159,13 @@ function renderSpaciousRows(rows: WeekendMatch[], primary: string, secondary: st
       <rect x="64" y="${top + 5}" width="952" height="${cardHeight}" rx="22" fill="#000" opacity=".22"/>
       <rect x="64" y="${top}" width="952" height="${cardHeight}" rx="22" fill="url(#card)" stroke="#fff" stroke-opacity=".16"/>
       <rect x="64" y="${top + 26}" width="5" height="${cardHeight - 52}" rx="2" fill="${sideColor}"/>
+      ${balIcoon(930, top + cardHeight - (spacious ? 64 : 40), spacious ? 34 : 22, sideColor, .55)}
       <rect x="${984 - pillW}" y="${top + 18}" width="${pillW}" height="30" rx="15" fill="${sideColor}" fill-opacity=".18" stroke="${sideColor}" stroke-opacity=".6"/>
       <text x="${984 - pillW / 2}" y="${top + 39}" text-anchor="middle" fill="${sideColor}" font-size="15" font-weight="800" letter-spacing="1">${sideLabel}</text>
       ${label(m.time, 92, top + (spacious ? 143 : 70), spacious ? 38 : 32, 125)}
       <line x1="238" y1="${top + 24}" x2="238" y2="${top + cardHeight - 24}" stroke="#fff" stroke-opacity=".12"/>
-      ${alignedText(m.opponent, 266, top + (spacious ? 117 : 52), opponentSize, spacious ? 710 : 590)}
-      ${alignedText(m.series, 266, top + (spacious ? 177 : 91), seriesSize, 710, '#b2bfd2')}
+      ${alignedText(m.place, 266, top + (spacious ? 117 : 52), opponentSize, spacious ? 600 : 560)}
+      ${alignedText(m.series, 266, top + (spacious ? 177 : 91), seriesSize, 600, '#b2bfd2')}
     </g>`
   }).join('')
 }
@@ -124,21 +189,29 @@ const ROWS_BOTTOM = 1740
  * reekscode (bv. "1NAH") i.p.v. de volle reeksnaam — zo blijft een rij één regel, ook op drukke
  * speeldagen met veel ploegen. `scale` rekt de rij (en haar lettergrootte naar rato) op wanneer
  * er ruimte over is, zodat een rustige speeldag niet bovenaan verdwaald oogt. */
+/** Horizontaal rekt een compacte rij minder op dan verticaal: anders eten de badge en het uur de
+ * breedte op en kapt een gewone plaatsnaam ("Buggenhout") af. */
+const hScale = (scale: number) => Math.min(scale, 1.2)
+/** Breedte die in een compacte rij overblijft voor de plaatsnaam. */
+const placeWidth = (scale: number) => COL_WIDTH - 126 * hScale(scale) - 80 * hScale(scale)
+
 function compactRow(m: WeekendMatch, colX: number, top: number, rowH: number, scale: number, opponentSize: number, primary: string, secondary: string): string {
   const sideColor = m.side === 'home' ? primary : secondary
   const symbol = m.side === 'home' ? 'T' : 'U'
   const midY = top + rowH / 2
+  const hs = hScale(scale)
+  scale = hs
   const badgeR = 15 * scale
   const badgeX = colX + 34 * scale
   return `<g data-match="${m.id}">
       <rect x="${colX}" y="${top}" width="${COL_WIDTH}" height="${rowH}" rx="14" fill="url(#card)" stroke="#fff" stroke-opacity=".14"/>
       <rect x="${colX}" y="${top + 8}" width="4" height="${rowH - 16}" rx="2" fill="${sideColor}"/>
-      <circle cx="${badgeX}" cy="${midY}" r="${badgeR}" fill="${sideColor}" fill-opacity=".2" stroke="${sideColor}" stroke-width="1.5"/>
-      <text x="${badgeX}" y="${midY + 5 * scale}" text-anchor="middle" fill="${sideColor}" font-size="${15 * scale}" font-weight="800">${symbol}</text>
-      ${label(m.time, colX + 60 * scale, midY + 6 * scale, 17 * scale, 56 * scale, '#aab7cb')}
-      ${alignedText(m.opponent, colX + 120 * scale, midY + 6 * scale, opponentSize, COL_WIDTH - 120 * scale - 66 * scale)}
-      <rect x="${colX + COL_WIDTH - 66 * scale}" y="${midY - 13 * scale}" width="${60 * scale}" height="${26 * scale}" rx="8" fill="${sideColor}" fill-opacity=".16" stroke="${sideColor}" stroke-opacity=".55"/>
-      <text x="${colX + COL_WIDTH - 36 * scale}" y="${midY + 5 * scale}" text-anchor="middle" fill="${sideColor}" font-size="${14 * scale}" font-weight="800" letter-spacing=".3">${esc(m.seriesCode)}</text>
+      ${balIcoon(badgeX, midY, badgeR, sideColor)}
+      <text x="${badgeX}" y="${midY + 5 * scale}" text-anchor="middle" fill="#fff" stroke="#000" stroke-opacity=".55" stroke-width="${2.5 * scale}" paint-order="stroke" font-size="${15 * scale}" font-weight="800">${symbol}</text>
+      ${label(m.time, colX + 60 * scale, midY + 6 * scale, 18 * scale, 60 * scale, '#e7edf6')}
+      ${alignedText(m.place, colX + 126 * scale, midY + 7 * scale, opponentSize, placeWidth(scale))}
+      <rect x="${colX + COL_WIDTH - 74 * scale}" y="${midY - 14 * scale}" width="${68 * scale}" height="${28 * scale}" rx="8" fill="${sideColor}" fill-opacity=".16" stroke="${sideColor}" stroke-opacity=".55"/>
+      <text x="${colX + COL_WIDTH - 40 * scale}" y="${midY + 5 * scale}" text-anchor="middle" fill="${sideColor}" font-size="${Math.min(14, 58 / Math.max(3, m.seriesCode.length) / .66) * scale}" font-weight="800">${esc(m.seriesCode)}</text>
     </g>`
 }
 
@@ -178,7 +251,7 @@ function renderCompactColumns(rows: WeekendMatch[], primary: string, secondary: 
   // Gedeelde grootte voor de tegenstander-naam over BEIDE kolommen heen — anders oogt de ene kolom
   // net iets anders dan de andere zodra de namen daar gemiddeld langer/korter zijn. Een naam die
   // niet past, kapt af (zie alignedText) i.p.v. individueel te krimpen.
-  const opponentSize = fitSize(rows.map(m => m.opponent), 21 * scale, COL_WIDTH - 120 * scale - 66 * scale)
+  const opponentSize = fitSize(rows.map(m => m.place), 24 * hScale(scale), placeWidth(scale))
 
   return columns.map((colRows, ci) => {
     let y = ROWS_TOP
@@ -213,18 +286,17 @@ export function renderWeekendDesign(o: {
     ? renderCompactColumns(o.rows, o.primary, o.secondary)
     : renderSpaciousRows(o.rows, o.primary, o.secondary)
   const initials = o.club.split(/\s+/).map(w => w[0]).join('').slice(0, 3)
+  // Clublogo links in de kop; rechtsboven breekt een grote krachtbal uit het beeld.
+  const LX = 186
+  const LY = 300
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
     <defs>
-      <linearGradient id="base" x2="1" y2="1"><stop stop-color="#1c2534"/><stop offset="1" stop-color="#090c12"/></linearGradient>
-      <radialGradient id="glow"><stop stop-color="${o.primary}" stop-opacity=".5"/><stop offset="1" stop-color="${o.primary}" stop-opacity="0"/></radialGradient>
-      <linearGradient id="card" x2="1" y2="1"><stop stop-color="#2b3546"/><stop offset="1" stop-color="#141922"/></linearGradient>
-      <linearGradient id="hero" x2="1" y2="0"><stop stop-color="${o.primary}" stop-opacity=".22"/><stop offset="1" stop-color="${o.secondary}" stop-opacity=".22"/></linearGradient>
-      <clipPath id="badge"><circle cx="902" cy="272" r="78"/></clipPath>
-      <!-- Shine voor het clublogo: een gloed in de clubkleur erachter + een glazen sphere-shading
-           erbovenop, zodat het logo als een gepolijste medaille oogt i.p.v. plat op de kaart. Een
-           witte highlight op een wit rondje is zelf onzichtbaar (wit-op-wit) — daarom werkt de
-           shine via SELECTIEF DONKERDER maken (linksboven ongemoeid = lijkt het felst, rechtsonder
-           gedimd), wat wél zichtbaar is boven zowel een wit rondje als een echt logo. -->
+      <linearGradient id="base" x2="1" y2="1"><stop stop-color="#141b27"/><stop offset="1" stop-color="#06080d"/></linearGradient>
+      <radialGradient id="glow"><stop stop-color="${o.primary}" stop-opacity=".55"/><stop offset="1" stop-color="${o.primary}" stop-opacity="0"/></radialGradient>
+      <!-- Kaarten als donker glas: het veld eronder blijft zichtbaar. -->
+      <linearGradient id="card" x2="1" y2="1"><stop stop-color="#1d2533" stop-opacity=".9"/><stop offset="1" stop-color="#080b11" stop-opacity=".86"/></linearGradient>
+      <linearGradient id="hero" x2="1" y2="1"><stop stop-color="#0a0e15" stop-opacity=".82"/><stop offset="1" stop-color="${o.primary}" stop-opacity=".3"/></linearGradient>
+      <clipPath id="badge"><circle cx="${LX}" cy="${LY}" r="78"/></clipPath>
       <filter id="badgeGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="16"/></filter>
       <radialGradient id="shine" cx=".32" cy=".26" r=".95">
         <stop offset="0" stop-color="#000" stop-opacity="0"/>
@@ -235,62 +307,53 @@ export function renderWeekendDesign(o: {
         <stop offset="0" stop-color="#fff" stop-opacity=".9"/>
         <stop offset="1" stop-color="#fff" stop-opacity="0"/>
       </radialGradient>
-      <!-- Krachtbalveld als achtergrond: grasmat-tint in de CLUBKLEUR + maaibanen + vignette,
-           zelfde grammatica als RecapFieldBackdrop.tsx — herkenbaar als "van het veld" én meteen
-           herkenbaar als HAAR veld, niet een generiek grasgroen. -->
-      <linearGradient id="turf" x1="0" y1="0" x2="0.25" y2="1">
-        <stop offset="0" stop-color="${o.primary}" stop-opacity=".62"/>
-        <stop offset=".5" stop-color="${o.primary}" stop-opacity=".34"/>
-        <stop offset="1" stop-color="${o.secondary}" stop-opacity=".16"/>
+      <radialGradient id="goudgloed"><stop stop-color="#ffd84d" stop-opacity=".4"/><stop offset="1" stop-color="#ffd84d" stop-opacity="0"/></radialGradient>
+      <radialGradient id="bolschaduw" cx=".38" cy=".32" r=".75">
+        <stop offset=".55" stop-color="#000" stop-opacity="0"/>
+        <stop offset="1" stop-color="#000" stop-opacity=".45"/>
+      </radialGradient>
+      <!-- Grasmat in de CLUBKLEUR + maaibanen van 2 m, zoals op het echte terrein. -->
+      <linearGradient id="turf" x1="0" y1="0" x2="0.2" y2="1">
+        <stop offset="0" stop-color="${o.primary}" stop-opacity=".5"/>
+        <stop offset=".55" stop-color="${o.primary}" stop-opacity=".3"/>
+        <stop offset="1" stop-color="${o.secondary}" stop-opacity=".18"/>
       </linearGradient>
-      <pattern id="mow" patternUnits="userSpaceOnUse" width="1080" height="26"><rect width="1080" height="13" fill="#ffffff" opacity=".045"/></pattern>
-      <radialGradient id="turfvig" cx=".5" cy=".22" r=".85"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".5"/></radialGradient>
+      <pattern id="mow" patternUnits="userSpaceOnUse" width="1080" height="${r1(4 * PX_M)}"><rect width="1080" height="${r1(2 * PX_M)}" fill="#ffffff" opacity=".05"/></pattern>
+      <radialGradient id="turfvig" cx=".5" cy=".3" r=".9"><stop offset=".45" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".6"/></radialGradient>
     </defs>
     <rect width="1080" height="1920" fill="url(#base)"/>
-    <rect width="1080" height="1920" fill="url(#turf)"/>
-    <rect width="1080" height="1920" fill="url(#mow)"/>
-    <!-- Doelgebied bovenaan, doellijn + vrijeworplijn, en de zone-derden die het hele veld in
-         lengte doorlopen — dezelfde lijnentaal als het echte terrein (FieldSchema.tsx). Duidelijk
-         wit/crème (net als de echte lijnen op het veld) zodat ze bij elke clubkleur goed
-         afsteken, maar dun en transparant genoeg om de kaarten niet te storen. -->
-    <rect x="0" y="0" width="1080" height="148" fill="${o.secondary}" opacity=".14"/>
-    <line x1="0" y1="148" x2="1080" y2="148" stroke="#f3f9f5" stroke-opacity=".6" stroke-width="3.5"/>
-    <line x1="0" y1="230" x2="1080" y2="230" stroke="#f3f9f5" stroke-opacity=".34" stroke-width="1.5"/>
-    <line x1="360" y1="0" x2="360" y2="1920" stroke="#f3f9f5" stroke-opacity=".22" stroke-width="1" stroke-dasharray="3 9"/>
-    <line x1="720" y1="0" x2="720" y2="1920" stroke="#f3f9f5" stroke-opacity=".22" stroke-width="1" stroke-dasharray="3 9"/>
-    <!-- Buiten-zone: de koraalrand langs de zijlijnen, net als op het echte terrein (een vaste
-         waarschuwingskleur op de mat, dus bewust los van de clubkleur). -->
-    <rect x="0" y="0" width="18" height="1920" fill="#ff5d6c" opacity=".2"/>
-    <rect x="1062" y="0" width="18" height="1920" fill="#ff5d6c" opacity=".2"/>
+    ${veld(o.primary, o.secondary)}
     <rect width="1080" height="1920" fill="url(#turfvig)"/>
-    <ellipse cx="950" cy="320" rx="750" ry="700" fill="url(#glow)"/>
-    <path d="M760 0 L360 1920" stroke="#fff" stroke-opacity=".025" stroke-width="180"/>
+    <ellipse cx="900" cy="260" rx="620" ry="560" fill="url(#glow)"/>
+    <!-- De gouden krachtbal (het echte 3D-model, zie gouden-krachtbal.ts) groot in de achtergrond,
+         rechtsboven half uit beeld; de kop en de kaarten liggen er als glas overheen. -->
+    <ellipse cx="880" cy="170" rx="400" ry="380" fill="url(#goudgloed)"/>
+    <image href="${GOUDEN_KRACHTBAL}" x="580" y="-150" width="620" height="620" opacity=".95"/>
     <g font-family="DejaVu Sans, Arial, sans-serif">
-      <rect x="64" y="70" width="230" height="46" rx="23" fill="#050912" fill-opacity=".72" stroke="#fff" stroke-opacity=".16"/>
-      <circle cx="90" cy="93" r="9" fill="${o.primary}"/>
-      <text x="110" y="99" fill="#f5f7fb" font-size="20" font-weight="700">Krachtbal <tspan fill="#80baff">Live</tspan></text>
-      <text x="1016" y="99" text-anchor="end" fill="#b2bfd2" font-size="18" font-weight="700" letter-spacing="3">WEEKENDPLAN</text>
-      <rect x="64" y="166" width="952" height="258" rx="32" fill="url(#hero)" stroke="#fff" stroke-opacity=".16"/>
-      <text x="96" y="215" fill="#80baff" font-size="19" font-weight="700" letter-spacing="3">ALLE PLOEGEN. ÉÉN CLUB.</text>
-      ${label(o.club, 96, 277, 38, 660)}
-      ${label(o.title, 96, 320, 25, 660, '#c6d4e8')}
-      <line x1="96" y1="352" x2="892" y2="352" stroke="#fff" stroke-opacity=".14"/>
-      ${statChip(96, 396, o.total, o.total === 1 ? 'wedstrijd' : 'wedstrijden', '#f5f7fb')}
-      ${statChip(320, 396, o.homeCount, 'thuis', o.primary)}
-      ${statChip(500, 396, o.awayCount, 'uit', o.secondary)}
-      <circle cx="902" cy="272" r="104" fill="${o.primary}" opacity=".45" filter="url(#badgeGlow)"/>
-      <circle cx="902" cy="280" r="85" fill="#000" opacity=".3"/>
-      <circle cx="902" cy="272" r="84" fill="#fff" stroke="${o.primary}" stroke-width="5"/>
-      <g clip-path="url(#badge)">${o.logoHref ? `<image href="${esc(o.logoHref)}" x="${902 - logoSize / 2 + fit.offsetX * 1.48}" y="${272 - logoSize / 2 + fit.offsetY * 1.48}" width="${logoSize}" height="${logoSize}" preserveAspectRatio="xMidYMid meet"/>` : `<text x="902" y="286" text-anchor="middle" fill="#1c2534" font-size="34" font-weight="700">${esc(initials)}</text>`}
-      <circle cx="902" cy="272" r="84" fill="url(#shine)"/>
-      <ellipse cx="874" cy="232" rx="30" ry="16" fill="url(#shineSpot)" transform="rotate(-30 874 232)"/></g>
-      <circle cx="902" cy="272" r="88" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="2"/>
-      <text x="64" y="470" fill="#fff" font-size="48" font-weight="700" letter-spacing="-1">Het weekend van ons.</text>
+      <rect x="64" y="70" width="252" height="50" rx="25" fill="#050912" fill-opacity=".78" stroke="#fff" stroke-opacity=".16"/>
+      ${balIcoon(94, 95, 14, '#f2c230')}
+      <text x="120" y="102" fill="#f5f7fb" font-size="21" font-weight="700">Krachtbal <tspan fill="#80baff">Live</tspan></text>
+      <rect x="64" y="176" width="952" height="248" rx="32" fill="url(#hero)" stroke="#fff" stroke-opacity=".18"/>
+      <circle cx="${LX}" cy="${LY}" r="104" fill="${o.primary}" opacity=".45" filter="url(#badgeGlow)"/>
+      <circle cx="${LX}" cy="${LY + 8}" r="85" fill="#000" opacity=".3"/>
+      <circle cx="${LX}" cy="${LY}" r="84" fill="#fff" stroke="${o.primary}" stroke-width="5"/>
+      <g clip-path="url(#badge)">${o.logoHref ? `<image href="${esc(o.logoHref)}" x="${LX - logoSize / 2 + fit.offsetX * 1.48}" y="${LY - logoSize / 2 + fit.offsetY * 1.48}" width="${logoSize}" height="${logoSize}" preserveAspectRatio="xMidYMid meet"/>` : `<text x="${LX}" y="${LY + 14}" text-anchor="middle" fill="#1c2534" font-size="34" font-weight="700">${esc(initials)}</text>`}
+      <circle cx="${LX}" cy="${LY}" r="84" fill="url(#shine)"/>
+      <ellipse cx="${LX - 28}" cy="${LY - 40}" rx="30" ry="16" fill="url(#shineSpot)" transform="rotate(-30 ${LX - 28} ${LY - 40})"/></g>
+      <circle cx="${LX}" cy="${LY}" r="88" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="2"/>
+      <text x="306" y="232" fill="#80baff" font-size="18" font-weight="700" letter-spacing="3">WEEKENDPLAN · ALLE PLOEGEN</text>
+      ${label(o.club, 306, 290, 40, 480)}
+      ${label(o.title, 306, 332, 25, 480, '#c6d4e8')}
+      ${statChip(306, 392, o.total, o.total === 1 ? 'wedstrijd' : 'wedstrijden', '#f5f7fb')}
+      ${statChip(540, 392, o.homeCount, 'thuis', o.primary)}
+      ${statChip(700, 392, o.awayCount, 'uit', o.secondary)}
+      <text x="64" y="478" fill="#fff" font-size="50" font-weight="800" letter-spacing="-1">Het weekend van ons.</text>
       ${rows || `<rect x="64" y="${ROWS_TOP + 34}" width="952" height="260" rx="28" fill="url(#card)"/>${label('Even geen wedstrijden.', 104, ROWS_TOP + 140, 38, 860)}${label('Tot langs de zijlijn bij de volgende speeldag!', 104, ROWS_TOP + 204, 25, 860, '#b2bfd2')}`}
-      <line x1="64" y1="1764" x2="1016" y2="1764" stroke="#fff" stroke-opacity=".16"/>
-      <text x="64" y="1812" fill="#f5f7fb" font-size="23" font-weight="700">KOM MEE SUPPORTEREN.</text>
-      <text x="1016" y="1812" text-anchor="end" fill="#b2bfd2" font-size="21">${o.total} wedstrijden · ${o.page + 1} / ${o.pages}</text>
-      <text x="64" y="1856" fill="#80baff" font-size="21">Volg alle scores op livescore.roodgries.be</text>
+      <rect x="40" y="1770" width="1000" height="124" rx="28" fill="#05080d" fill-opacity=".8" stroke="#fff" stroke-opacity=".12"/>
+      ${balIcoon(96, 1814, 18, '#f2c230')}
+      <text x="128" y="1822" fill="#f5f7fb" font-size="25" font-weight="800">KOM MEE SUPPORTEREN.</text>
+      <text x="1000" y="1822" text-anchor="end" fill="#b2bfd2" font-size="21">${o.total} wedstrijden · ${o.page + 1} / ${o.pages}</text>
+      <text x="128" y="1864" fill="#80baff" font-size="21">Volg alle scores op livescore.roodgries.be</text>
     </g>
   </svg>`
 }

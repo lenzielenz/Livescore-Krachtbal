@@ -5,6 +5,7 @@ import { GEVEL, lichtshow, type Rechthoek, type StadionThema } from '@/lib/virtu
 import { gevelOmtrek } from './omgeving'
 import { bijSpelersgebouwen } from './kleedkamer'
 import { canvasTex, rnd } from './stadion'
+import { lichtBron } from './lichtkaart'
 
 // De buitenkant afgewerkt tot in de details, bovenop de gevel uit omgeving.ts:
 //  • een zwevende dakrand rondom: een slanke luifel boven de kroonlijst met downlights eronder en een
@@ -131,6 +132,8 @@ export function bouwBuitenkant(
   const POORT_H = 5.5
   const portaalMat = new THREE.MeshBasicMaterial({ color: primair, toneMapped: false })
   for (const ing of ingangen) {
+    // Een portaal licht het plein ervoor op, in de clubkleur.
+    lichtBron(ing.x + Math.sin(ing.ry) * 4.5, ing.z + Math.cos(ing.ry) * 4.5, 11, primair, 0.9)
     const g = new THREE.Group()
     g.position.set(ing.x, 0, ing.z)
     g.rotation.y = ing.ry
@@ -194,6 +197,7 @@ export function bouwBuitenkant(
   druppelMesh.frustumCulled = false
   for (const fx of [-17, 17]) {
     const c = new THREE.Vector3(fx, 0, B + 17)
+    lichtBron(c.x, c.z, 10, '#9fd8ff', 0.75)
     const bak = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.35, 0.55, 40, 1, true), randMat)
     bak.position.set(c.x, 0.275, c.z)
     const boord = new THREE.Mesh(new THREE.TorusGeometry(3.25, 0.13, 8, 40).rotateX(Math.PI / 2), randMat)
@@ -241,6 +245,7 @@ export function bouwBuitenkant(
     new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(paalGloedC), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }),
     paaltjePunten.length,
   )
+  for (const p of paaltjePunten) lichtBron(p.x + p.nx * 7.5, p.z + p.nz * 7.5, 3.6, '#ffe2b0', 0.55)
   paaltjePunten.forEach((p, i) => {
     m4.makeTranslation(p.x + p.nx * 7.5, 0, p.z + p.nz * 7.5)
     paaltjes.setMatrixAt(i, m4)

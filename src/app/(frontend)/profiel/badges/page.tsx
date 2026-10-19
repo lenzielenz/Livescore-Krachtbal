@@ -3,12 +3,13 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
-import { computeBadges, earnedCount, type Badge, type BadgeStats } from '@/lib/badges'
+import { aanwezigheidVoorBadges } from '@/lib/badge-stats'
+import { computeBadges, earnedCount, type Badge, type BadgeStats, type Rarity } from '@/lib/badges'
 import { sanitizeCheckins } from '@/lib/checkins'
 import { fanScore } from '@/lib/fan-score'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { buildPredictionLeaderboard, type PredEntry } from '@/lib/prediction-score'
+import { buildPredictionLeaderboard, rankLeaderboard, type PredEntry } from '@/lib/prediction-score'
 import { trustLevel, trustScore } from '@/lib/score-trust'
 import { readUserTrust } from '@/lib/score-trust-store'
 import { seasonFromDate } from '@/lib/seasons'
@@ -17,6 +18,8 @@ import './badges.css'
 export const dynamic = 'force-dynamic'
 
 export const metadata = { title: 'Mijn badges — Krachtbal Live' }
+
+const RARITY_LABEL: Record<Rarity, string> = { brons: 'Brons', zilver: 'Zilver', goud: 'Goud', legende: 'Legende' }
 
 /** Vanaf 60% voortgang telt een badge als "bijna" — trekt het oog naar wat haalbaar is. */
 const CLOSE_RATIO = 0.6
@@ -187,14 +190,18 @@ export default async function BadgesPage() {
       if (st) scored.push({ actual: { home: st.score.home, away: st.score.away }, preds: m.preds })
     }),
   )
-  const myPred = buildPredictionLeaderboard(scored).find((r) => r.userId === myUserId)
+  const myPred = rankLeaderboard(buildPredictionLeaderboard(scored)).find((r) => r.userId === myUserId)
   const predictionPoints = myPred?.points ?? 0
 
   // Trust-historiek van het aantekenen. De score zelf blijft onzichtbaar; enkel het bereikte
   // niveau vertaalt zich in een badge (zie score-trust.ts).
   const myTrust = await readUserTrust(payload, myUserId)
 
-  const checkins = sanitizeCheckins(u.checkins).length
+  const myCheckins = sanitizeCheckins(u.checkins)
+  const checkins = myCheckins.length
+  const clubRaw = u.club
+  const eigenClub = Number(clubRaw && typeof clubRaw === 'object' ? (clubRaw as { id?: unknown }).id : clubRaw)
+  const aanwezig = await aanwezigheidVoorBadges(payload, myCheckins, Number.isFinite(eigenClub) && eigenClub > 0 ? eigenClub : null)
   const booster = u.pronostiekPower as { mult?: unknown } | null | undefined
   const stats: BadgeStats = {
     checkins,
@@ -207,6 +214,10 @@ export default async function BadgesPage() {
     boosterWon: Boolean(booster && booster.mult),
     scoredMatches: myTrust.confirmed,
     trustedScorer: trustLevel(trustScore(myTrust)) === 'vertrouwd',
+    ...aanwezig,
+    exactPredictions: myPred?.exact ?? 0,
+    // Enkel wie effectief punten heeft, staat echt in het klassement.
+    predictionRank: myPred && myPred.points > 0 ? myPred.rank : null,
   }
 
   const badges = computeBadges(stats)
@@ -236,8 +247,9 @@ export default async function BadgesPage() {
       <div className="site">
         <h1 className="page-title">🏅 <span className="brand">Mijn badges</span></h1>
         <p className="wb-intro">
-          Verzamel badges door wedstrijden bij te wonen, sfeerfoto’s te plaatsen, uitslagen te voorspellen,
-          te stemmen voor de held van de match en je profiel compleet te maken.
+          Verzamel badges door wedstrijden bij te wonen (ook op verplaatsing), sfeerfoto’s te plaatsen,
+          uitslagen juist te voorspellen, te stemmen voor de held van de match en zelf aan te tekenen.
+          Brons haal je snel — goud en legende vragen een heel seizoen inzet.
           {' '}<Link href="/profiel/paspoort" style={{ color: 'var(--accent)', fontWeight: 700 }}>Supporterpaspoort →</Link>
         </p>
 
@@ -247,6 +259,13 @@ export default async function BadgesPage() {
             <span className="bg-progress-lbl">badges verdiend</span>
           </div>
           <div className="bg-bar"><span style={{ width: `${Math.round((earned / total) * 100)}%` }} /></div>
+          <div className="bg-rarity-sum" aria-label="Verdiend per zeldzaamheid">
+            {(['brons', 'zilver', 'goud', 'legende'] as Rarity[]).map((r) => (
+              <span key={r} className={`bg-rarity r-${r}`}>
+                {RARITY_LABEL[r]} {badges.filter((b) => b.rarity === r && b.earned).length}/{badges.filter((b) => b.rarity === r).length}
+              </span>
+            ))}
+          </div>
           {next && (
             <div className="bg-next">
               <span className="bg-next-icon" aria-hidden>{next.emoji}</span>
@@ -268,6 +287,7 @@ export default async function BadgesPage() {
                 <div key={b.key} className={`bg-card${b.earned ? ' is-earned' : ''}${isClose(b) ? ' is-close' : ''}`}>
                   {isClose(b) && <span className="bg-close-tag">Bijna!</span>}
                   <BadgeEmoji badge={b} />
+                  <span className={`bg-rarity r-${b.rarity}`}>{RARITY_LABEL[b.rarity]}</span>
                   <span className="bg-title">{b.title}</span>
                   <span className="bg-desc">{b.desc}</span>
                   {b.earned ? (

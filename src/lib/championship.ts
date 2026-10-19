@@ -16,7 +16,6 @@
 // zo'n duel gespeeld is, verandert de stand en dus de uitkomst — dat gaat vanzelf.
 // Forfaits zijn niet voorzien (een leider die forfait geeft, krijgt 0 i.p.v. 2 punten).
 
-import { dateStrBE } from './datetime'
 import { computeStandings, STANDINGS_POINTS, type StandingRow, type StandingsMatch } from './standings'
 
 const WIN = STANDINGS_POINTS.win
@@ -46,16 +45,31 @@ export interface ClinchResult {
 /** Wat de berekening buiten de stand nog nodig heeft: wie speelt nog tegen wie, en wie won al. */
 export interface ClinchContext {
   /** Nog te spelen wedstrijden — voor de onderlinge duels met een rivaal. De datum is enkel nodig
-   *  voor de vooruitblik (titelProjectie). */
+   *  om de duels met de rivalen chronologisch te noemen (openDuels). */
   fixtures: { homeId: number; awayId: number; date?: string | null }[]
   /** Afgespeelde wedstrijden — voor het onderling resultaat bij gelijke punten. */
   results: StandingsMatch[]
 }
 
+/** Wat de titelsimulatie (titelKansen) voor de boodschap oplevert, met namen ingevuld. */
+export interface TitelKansInfo {
+  /** Titelkans van de eigen ploeg (0–1). */
+  eigen: number
+  /** De andere ploeg met de grootste titelkans. */
+  favoriet: { naam: string; kans: number } | null
+  /** Enkel voor de leider: de nummer twee in de stand, voor de voorsprong. */
+  naaste: { naam: string; punten: number } | null
+  /** Nog te spelen duels tegen titelrivalen, chronologisch — bv. "D&W Koekelare (za 13 maart)". */
+  duels: string[]
+}
+
 /**
  * Eén regel over de titelstrijd voor boven de rangschikking, vanuit de eigen ploeg van wie kijkt —
- * of null wanneer er niets zinvols te melden valt (begin van het seizoen, of de ploeg kan de titel
- * niet meer zelf afdwingen).
+ * of null wanneer er niets zinvols te melden valt (begin van het seizoen, of geen titelkans meer).
+ *
+ * Wat er staat, klopt altijd: wiskundig kampioen of het exacte aantal zeges dat nog nodig is (dicht
+ * bij de meet), en anders een titelkans uit de simulatie van de rest van het seizoen — nooit een
+ * vaste datum, want die hangt af van uitslagen die nog niet gespeeld zijn.
  */
 export function titelBoodschap(input: {
   /** Titelstatus van de eigen ploeg (clinchStatus). */
@@ -66,10 +80,10 @@ export function titelBoodschap(input: {
   teamsInTable: number
   /** Hoeveel punten de eigen ploeg achter de leider staat (0 = gedeelde leiding). */
   achterstand?: number
-  /** Vooruitblik (zie titelProjectie): wanneer de titel kan vallen als de ploeg blijft winnen. */
-  projectie?: { datum: string; tegenstander: string | null } | null
+  /** Titelkansen uit de simulatie (titelKansen); zonder valt de boodschap terug op de zeges. */
+  kansen?: TitelKansInfo | null
 }): { text: string; clinched: boolean } | null {
-  const { status, ploegNaam, reeksLabel, teamsInTable, projectie } = input
+  const { status, ploegNaam, reeksLabel, teamsInTable, kansen } = input
   if (!status || !ploegNaam || teamsInTable < 2) return null
   if (status.clinched) return { text: `${ploegNaam} is wiskundig kampioen van ${reeksLabel}.`, clinched: true }
   if (status.remaining <= 0) return null
@@ -77,20 +91,46 @@ export function titelBoodschap(input: {
   const zeges = status.winsToClinch
   // Dicht bij de meet is het exacte aantal zeges het sterkste nieuws: dat staat vast.
   if (zeges != null && zeges > 0 && zeges <= DICHTBIJ_ZEGES) return { text: zegesTekst(plaats, zeges), clinched: false }
-  // Daarvoor zegt "nog 17 zeges" weinig. De vooruitblik verschuift elke week met de uitslagen.
-  if (projectie) {
-    const tegen = projectie.tegenstander ? ` tegen ${projectie.tegenstander}` : ''
-    return {
-      text: `${plaats}. Blijft ${ploegNaam} winnen en speelt de rest zoals tot nu, dan valt de titel op ${projectie.datum}${tegen}.`,
-      clinched: false,
-    }
+  if (kansen) {
+    // Wie (bijna) geen kans meer maakt, krijgt geen titelregel; de stand spreekt dan voor zich.
+    if (!status.leading && kansen.eigen < 0.01) return null
+    const delen = [voorsprongTekst(ploegNaam, status, plaats, kansen.naaste)]
+    const fav = kansen.favoriet && kansen.favoriet.kans >= 0.01 ? kansen.favoriet : null
+    const favTekst = fav ? (status.leading ? `, ${fav.naam} ${procent(fav.kans)}` : `, favoriet is ${fav.naam} (${procent(fav.kans)})`) : ''
+    delen.push(`Titelkans ${procent(kansen.eigen)}${favTekst}.`)
+    if (kansen.duels.length > 0) delen.push(`Nog te spelen tegen ${opsomming(kansen.duels)}.`)
+    return { text: delen.join(' '), clinched: false }
   }
   if (zeges == null || zeges <= 0) return null
   return { text: zegesTekst(plaats, zeges), clinched: false }
 }
 
-/** Vanaf hoeveel resterende zeges het exacte aantal de vooruitblik vervangt. */
+/** Vanaf hoeveel resterende zeges het exacte aantal de titelkans vervangt. */
 const DICHTBIJ_ZEGES = 3
+
+/**
+ * "X leidt met 2 punten voor Y: na één nederlaag kan Y gelijkkomen." Een nederlaag kost de leider
+ * maar WIN_BONUS (2) punten t.o.v. een rivaal die wint — verlies levert immers nog 2 op.
+ */
+function voorsprongTekst(ploeg: string, status: ClinchResult, plaats: string, naaste: TitelKansInfo['naaste']): string {
+  if (!status.leading || !naaste) return `${plaats}.`
+  const verschil = status.points - naaste.punten
+  if (verschil <= 0) return `${ploeg} deelt de leiding met ${naaste.naam}.`
+  const nederlagen = Math.ceil(verschil / WIN_BONUS)
+  const woord = nederlagen === 1 ? 'één nederlaag' : nederlagen === 2 ? 'twee nederlagen' : `${nederlagen} nederlagen`
+  const gevolg = verschil % WIN_BONUS === 0 ? 'gelijkkomen' : 'erover'
+  const punten = `${verschil} ${verschil === 1 ? 'punt' : 'punten'}`
+  return `${ploeg} leidt met ${punten} voor ${naaste.naam}: na ${woord} kan ${naaste.naam} ${gevolg}.`
+}
+
+/** 0,483 → "± 48%"; de randen eerlijk als "< 1%" en "> 99%" (wiskundig ligt het nog open). */
+function procent(kans: number): string {
+  if (kans < 0.01) return '< 1%'
+  if (kans > 0.99) return '> 99%'
+  return `± ${Math.round(kans * 100)}%`
+}
+
+const opsomming = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} en ${xs[xs.length - 1]}`)
 
 /** "X leidt", "X deelt de leiding" of "X staat 3e op 2 punten". */
 function plaatsTekst(ploeg: string, status: ClinchResult, achterstand: number): string {
@@ -177,78 +217,129 @@ export function clinchStatus(
   }
 }
 
-/** Onder dit verschil in punten per wedstrijd tellen twee ploegen als even sterk: gelijkspel. */
-const GELIJKE_VORM = 0.05
+/** Aantal keer dat de rest van het seizoen wordt nagespeeld. */
+const SIMULATIES = 5000
+/** Denkbeeldige wedstrijden "half gewonnen" bij elke ploeg: dempt de vorm na weinig wedstrijden. */
+const VORM_DEMPING = 4
+/** Gelijkspelkans als de reeks er zelf nog te weinig over zegt, en hoe zwaar die weegt. */
+const GELIJK_BASIS = 0.08
+const GELIJK_DEMPING = 12
+
+/** Kleine, voorspelbare toevalsgenerator (mulberry32): dezelfde stand geeft dezelfde kansen. */
+function mulberry32(seed: number) {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
 
 /**
- * Vooruitblik: op welke speeldag kan deze ploeg de titel vastleggen?
+ * Titelkans per ploeg: speelt de resterende kalender duizenden keren na, telkens met andere
+ * uitslagen, en telt hoe vaak elke ploeg bovenaan eindigt.
  *
- * "Nog 17 zeges" klopt wiskundig, maar zegt in oktober niets: het rekent alsof elke achtervolger
- * al zijn wedstrijden wint, ook die tegen elkaar. In werkelijkheid pakken ze punten van elkaar af.
- * Deze vooruitblik speelt daarom de resterende kalender speeldag per speeldag af:
- *  • de ploeg zelf wint al haar wedstrijden (de vraag is "wanneer KAN je kampioen spelen");
- *  • elke andere wedstrijd gaat naar de ploeg in de beste vorm, gemeten in punten per gespeelde
- *    wedstrijd tot nu toe; bij gelijke vorm wordt het gelijkspel.
- * Na elke speeldag toetst ze met clinchStatus of de titel wiskundig vastligt. De eerste speeldag
- * waarop dat zo is, is het antwoord. Omdat de vorm uit de echte uitslagen komt, verschuift de
- * datum elke week mee.
- *
- * Geeft null als het niet te bepalen valt (geen datums in de kalender, of nooit zeker).
+ * Waarom geen vast scenario: of de leider kampioen wordt, hangt niet enkel af van zijn eigen
+ * wedstrijden maar ook van wat de achtervolgers van elkaar afpakken — en van de duels met hen,
+ * die dubbel tellen. Eén "als alles loopt zoals tot nu"-scenario negeert dat de leider ook kan
+ * verliezen. De simulatie neemt alles mee:
+ *  • elke wedstrijd krijgt een winkans uit de vorm van beide ploegen (log5 op het gedempte
+ *    winstpercentage tot nu, gelijk = halve zege) en een gelijkspelkans uit de reeks zelf; die
+ *    vorm is onzeker na weinig wedstrijden, en dat zit mee in de simulatie;
+ *  • alle resterende duels worden gespeeld, ook die van de rivalen onderling;
+ *  • gelijke punten beslist het onderling resultaat (punten in de duels tussen de gelijke ploegen,
+ *    inclusief de gesimuleerde), daarna het huidige doelsaldo.
+ * De generator is vast gezaaid: wie de pagina herlaadt, ziet hetzelfde getal tot er een uitslag
+ * bijkomt.
  */
-export function titelProjectie(
-  standings: StandingRow[],
-  ctx: ClinchContext,
-  teamId: number,
-): { datum: string; tegenstanderId: number | null } | null {
-  if (!standings.some((r) => r.teamId === teamId)) return null
-  const vorm = new Map(standings.map((r) => [r.teamId, r.played > 0 ? r.points / r.played : STANDINGS_POINTS.draw]))
-  const punten = new Map(standings.map((r) => [r.teamId, r.points]))
+export function titelKansen(standings: StandingRow[], ctx: ClinchContext, runs = SIMULATIES): Map<number, number> {
+  const n = standings.length
+  const kansen = new Map(standings.map((r) => [r.teamId, 0]))
+  if (n === 0) return kansen
+  const idx = new Map(standings.map((r, i) => [r.teamId, i]))
 
-  // Enkel wedstrijden met een datum laten zich op een speeldag zetten.
-  const gedateerd = ctx.fixtures
-    .filter((f): f is { homeId: number; awayId: number; date: string } => typeof f.date === 'string' && f.date.length > 0)
-    .filter((f) => !Number.isNaN(new Date(f.date).getTime()))
-    .sort((a, b) => a.date.localeCompare(b.date))
-  if (gedateerd.length === 0) return null
-  const dagen = new Map<string, typeof gedateerd>()
-  for (const f of gedateerd) {
-    const dag = dateStrBE(new Date(f.date))
-    dagen.set(dag, [...(dagen.get(dag) ?? []), f])
+  // Sterkte = gedempt winstpercentage, met de onzekerheid die bij zo weinig wedstrijden hoort: na
+  // zes zeges weet je niet of een ploeg 70% of 90% van haar wedstrijden wint. Elke simulatie trekt
+  // daarom eerst een sterkte per ploeg rond dat gemiddelde (normale benadering van de beta-
+  // verdeling), en speelt daarmee het seizoen af.
+  const sterkte = standings.map((r) => (r.won + r.drawn / 2 + VORM_DEMPING / 2) / (r.played + VORM_DEMPING))
+  const spreiding = standings.map((r, i) => Math.sqrt((sterkte[i] * (1 - sterkte[i])) / (r.played + VORM_DEMPING + 1)))
+  const getrokken = new Float64Array(n)
+  const gespeeld = standings.reduce((s, r) => s + r.played, 0) / 2
+  const gelijk = standings.reduce((s, r) => s + r.drawn, 0) / 2
+  const pGelijk = Math.min(0.35, Math.max(0.02, (gelijk + GELIJK_BASIS * GELIJK_DEMPING) / (gespeeld + GELIJK_DEMPING)))
+
+  // Onderlinge punten uit de gespeelde wedstrijden: h2h[i * n + j] = punten van i tegen j.
+  const h2hBasis = new Float64Array(n * n)
+  for (const m of ctx.results) {
+    const h = idx.get(m.homeId)
+    const a = idx.get(m.awayId)
+    if (h == null || a == null) continue
+    const duel = computeStandings([m], [m.homeId, m.awayId])
+    h2hBasis[h * n + a] += duel.find((d) => d.teamId === m.homeId)?.points ?? 0
+    h2hBasis[a * n + h] += duel.find((d) => d.teamId === m.awayId)?.points ?? 0
   }
 
-  let resterend = [...ctx.fixtures]
-  const uitslagen = [...ctx.results]
-  for (const [, wedstrijden] of dagen) {
-    let tegenstanderId: number | null = null
-    for (const f of wedstrijden) {
-      let thuis: number
-      if (f.homeId === teamId || f.awayId === teamId) {
-        thuis = f.homeId === teamId ? STANDINGS_POINTS.win : STANDINGS_POINTS.loss
-        tegenstanderId = f.homeId === teamId ? f.awayId : f.homeId
-      } else {
-        const verschil = (vorm.get(f.homeId) ?? 0) - (vorm.get(f.awayId) ?? 0)
-        thuis = Math.abs(verschil) < GELIJKE_VORM ? STANDINGS_POINTS.draw : verschil > 0 ? STANDINGS_POINTS.win : STANDINGS_POINTS.loss
+  const duels = ctx.fixtures.flatMap((f) => {
+    const h = idx.get(f.homeId)
+    const a = idx.get(f.awayId)
+    return h == null || a == null || h === a ? [] : [{ h, a }]
+  })
+
+  const basis = standings.map((r) => r.points)
+  const punten = new Float64Array(n)
+  const h2h = new Float64Array(n * n)
+  const tel = new Float64Array(n)
+  const rnd = mulberry32(0x6b6b6266 ^ (duels.length * 2654435761))
+  for (let run = 0; run < runs; run++) {
+    for (let i = 0; i < n; i++) punten[i] = basis[i]
+    h2h.set(h2hBasis)
+    for (let i = 0; i < n; i++) {
+      // Box-Muller: één normaal verdeeld getal per ploeg.
+      const z = Math.sqrt(-2 * Math.log(1 - rnd())) * Math.cos(2 * Math.PI * rnd())
+      getrokken[i] = Math.min(0.97, Math.max(0.03, sterkte[i] + z * spreiding[i]))
+    }
+    for (const d of duels) {
+      const sh = getrokken[d.h]
+      const sa = getrokken[d.a]
+      const pThuis = ((1 - pGelijk) * sh * (1 - sa)) / (sh * (1 - sa) + sa * (1 - sh))
+      const x = rnd()
+      const [ph, pa] = x < pThuis ? [WIN, LOSS] : x < pThuis + pGelijk ? [STANDINGS_POINTS.draw, STANDINGS_POINTS.draw] : [LOSS, WIN]
+      punten[d.h] += ph
+      punten[d.a] += pa
+      h2h[d.h * n + d.a] += ph
+      h2h[d.a * n + d.h] += pa
+    }
+    let max = -Infinity
+    for (let i = 0; i < n; i++) max = Math.max(max, punten[i])
+    const gelijken: number[] = []
+    for (let i = 0; i < n; i++) if (punten[i] === max) gelijken.push(i)
+    let winnaar = gelijken[0]
+    if (gelijken.length > 1) {
+      let beste = -Infinity
+      for (const i of gelijken) {
+        let onder = 0
+        for (const j of gelijken) if (j !== i) onder += h2h[i * n + j]
+        // Onderling eerst, dan doelsaldo; de stand is al op doelsaldo gesorteerd.
+        const score = onder * 1e6 + standings[i].diff
+        if (score > beste) {
+          beste = score
+          winnaar = i
+        }
       }
-      const uit = thuis === STANDINGS_POINTS.draw ? STANDINGS_POINTS.draw : thuis === STANDINGS_POINTS.win ? STANDINGS_POINTS.loss : STANDINGS_POINTS.win
-      punten.set(f.homeId, (punten.get(f.homeId) ?? 0) + thuis)
-      punten.set(f.awayId, (punten.get(f.awayId) ?? 0) + uit)
-      // Ook als uitslag bewaren: het onderling resultaat bij gelijke punten telt mee.
-      const goals = thuis === STANDINGS_POINTS.win ? [1, 0] : thuis === STANDINGS_POINTS.loss ? [0, 1] : [0, 0]
-      uitslagen.push({ homeId: f.homeId, awayId: f.awayId, homeGoals: goals[0], awayGoals: goals[1], forfait: 'none' })
-      const i = resterend.indexOf(f)
-      if (i >= 0) resterend = [...resterend.slice(0, i), ...resterend.slice(i + 1)]
     }
-
-    const stand = standings
-      .map((r) => ({ ...r, points: punten.get(r.teamId) ?? r.points }))
-      .sort((a, b) => b.points - a.points)
-    const nogTeSpelen = new Map<number, number>()
-    for (const f of resterend) {
-      nogTeSpelen.set(f.homeId, (nogTeSpelen.get(f.homeId) ?? 0) + 1)
-      nogTeSpelen.set(f.awayId, (nogTeSpelen.get(f.awayId) ?? 0) + 1)
-    }
-    const status = clinchStatus(stand, nogTeSpelen, teamId, { fixtures: resterend, results: uitslagen })
-    if (status?.clinched) return { datum: wedstrijden[0].date, tegenstanderId }
+    tel[winnaar]++
   }
-  return null
+  standings.forEach((r, i) => kansen.set(r.teamId, tel[i] / runs))
+  return kansen
+}
+
+/** De nog te spelen wedstrijden van een ploeg tegen een van de opgegeven rivalen, chronologisch. */
+export function openDuels(ctx: ClinchContext, teamId: number, rivalen: Set<number>): { tegenstanderId: number; date: string | null }[] {
+  return ctx.fixtures
+    .filter((f) => (f.homeId === teamId && rivalen.has(f.awayId)) || (f.awayId === teamId && rivalen.has(f.homeId)))
+    .map((f) => ({ tegenstanderId: f.homeId === teamId ? f.awayId : f.homeId, date: f.date ?? null }))
+    .sort((x, y) => (x.date ?? '9999').localeCompare(y.date ?? '9999'))
 }

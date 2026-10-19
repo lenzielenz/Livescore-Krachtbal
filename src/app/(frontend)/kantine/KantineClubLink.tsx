@@ -1,73 +1,89 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
-// Vaste, openbare kantine-link per club: kies je club en deel/plak de link op de kantine-tv. Hij
-// blijft heel het seizoen geldig en toont automatisch al jullie wedstrijden van die dag.
+import { CastKnop } from '@/components/CastKnop'
+
+// Snel één club op de tv: het eerste wat je op /kantine ziet. Club kiezen, scherm openen — geen
+// account, geen instellingen. De link is openbaar en blijft heel het seizoen geldig; hij toont
+// automatisch alle wedstrijden van die club.
 //
-// DECISION 2026-09-06: de kop zegt nu expliciet "automatisch" en de tekst dat je hieronder niets
-// hoeft aan te vinken. Deze pagina toont twee schermen onder elkaar — deze clublink én de
-// handmatige selectie eronder — en dat verschil stond nergens. Een clubverantwoordelijke vroeg
-// daardoor of de vaste link alle live wedstrijden van zijn club toont, en of de zelfgekozen lijst
-// eronder daar dan bij hoort. Twee schermen die op elkaar lijken moeten zichzelf uitleggen.
+// 2026-10-19: stond onderaan, dichtgeklapt onder "Alleen snel één club tonen?". Wie het scherm
+// gewoon wil zien, moest eerst door een uitleg in vier stappen scrollen. Nu staat dit bovenaan en
+// open; het persoonlijke scherm (meerdere clubs, losse ploegen) staat eronder.
+
+/** Laatst gekozen club op dit toestel — enkel gemak, nooit nodig om te werken. */
+const BEWAAR_KEY = 'kb-kantine-snelclub'
+
 export function KantineClubLink({ clubs, myClubId }: { clubs: { id: number; name: string }[]; myClubId?: number | null }) {
   const [clubId, setClubId] = useState<number | null>(myClubId ?? (clubs.length === 1 ? clubs[0].id : null))
   const [copied, setCopied] = useState(false)
 
-  // De volledige link heeft het domein nodig, maar dat kent de server niet: gebruik je
-  // window.location tijdens het renderen, dan verschilt de server-HTML van wat de browser
-  // maakt en klaagt React over de hydratatie. Daarom pas ná de eerste render invullen.
+  // De volledige link heeft het domein nodig, maar dat kent de server niet: pas ná de eerste
+  // render invullen, anders verschilt de server-HTML van die in de browser (hydratatie).
   const [origin, setOrigin] = useState('')
-  useEffect(() => setOrigin(window.location.origin), [])
-
-  const url = useMemo(() => (clubId == null ? '' : `${origin}/kantine/club/${clubId}`), [clubId, origin])
+  useEffect(() => {
+    setOrigin(window.location.origin)
+    // Zonder eigen club: neem de club van de vorige keer op dit toestel.
+    if (myClubId != null) return
+    try {
+      const vorige = Number(window.localStorage.getItem(BEWAAR_KEY))
+      if (clubs.some((c) => c.id === vorige)) setClubId(vorige)
+    } catch {
+      /* geen opslag (privévenster) — dan kies je gewoon opnieuw */
+    }
+  }, [clubs, myClubId])
 
   if (clubs.length === 0) return null
 
+  const pad = clubId == null ? '' : `/kantine/club/${clubId}`
+  const kies = (id: number | null) => {
+    setClubId(id)
+    setCopied(false)
+    try {
+      if (id != null) window.localStorage.setItem(BEWAAR_KEY, String(id))
+    } catch {
+      /* zie hierboven */
+    }
+  }
+
   return (
-    <details className="kt-clublink">
-      <summary className="kt-clublink-summary">
-        <span>
-          <strong>Alleen snel één club tonen?</strong>
-          <small>Gebruik het eenvoudige clubscherm zonder instellingen</small>
-        </span>
-        <span className="kt-clublink-chevron" aria-hidden>⌄</span>
-      </summary>
-      <div className="kt-clublink-content">
-        <p className="kt-clublink-sub">
-          Kies een club en krijg meteen een openbaar scherm met alle wedstrijden van vandaag.
-          Extra ploegen of wedstrijden toevoegen kan alleen via je persoonlijke scherm hierboven.
-        </p>
-        <div className="kt-clublink-row">
-          <label className="kt-clublink-field">
-            <span>Club</span>
-            <select
-              className="kt-clublink-select"
-              value={clubId ?? ''}
-              onChange={(e) => { setClubId(e.target.value ? Number(e.target.value) : null); setCopied(false) }}
-              aria-label="Club"
-            >
-              <option value="">— kies een club —</option>
-              {clubs.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </label>
-          {url && (
-            <>
-              <button
-                type="button"
-                className="kt-clublink-btn"
-                onClick={() => { void navigator.clipboard?.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
-              >
-                {copied ? '✓ Link gekopieerd' : '🔗 Kopieer link'}
-              </button>
-              <a className="kt-clublink-btn open" href={url} target="_blank" rel="noopener noreferrer">Open scherm ↗</a>
-              <input className="kt-clublink-url" value={url} readOnly onFocus={(e) => e.currentTarget.select()} aria-label="Vaste link" />
-            </>
-          )}
+    <section className="kt-snel" aria-labelledby="kt-snel-titel">
+      <span className="kt-snel-eyebrow">⚡ Meteen op de tv</span>
+      <h2 id="kt-snel-titel" className="kt-snel-titel">Toon de wedstrijden van één club</h2>
+      <p className="kt-snel-sub">Kies je club en open het scherm. Live standen en de volgende wedstrijden komen er vanzelf op.</p>
+
+      <select
+        className="kt-snel-select"
+        value={clubId ?? ''}
+        onChange={(e) => kies(e.target.value ? Number(e.target.value) : null)}
+        aria-label="Kies je club"
+      >
+        <option value="">Kies je club…</option>
+        {clubs.map((c) => (
+          <option key={c.id} value={c.id}>{c.name}</option>
+        ))}
+      </select>
+
+      {pad ? (
+        <div className="kt-snel-acties">
+          <a className="kt-snel-open" href={pad} target="_blank" rel="noopener noreferrer">📺 Open scherm</a>
+          <CastKnop pad={pad} sleutel={`kantine-club-${clubId}`} label="📡 Cast" klasse="kt-snel-knop" />
+          <button
+            type="button"
+            className="kt-snel-knop"
+            onClick={() => {
+              void navigator.clipboard?.writeText(`${origin}${pad}`)
+              setCopied(true)
+              setTimeout(() => setCopied(false), 2000)
+            }}
+          >
+            {copied ? '✓ Gekopieerd' : '🔗 Kopieer link'}
+          </button>
         </div>
-      </div>
-    </details>
+      ) : (
+        <p className="kt-snel-hint">Kies hierboven een club — daarna verschijnt de knop om het scherm te openen.</p>
+      )}
+    </section>
   )
 }

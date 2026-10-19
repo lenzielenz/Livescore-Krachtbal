@@ -100,6 +100,29 @@
 }
 .ssk-cl-logo.home { --logo-c: var(--home-c, #0fe0a6); }
 .ssk-cl-logo.away { --logo-c: var(--away-c, #4cc9f0); }
+/* −/+ 1 min onder de klok: wie de klok vergat te starten, telt er per minuut bij. */
+.ssk-clockadj {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.ssk-clockadj-btn {
+  min-width: 84px;
+  min-height: 40px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.ssk-clockadj-btn:disabled { opacity: 0.4; cursor: default; }
+.ssk-clockadj-lbl { font-size: 12px; color: var(--dim, #9aa4b2); }
 .ssk-clock {
   display: block;
   width: 100%;
