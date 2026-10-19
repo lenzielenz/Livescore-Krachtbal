@@ -88,17 +88,20 @@ function naad(R: number, c: number, dir: 1 | -1): string {
 function krachtbal(cx: number, cy: number, R: number, rot: number): string {
   const naden = NADEN.flatMap(c => [naad(R, c, -1), naad(R, c, 1)])
   const strook = `${naad(R, NADEN[0], -1)} A${r1(R)} ${r1(R)} 0 0 1 ${r1(KAP_X * R)} ${r1(KAP_Y * R * NADEN[0])} A${r1(R)} ${r1(R * NADEN[0])} 0 0 1 ${r1(-KAP_X * R)} ${r1(KAP_Y * R * NADEN[0])} Z`
-  const kapjes = [-1, 1].map(k => `<ellipse cx="${r1(k * KAP_X * R)}" cy="0" rx="${r1(R * .07)}" ry="${r1(KAP_Y * R)}" fill="#000" fill-opacity=".12" stroke="#3a1c06" stroke-width="${r1(R * .028)}"/>`).join('')
+  const kapjes = [-1, 1].map(k => `<ellipse cx="${r1(k * KAP_X * R)}" cy="0" rx="${r1(R * .07)}" ry="${r1(KAP_Y * R)}" fill="#7a5a10" fill-opacity=".25" stroke="#5a3d06" stroke-width="${r1(R * .028)}"/>`).join('')
   return `<g transform="translate(${cx} ${cy}) rotate(${rot})">
       <ellipse cx="${r1(R * .1)}" cy="${r1(R * 1.06)}" rx="${r1(R * .9)}" ry="${r1(R * .16)}" fill="#000" opacity=".35" filter="url(#zacht)"/>
+      <circle r="${r1(R * 1.45)}" fill="url(#goudgloed)"/>
       <circle r="${R}" fill="url(#leer)"/>
-      <circle r="${R}" fill="url(#nerf)" opacity=".5"/>
+      <circle r="${R}" fill="url(#nerf)" opacity=".25"/>
       <path d="${strook}" fill="#fff" fill-opacity=".07"/>
-      ${naden.map(d => `<path d="${d}" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="${r1(R * .02)}" transform="translate(0 ${r1(R * .012)})"/><path d="${d}" fill="none" stroke="#3a1c06" stroke-width="${r1(R * .032)}" stroke-linecap="round"/>`).join('')}
+      ${naden.map(d => `<path d="${d}" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="${r1(R * .02)}" transform="translate(0 ${r1(R * .012)})"/><path d="${d}" fill="none" stroke="#5a3d06" stroke-width="${r1(R * .032)}" stroke-linecap="round"/>`).join('')}
       ${kapjes}
-      <text x="0" y="${r1(R * .085)}" text-anchor="middle" fill="#2a1405" fill-opacity=".86" font-family="DejaVu Sans, Arial, sans-serif" font-size="${r1(R * .2)}" font-weight="900" letter-spacing="${r1(R * .01)}">KRACHTBAL</text>
+      <text x="0" y="${r1(R * .085)}" text-anchor="middle" fill="#3b2606" fill-opacity=".9" font-family="DejaVu Sans, Arial, sans-serif" font-size="${r1(R * .2)}" font-weight="900" letter-spacing="${r1(R * .01)}">KRACHTBAL</text>
       <circle r="${R}" fill="url(#bolschaduw)"/>
+      <circle r="${R}" fill="url(#metaal)"/>
       <ellipse cx="${r1(-R * .38)}" cy="${r1(-R * .46)}" rx="${r1(R * .34)}" ry="${r1(R * .17)}" fill="url(#glans)" transform="rotate(-28 ${r1(-R * .38)} ${r1(-R * .46)})"/>
+      ${[[-.78, -.86, .09], [.92, -.5, .06], [.62, .94, .07]].map(([x, y, k]) => `<path d="M${r1(x * R)} ${r1(y * R - k * R)} L${r1(x * R + k * R * .28)} ${r1(y * R - k * R * .28)} L${r1(x * R + k * R)} ${r1(y * R)} L${r1(x * R + k * R * .28)} ${r1(y * R + k * R * .28)} L${r1(x * R)} ${r1(y * R + k * R)} L${r1(x * R - k * R * .28)} ${r1(y * R + k * R * .28)} L${r1(x * R - k * R)} ${r1(y * R)} L${r1(x * R - k * R * .28)} ${r1(y * R - k * R * .28)} Z" fill="#fff6c8"/>`).join('')}
     </g>`
 }
 
@@ -325,12 +328,21 @@ export function renderWeekendDesign(o: {
         <stop offset="0" stop-color="#fff" stop-opacity=".9"/>
         <stop offset="1" stop-color="#fff" stop-opacity="0"/>
       </radialGradient>
-      <!-- Leder van de krachtbal: warm bruin-oranje, licht linksboven, donker in de hoek. -->
-      <radialGradient id="leer" cx=".36" cy=".3" r=".8">
-        <stop offset="0" stop-color="#f6b56a"/>
-        <stop offset=".55" stop-color="#d9782a"/>
-        <stop offset="1" stop-color="#7a3810"/>
+      <!-- De GOUDEN krachtbal uit de goudjacht van het virtueel stadion (goudjacht.ts: basis
+           #f2c230, opdruk #3b2606, metaalglans): licht linksboven, diep amber in de hoek. -->
+      <radialGradient id="leer" cx=".36" cy=".3" r=".82">
+        <stop offset="0" stop-color="#fff4b8"/>
+        <stop offset=".28" stop-color="#ffd84d"/>
+        <stop offset=".62" stop-color="#f2c230"/>
+        <stop offset=".86" stop-color="#b8860b"/>
+        <stop offset="1" stop-color="#6b4a06"/>
       </radialGradient>
+      <radialGradient id="goudgloed"><stop stop-color="#ffd84d" stop-opacity=".55"/><stop offset="1" stop-color="#ffd84d" stop-opacity="0"/></radialGradient>
+      <linearGradient id="metaal" x1="0" y1="0" x2="1" y2="1">
+        <stop offset=".3" stop-color="#fff" stop-opacity="0"/>
+        <stop offset=".45" stop-color="#fff" stop-opacity=".35"/>
+        <stop offset=".52" stop-color="#fff" stop-opacity="0"/>
+      </linearGradient>
       <pattern id="nerf" patternUnits="userSpaceOnUse" width="9" height="9">
         <circle cx="2" cy="3" r="1" fill="#3a1c06" opacity=".35"/><circle cx="7" cy="7" r=".8" fill="#fff" opacity=".18"/>
       </pattern>
@@ -354,7 +366,7 @@ export function renderWeekendDesign(o: {
     <ellipse cx="900" cy="260" rx="620" ry="560" fill="url(#glow)"/>
     <g font-family="DejaVu Sans, Arial, sans-serif">
       <rect x="64" y="70" width="252" height="50" rx="25" fill="#050912" fill-opacity=".78" stroke="#fff" stroke-opacity=".16"/>
-      ${balIcoon(94, 95, 14, '#e08a2e')}
+      ${balIcoon(94, 95, 14, '#f2c230')}
       <text x="120" y="102" fill="#f5f7fb" font-size="21" font-weight="700">Krachtbal <tspan fill="#80baff">Live</tspan></text>
       <rect x="64" y="176" width="952" height="248" rx="32" fill="url(#hero)" stroke="#fff" stroke-opacity=".18"/>
       ${krachtbal(952, 168, 150, -22)}
@@ -374,7 +386,7 @@ export function renderWeekendDesign(o: {
       <text x="64" y="478" fill="#fff" font-size="50" font-weight="800" letter-spacing="-1">Het weekend van ons.</text>
       ${rows || `<rect x="64" y="${ROWS_TOP + 34}" width="952" height="260" rx="28" fill="url(#card)"/>${label('Even geen wedstrijden.', 104, ROWS_TOP + 140, 38, 860)}${label('Tot langs de zijlijn bij de volgende speeldag!', 104, ROWS_TOP + 204, 25, 860, '#b2bfd2')}`}
       <rect x="40" y="1770" width="1000" height="124" rx="28" fill="#05080d" fill-opacity=".8" stroke="#fff" stroke-opacity=".12"/>
-      ${balIcoon(96, 1814, 18, '#e08a2e')}
+      ${balIcoon(96, 1814, 18, '#f2c230')}
       <text x="128" y="1822" fill="#f5f7fb" font-size="25" font-weight="800">KOM MEE SUPPORTEREN.</text>
       <text x="1000" y="1822" text-anchor="end" fill="#b2bfd2" font-size="21">${o.total} wedstrijden · ${o.page + 1} / ${o.pages}</text>
       <text x="128" y="1864" fill="#80baff" font-size="21">Volg alle scores op livescore.roodgries.be</text>
