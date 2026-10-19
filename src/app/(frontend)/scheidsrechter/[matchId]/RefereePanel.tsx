@@ -65,6 +65,7 @@ export function RefereePanel({
   isFederation,
   vrijgaveCode,
   backupRefereeName,
+  andereTafel = null,
 }: {
   matchId: string
   reeks: Reeks | null
@@ -89,6 +90,8 @@ export function RefereePanel({
   isFederation: boolean
   vrijgaveCode: string | null
   backupRefereeName: string | null
+  /** Naam van wie deze lopende wedstrijd al aantekent (een andere tafel), of null. */
+  andereTafel?: string | null
 }) {
   const [status, setStatus] = useState<MatchSheetStatus>(initialStatus as MatchSheetStatus)
   const [keuring, setKeuring] = useState<Record<string, string>>(initialKeuring)
@@ -585,9 +588,15 @@ export function RefereePanel({
         </ul>
         {sheetOpenForScoring(status) ? (
           <div className="wb-btn-row" style={{ marginTop: 6 }}>
-            <Link href={`/scorekeeper/${matchId}`} className="wb-btn wb-btn-primary">
-              → Naar stap 3 — Aantekenen
-            </Link>
+            {andereTafel ? (
+              <Link href={`/match/${matchId}`} className="wb-btn">
+                🔒 {andereTafel} tekent aan — bekijk de wedstrijd
+              </Link>
+            ) : (
+              <Link href={`/scorekeeper/${matchId}`} className="wb-btn wb-btn-primary">
+                → Naar stap 3 — Aantekenen
+              </Link>
+            )}
             {status === 'af_te_tekenen' && (
               <Link href={`/aftekenen/${matchId}`} className="wb-btn">
                 → Naar stap 4 — Aftekenen

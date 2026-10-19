@@ -38,6 +38,7 @@ export function SimpleScorekeeper({
   reeks,
   exitHref = '/scorekeeper',
   supportersMode = false,
+  startKlaar = null,
 }: {
   matchId: number
   initialState: MatchState
@@ -47,6 +48,9 @@ export function SimpleScorekeeper({
   exitHref?: string
   /** Supporters-modus (vrije livescore): doel is doel — geen scorer kiezen, geen wissel. */
   supportersMode?: boolean
+  /** Federatieflow vóór de aftrap: wat ontbreekt er nog (opstelling, akkoord scheidsrechter)?
+   *  null = startklaar (of niet van toepassing). */
+  startKlaar?: { ontbreekt: string[] } | null
 }) {
   const [state, setState] = useState<MatchState>(initialState)
   const [error, setError] = useState<string | null>(null)
@@ -161,8 +165,11 @@ export function SimpleScorekeeper({
   // daar vlak achteraan komt.
   const NA_START_DOOF_MS = 1200
   const startTik = useRef(0)
+  // Nog niet startklaar in de federatieflow: de klok start de wedstrijd niet (de server weigert
+  // het toch) — het scherm toont wat er ontbreekt.
+  const geblokkeerd = !live && !finished && !!startKlaar && startKlaar.ontbreekt.length > 0
   const tikOpKlok = () => {
-    if (finished) return
+    if (finished || geblokkeerd) return
     const nu = Date.now()
     if (nu - startTik.current < NA_START_DOOF_MS) return
     if (!live) {
@@ -380,7 +387,9 @@ export function SimpleScorekeeper({
           </span>
           {!finished && (
             <span className="ssk-clock-action">
-              {rust
+              {geblokkeerd
+                ? '🔒 Nog niet startklaar'
+                : rust
                 ? `▶ Tik om de ${half}e helft te starten`
                 : !live || (!state.match.clockRunning && clock < 1)
                   ? '▶ Tik om te starten'
@@ -394,6 +403,17 @@ export function SimpleScorekeeper({
           <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size="clamp(60px, 15vw, 104px)" ringColor={state.teams.away.colors?.primary ?? null} />
         </span>
       </div>
+
+      {geblokkeerd && startKlaar && (
+        <div className="ssk-startklaar" role="status">
+          <strong>Nog niet klaar om te starten</strong>
+          <span>Nog nodig: {startKlaar.ontbreekt.join(', ')}.</span>
+          <span className="ssk-startklaar-links">
+            <Link href={`/opstelling/${matchId}`} className="ssk-btn zacht">📋 Opstelling</Link>
+            <Link href={`/scheidsrechter/${matchId}`} className="ssk-btn zacht">🧑‍⚖️ Scheidsrechter</Link>
+          </span>
+        </div>
+      )}
 
       {live && !finished && (
         <div className="ssk-clockadj" role="group" aria-label="Klok per minuut bijstellen">
@@ -559,6 +579,11 @@ export function SimpleScorekeeper({
         <div className="ssk-done">
           ✅ Afgelopen — eindstand <strong>{state.score.home} – {state.score.away}</strong>
           <div className="ssk-after">
+            {/* Federatieflow: na de laatste worp volgt het aftekenen (stap 4). Zonder deze knop
+                verdween een afgelopen wedstrijd uit Mijn club en wist de tafel niet waar verder. */}
+            {!supportersMode && (
+              <Link href={`/aftekenen/${matchId}`} className="ssk-btn">✍️ Naar aftekenen →</Link>
+            )}
             <Link href={`/match/${matchId}`} className="ssk-btn">Naar wedstrijdpagina</Link>
             {/* Te vroeg op "Einde" gedrukt? Verder doen waar je stond, zonder iets te verliezen. */}
             <button

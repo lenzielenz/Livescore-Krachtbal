@@ -8,6 +8,8 @@ import { canViewAnalyseMatch } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchState } from '@/lib/match-engine'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
+import { missingSteps } from '@/lib/match-readiness'
+import { mayScoreMatch, type AuthedUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { isSupportersMode } from '@/lib/score-mode'
@@ -73,17 +75,18 @@ export default async function ScorekeeperPage({
   // In supportersmodus staat de demo uit (zie demo/page.tsx) — ook via een oude link.
   if (isDemo && supportersMode) redirect('/')
 
-  // Supporters-modus: iedereen mag aantekenen, maar je moet wél ingelogd zijn om de score te
-  // veranderen. Toon een nette inlog-uitnodiging i.p.v. een 401 verderop in de flow.
-  if (supportersMode && !user) {
+  // Niet ingelogd: aantekenen vraagt altijd een account (api-auth.ts weigert een anonieme
+  // mutatie). Toon een nette inlog-uitnodiging i.p.v. een scorebord waarvan elke tik mislukt.
+  if (!isDemo && !user) {
     return (
       <>
         <SiteHeader active="wedstrijden" />
         <div className="site">
           <h1 className="page-title">Aantekenen</h1>
           <p className="empty">
-            Log in om de score van deze wedstrijd door te geven. Aantekenen kan door elke ingelogde
-            supporter — een account maken is gratis.
+            {supportersMode
+              ? 'Log in om de score van deze wedstrijd door te geven. Aantekenen kan door elke ingelogde supporter — een account maken is gratis.'
+              : 'Log in om deze wedstrijd aan te tekenen. In de federatieflow tekent de aangeduide tafel aan: de clubverantwoordelijke, de aantekenaar of de scheidsrechter van dienst.'}
           </p>
           <p className="sk-login-actions">
             <Link href={`/inloggen?next=/scorekeeper/${matchId}`} className="match-score-cta">
@@ -91,7 +94,31 @@ export default async function ScorekeeperPage({
               <span>Inloggen om aan te tekenen</span>
               <span className="match-score-cta-arrow" aria-hidden>→</span>
             </Link>
-            <Link href="/registreren" className="back-link">Nog geen account? Registreren →</Link>
+            {supportersMode && <Link href="/registreren" className="back-link">Nog geen account? Registreren →</Link>}
+          </p>
+        </div>
+      </>
+    )
+  }
+
+  // Federatieflow: enkel wie deze wedstrijd mag aantekenen (zie mayScoreMatch) krijgt het scherm.
+  // Anders zag je een volledig werkend ogend scorebord waarvan elke tik op 403 eindigde.
+  if (!isDemo && !supportersMode && !isAnalyse && !(await mayScoreMatch(payload, user as unknown as AuthedUser | null, matchId))) {
+    return (
+      <>
+        <SiteHeader active="wedstrijden" />
+        <div className="site">
+          <h1 className="page-title">Aantekenen</h1>
+          <p className="empty">
+            Je kan deze wedstrijd niet aantekenen. In de federatieflow doet de aangeduide tafel dat:
+            de verantwoordelijke van een van beide clubs, een aantekenaar of de scheidsrechter van dienst.
+          </p>
+          <p className="sk-login-actions">
+            <Link href={`/match/${matchId}`} className="match-score-cta">
+              <span aria-hidden>📺</span>
+              <span>Volg de wedstrijd</span>
+              <span className="match-score-cta-arrow" aria-hidden>→</span>
+            </Link>
           </p>
         </div>
       </>
@@ -147,6 +174,22 @@ export default async function ScorekeeperPage({
   // iedereen — behalve via "Demo expert" (?expert=1), waarmee een admin het veldschema kan oefenen.
   const advanced = isDemo ? isAdmin && expert === '1' : isAnalyse
 
+  // Eruit gaan: terug naar waar je vandaan kwam. Clubstaf → Mijn club (daar start je de
+  // tijdopname), de scheidsrechter → zijn wedstrijdscherm, de rest (aantekenaar, federatie, demo,
+  // supporters) → de lijst om aan te tekenen. Iemand zonder club kwam anders op "niet gekoppeld".
+  const exitHref =
+    isDemo || supportersMode
+      ? '/scorekeeper'
+      : hasRole(user, 'club-beheerder', 'club-medewerker')
+        ? '/club'
+        : hasRole(user, 'scheidsrechter')
+          ? `/scheidsrechter/${matchId}`
+          : '/scorekeeper'
+  // Federatieflow vóór de aftrap: wat ontbreekt er nog om te mogen starten? Het snelscorescherm
+  // toont het i.p.v. een starttik die de server toch weigert (zie startControle in de actie-route).
+  const startReadiness = !supportersMode && !isDemo && state.match.status === 'scheduled' ? await getMatchReadiness(payload, matchId) : null
+  const startKlaar = startReadiness && !startReadiness.ready ? { ontbreekt: missingSteps(startReadiness) } : null
+
   if (!advanced) {
     // Eruit gaan brengt je terug naar "Mijn club" (daar start je de tijdopname zodra de
     // scheidsrechter alles goedkeurde) — enkel de demo blijft naar de kieslijst gaan.
@@ -156,8 +199,9 @@ export default async function ScorekeeperPage({
         initialState={state}
         roster={roster}
         reeks={reeks}
-        exitHref={isDemo || supportersMode ? '/scorekeeper' : '/club'}
+        exitHref={exitHref}
         supportersMode={supportersMode}
+        startKlaar={startKlaar}
       />
     )
   }

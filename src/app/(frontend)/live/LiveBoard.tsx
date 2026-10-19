@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+
+import { bordAantekenKnop, type AantekenRol } from '@/lib/wedstrijddag-acties'
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import { PushOptIn } from '@/components/PushOptIn'
@@ -201,6 +203,7 @@ export function LiveBoard({
   myTeamIds = [],
   supportersMode = false,
   userId = null,
+  aantekenRol = null,
 }: {
   date: string
   today: string
@@ -223,6 +226,8 @@ export function LiveBoard({
   supportersMode?: boolean
   /** Authenticated account identity used to isolate favorites on shared devices. */
   userId?: number | string | null
+  /** Federatieflow: wie mag vanaf het bord naar het aantekenscherm (zie bordAantekenKnop). */
+  aantekenRol?: AantekenRol
 }) {
   const router = useRouter()
   // Het bord werkt zichzelf bij zolang er iets te volgen valt (zie useLiveScores hierboven).
@@ -902,11 +907,18 @@ export function LiveBoard({
                         zijn er op een speeldag tientallen, en die hoeven het bord niet vol te zetten. */}
                     {/* Tekent iemand anders deze wedstrijd al aan, dan verdwijnt de knop: er is
                         maar één aantekenaar tegelijk (zie claimHeld in score-trust.ts). */}
-                    {supportersMode && (live || open) && m.status !== 'finished' && !(m.scorerId != null && String(m.scorerId) !== String(userId)) && (
+                    {(supportersMode ? live || open : live) && m.status !== 'finished' && bordAantekenKnop({
+                      supportersMode,
+                      rol: aantekenRol,
+                      myClubId,
+                      homeClubId: m.home.clubId,
+                      awayClubId: m.away.clubId,
+                      iemandAnders: m.scorerId != null && String(m.scorerId) !== String(userId) && aantekenRol !== 'alle',
+                    }) && (
                       <Link href={`/scorekeeper/${m.id}`} className="lb-score-cta">
                         <span className="lb-score-cta-ico" aria-hidden>✏️</span>
                         <span className="lb-score-cta-txt">
-                          {live ? 'Aantekenen — verder scoren' : 'Aantekenen — start de wedstrijd'}
+                          {!supportersMode ? 'Aantekenen (officiële tafel)' : live ? 'Aantekenen — verder scoren' : 'Aantekenen — start de wedstrijd'}
                         </span>
                         <span className="lb-score-cta-arrow" aria-hidden>→</span>
                       </Link>

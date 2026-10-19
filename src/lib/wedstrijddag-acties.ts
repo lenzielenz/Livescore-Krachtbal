@@ -53,3 +53,33 @@ export function primaireActie(acties: WedstrijdActie[]): WedstrijdActie | null {
   if (acties.includes('aantekenen')) return 'aantekenen'
   return acties[0] ?? null
 }
+
+/**
+ * Wie mag in de federatieflow vanaf het live-bord naar het aantekenscherm? 'alle' (federatie,
+ * admin, aantekenaar, scheidsrechter — de server beslist per wedstrijd verder), 'club' (enkel
+ * wedstrijden van de eigen club) of null. In supportersmodus speelt dit niet: daar mag iedereen.
+ */
+export type AantekenRol = 'alle' | 'club' | null
+
+export function aantekenRolVan(roles: readonly string[] | null | undefined): AantekenRol {
+  const r = new Set(roles ?? [])
+  if (r.has('admin') || r.has('federatie') || r.has('scorekeeper') || r.has('scheidsrechter')) return 'alle'
+  if (r.has('club-beheerder') || r.has('club-medewerker')) return 'club'
+  return null
+}
+
+/** Toont het live-bord voor deze wedstrijd een "Aantekenen"-knop aan deze kijker? */
+export function bordAantekenKnop(o: {
+  supportersMode: boolean
+  rol: AantekenRol
+  myClubId: number | null
+  homeClubId: number | null | undefined
+  awayClubId: number | null | undefined
+  /** Iemand anders tekent deze wedstrijd al aan (en de kijker is geen federatie/admin). */
+  iemandAnders: boolean
+}): boolean {
+  if (o.iemandAnders) return false
+  if (o.supportersMode) return true
+  if (o.rol === 'alle') return true
+  return o.rol === 'club' && o.myClubId != null && (o.homeClubId === o.myClubId || o.awayClubId === o.myClubId)
+}

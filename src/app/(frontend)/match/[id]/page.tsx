@@ -13,6 +13,7 @@ import { VeldschermKoppelen } from '@/components/VeldschermKoppelen'
 import { hasRole, isFederationLevel } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
+import { mayScoreMatch, type AuthedUser } from '@/lib/api-auth'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
 import { dateStrBE, formatDateTimeBE } from '@/lib/datetime'
@@ -353,13 +354,22 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   // Vertrouwenslaag: enkel zinvol bij een vrije supporters-score. Wie zelf meetekende, mag niet
   // bevestigen (geen onafhankelijke controle); wie niets claimde, kan het aantekenen overnemen.
   const trust = state.trust
+  // Mag deze kijker de wedstrijd aantekenen? Supporters: elke kijker. Federatie: enkel wie
+  // mayScoreMatch zegt. Telkens niet als iemand anders de lopende wedstrijd al aantekent.
+  const iemandAndersTekentAan =
+    state.trust.claimActive && state.trust.scorerId != null && state.trust.scorerId !== (me ? Number((me as { id?: number }).id) : null) && !isFederationLevel(me)
+  const toonAantekenen =
+    state.match.status !== 'finished' &&
+    !toekomstig &&
+    !iemandAndersTekentAan &&
+    (supportersMode || (me != null && (await mayScoreMatch(payload, me as unknown as AuthedUser, matchId))))
   const trustState = sanitizeTrust((matchDoc as { scoreTrust?: unknown } | null)?.scoreTrust)
   const meId = me ? Number((me as { id?: number }).id) : null
   const trustMe =
     meId != null
       ? {
           isScorer: trustState.scorerId === meId,
-          mayClaim: state.match.status !== 'finished' && mayClaim(trustState, meId),
+          mayClaim: state.match.status !== 'finished' && mayClaim(trustState, meId, Date.now(), state.match.status === 'live'),
           mayVote:
             voteWindowOpen(state.match.status, state.match.finishedAt) && mayVote(trustState, meId),
           myVote: trustState.confirms.some((v) => v.userId === meId)
@@ -395,14 +405,20 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       {/* Supporters-modus: vrije livescore. Iedereen kan meteen beginnen aantekenen — geen
           scheidsrechter of aftekenen nodig. */}
       {/* Tekent iemand anders deze lopende wedstrijd al aan, dan verdwijnt de knop: er kan maar één
-          aantekenaar tegelijk zijn (zie claimHeld in score-trust.ts). */}
-      {supportersMode && state.match.status !== 'finished' && !toekomstig && !(state.trust.claimActive && state.trust.scorerId != null && state.trust.scorerId !== myUid) && (
+          aantekenaar tegelijk zijn (zie claimHeld in score-trust.ts). Federatie/admin blijven de
+          noodrem en zien de knop wel. In de federatieflow krijgt enkel de aangeduide tafel hem
+          (mayScoreMatch): clubverantwoordelijke, aantekenaar of scheidsrechter van dienst. */}
+      {toonAantekenen && (
         <Link href={`/scorekeeper/${matchId}`} className="match-score-cta">
           <span aria-hidden>✏️</span>
           <span>
-            {state.match.status === 'live'
-              ? 'Aantekenen — verder scoren'
-              : 'Aantekenen — start de wedstrijd'}
+            {!supportersMode
+              ? state.match.status === 'live'
+                ? 'Aantekenen (officiële tafel) — verder scoren'
+                : 'Aantekenen (officiële tafel) — naar de start'
+              : state.match.status === 'live'
+                ? 'Aantekenen — verder scoren'
+                : 'Aantekenen — start de wedstrijd'}
           </span>
           <span className="match-score-cta-arrow" aria-hidden>→</span>
         </Link>

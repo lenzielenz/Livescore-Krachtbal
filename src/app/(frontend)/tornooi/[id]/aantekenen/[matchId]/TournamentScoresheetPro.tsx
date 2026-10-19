@@ -225,6 +225,20 @@ export function TournamentScoresheetPro({
             </span>
           </div>
 
+          {/* Klok vergeten te starten of te laat getikt? Per minuut bijstellen (zelfde knoppen als
+              bij de competitie); lopen of stilstaan blijft zoals het was. */}
+          {live && !finished && (
+            <div className="ssk-clockadj" role="group" aria-label="Klok per minuut bijstellen">
+              <button type="button" className="ssk-clockadj-btn" disabled={clock < 1} onClick={() => act({ action: 'clock', seconds: Math.max(0, Math.floor(clock) - 60) })} aria-label="Eén minuut van de klok af">
+                − 1 min
+              </button>
+              <span className="ssk-clockadj-lbl">klok bijstellen</span>
+              <button type="button" className="ssk-clockadj-btn" onClick={() => act({ action: 'clock', seconds: Math.floor(clock) + 60 })} aria-label="Eén minuut bij de klok">
+                + 1 min
+              </button>
+            </div>
+          )}
+
           <div className="ssk-board">
             {(['home', 'away'] as Side[]).map((side) => {
               const info = teamInfo(side)

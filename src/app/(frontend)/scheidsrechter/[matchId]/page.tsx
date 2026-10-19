@@ -148,6 +148,17 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
         isFederation={isFederation}
         vrijgaveCode={isFederation ? ((sheet?.vrijgaveCode as string | undefined) ?? null) : null}
         backupRefereeName={backupRefereeName}
+        andereTafel={
+          // Tekent een clubtafel deze lopende wedstrijd al aan? Dan geen knop "Naar aantekenen"
+          // voor de scheidsrechter (er kan maar één aantekenaar zijn, zie claimHeld); de
+          // federatie blijft er als noodrem wel door.
+          liveState?.trust.claimActive &&
+          liveState.trust.scorerId != null &&
+          Number(liveState.trust.scorerId) !== Number((user as { id?: number } | null)?.id) &&
+          !isFederation
+            ? (liveState.trust.scorerName ?? 'Iemand anders')
+            : null
+        }
       />
       </div>
     </>

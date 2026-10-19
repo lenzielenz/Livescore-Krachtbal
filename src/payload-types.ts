@@ -2136,7 +2136,7 @@ export interface PhotoboothFoto {
   focalY?: number | null;
 }
 /**
- * Hoe vlot het stadion loopt per bezoek (anoniem). Het overzicht: /api/virtueel/meting.
+ * Hoe vlot het stadion loopt per bezoek (anoniem). De analyse met knelpunten en advies: /federatie/stadion.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "virtuele-metingen".
@@ -3463,7 +3463,7 @@ export interface Season {
 export interface Setting {
   id: number;
   /**
-   * Geldt voor álle wedstrijden. Federatie = volledige flow (opstelling, scheidsrechtersakkoord, aftekenen). Supporters = vrije livescore: de scheidsrechterflow valt weg en iedereen kan elke wedstrijd openen en de score doorgeven.
+   * Geldt voor álle wedstrijden. Federatie = volledige flow (opstelling, scheidsrechtersakkoord, aftekenen). Supporters = vrije livescore: de scheidsrechterflow valt weg en iedereen kan elke wedstrijd openen en de score doorgeven. In de federatie-testomgeving staat dit altijd op Federatie, wat je hier ook kiest.
    */
   scoreMode: 'federatie' | 'supporters';
   /**

@@ -132,3 +132,28 @@ describe('primaireActie', () => {
     expect(primaireActie(['bekijk'])).toBe('bekijk')
   })
 })
+
+describe('aanteken-knop op het live-bord', () => {
+  const basis = { supportersMode: false, myClubId: 7, homeClubId: 7, awayClubId: 9, iemandAnders: false }
+  it('rollen: federatie/aantekenaar/scheidsrechter = alle, clubstaf = club, supporter = niets', async () => {
+    const { aantekenRolVan } = await import('@/lib/wedstrijddag-acties')
+    expect(aantekenRolVan(['federatie'])).toBe('alle')
+    expect(aantekenRolVan(['scheidsrechter'])).toBe('alle')
+    expect(aantekenRolVan(['club-medewerker'])).toBe('club')
+    expect(aantekenRolVan(['viewer'])).toBeNull()
+    expect(aantekenRolVan(null)).toBeNull()
+  })
+  it('supportersmodus: iedereen, behalve als een ander al aantekent', async () => {
+    const { bordAantekenKnop } = await import('@/lib/wedstrijddag-acties')
+    expect(bordAantekenKnop({ ...basis, supportersMode: true, rol: null })).toBe(true)
+    expect(bordAantekenKnop({ ...basis, supportersMode: true, rol: null, iemandAnders: true })).toBe(false)
+  })
+  it('federatieflow: clubstaf enkel bij de eigen club, de officiële tafel overal', async () => {
+    const { bordAantekenKnop } = await import('@/lib/wedstrijddag-acties')
+    expect(bordAantekenKnop({ ...basis, rol: 'club' })).toBe(true)
+    expect(bordAantekenKnop({ ...basis, rol: 'club', homeClubId: 3 })).toBe(false)
+    expect(bordAantekenKnop({ ...basis, rol: 'alle', homeClubId: 3 })).toBe(true)
+    expect(bordAantekenKnop({ ...basis, rol: null })).toBe(false)
+    expect(bordAantekenKnop({ ...basis, rol: 'club', iemandAnders: true })).toBe(false)
+  })
+})

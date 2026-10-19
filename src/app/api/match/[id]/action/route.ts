@@ -28,6 +28,7 @@ import { notifyGoalScored } from '@/lib/match-notify'
 import { missingSteps } from '@/lib/match-readiness'
 import { matchStartBlockedReason } from '@/lib/match-start-window'
 import { getPayloadClient } from '@/lib/payload-client'
+import { isSupportersMode } from '@/lib/score-mode'
 import { aantekenClaim, claimScorer, sanitizeTrust } from '@/lib/score-trust'
 import { noteContribution, userTrustScore, writeMatchTrust } from '@/lib/score-trust-store'
 import {
@@ -102,24 +103,28 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const claim = await liveClaim(payload, matchId, action, user)
     if (claim.blokkade) return Response.json({ error: claim.blokkade }, { status: 409 })
 
+    // Startcontrole: opstellingen + scheidsrechtersakkoord (of demo). Geldt voor élke manier van
+    // starten — het veldschema (start), de snelscore (simplestart) en een eerste doelpunt dat de
+    // wedstrijd live zet (simplegoal). Zonder dat laatste kon de federatieflow via het
+    // snelscorescherm overgeslagen worden. In supportersmodus is elke wedstrijd startklaar (zie
+    // matchsheet-data.ts). Een admin/federatie mag de controle bewust overslaan (allowUnready).
+    const startControle = async (): Promise<Response | null> => {
+      const readiness = await getMatchReadiness(payload, matchId)
+      if (readiness.ready || (isFederationLevel(user) && body.allowUnready === true)) return null
+      return Response.json(
+        { error: `Nog niet klaar om te starten: ${missingSteps(readiness).join(', ')}.`, readiness },
+        { status: 409 },
+      )
+    }
+
     let result: unknown
     switch (action) {
       case 'start': {
         const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0, overrideAccess: true })
         const teVroeg = matchStartBlockedReason(match)
         if (teVroeg) return Response.json({ error: teVroeg }, { status: 409 })
-        // Startcontrole: opstellingen + scheidsrechtersakkoord (of demo). Een admin/federatie
-        // mag de controle bewust overslaan via een testknop (allowUnready).
-        const readiness = await getMatchReadiness(payload, matchId)
-        if (!readiness.ready) {
-          const mayBypass = isFederationLevel(user) && body.allowUnready === true
-          if (!mayBypass) {
-            return Response.json(
-              { error: `Nog niet klaar om te starten: ${missingSteps(readiness).join(', ')}.`, readiness },
-              { status: 409 },
-            )
-          }
-        }
+        const nietKlaar = await startControle()
+        if (nietKlaar) return nietKlaar
         result = await startMatch(payload, matchId, Number(body.startingTeamId))
         break
       }
@@ -228,10 +233,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0, overrideAccess: true })
         const teVroeg = matchStartBlockedReason(match)
         if (teVroeg) return Response.json({ error: teVroeg }, { status: 409 })
+        const nietKlaar = await startControle()
+        if (nietKlaar) return nietKlaar
         result = await startSimpleMatch(payload, matchId)
         break
       }
       case 'simplegoal': {
+        // Een eerste doelpunt zet een geplande wedstrijd live: dan geldt de startcontrole ook.
+        const voorDoel = await payload.findByID({ collection: 'matches', id: matchId, depth: 0, overrideAccess: true })
+        if (voorDoel.status !== 'live') {
+          const teVroeg = matchStartBlockedReason(voorDoel)
+          if (teVroeg) return Response.json({ error: teVroeg }, { status: 409 })
+          const nietKlaar = await startControle()
+          if (nietKlaar) return nietKlaar
+        }
         const goalSide = body.side === 'away' ? 'away' : 'home'
         const res = await recordSimpleGoal(payload, matchId, goalSide, body.points === 2 ? 2 : 1, {
           id: Number(body.playerId),
@@ -265,6 +280,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         break
       // Wedstrijd gedaan zonder live-notatie: een supporter geeft achteraf de eindstand door.
       case 'reportresult':
+        // Achteraf enkel een eindstand doorgeven, zonder wedstrijdblad of aftekenen: in
+        // supportersmodus de vrije livescore, in federatiemodus enkel voor de federatie zelf (bv.
+        // een uitslag van een papieren wedstrijdblad). Anders kon een clubmedewerker de hele
+        // federatieflow omzeilen.
+        if (!isFederationLevel(user) && !(await isSupportersMode(payload))) {
+          return Response.json({ error: 'In de federatieflow komt de uitslag uit het wedstrijdblad, niet uit een losse melding.' }, { status: 403 })
+        }
         result = await reportFinalResult(payload, matchId, Number(body.home), Number(body.away))
         break
       default:
