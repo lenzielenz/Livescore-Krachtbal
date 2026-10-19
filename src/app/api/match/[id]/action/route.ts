@@ -28,7 +28,8 @@ import { notifyGoalScored } from '@/lib/match-notify'
 import { missingSteps } from '@/lib/match-readiness'
 import { matchStartBlockedReason } from '@/lib/match-start-window'
 import { getPayloadClient } from '@/lib/payload-client'
-import { noteContribution } from '@/lib/score-trust-store'
+import { aantekenClaim, claimScorer, sanitizeTrust } from '@/lib/score-trust'
+import { noteContribution, userTrustScore, writeMatchTrust } from '@/lib/score-trust-store'
 import {
   adjustRefereeStop,
   adjustSimpleCross,
@@ -90,6 +91,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const seen = prior.docs[0] as { response?: unknown } | undefined
       if (seen) return Response.json(seen.response ?? { ok: true, deduped: true })
     }
+
+    // Eén aantekenaar per lopende wedstrijd. Wie de wedstrijd startte (of als eerste op een lopende
+    // wedstrijd aantekende), houdt ze vast tot het einde; iedereen anders krijgt hier nee. Enkel
+    // "Wedstrijd was nog niet bezig" (reset) geeft de wedstrijd vrij — resetMatch wist de claim.
+    // De claim wordt na de actie nog binnen het slot weggeschreven: zo kunnen twee mensen die op
+    // hetzelfde moment op start tikken niet allebei beginnen, en een mislukte start (te vroeg, blad
+    // niet klaar) claimt niets. Admin/federatie blijven erdoor kunnen als noodrem (een aantekenaar
+    // die vertrok zonder terug te zetten).
+    const claim = await liveClaim(payload, matchId, action, user)
+    if (claim.blokkade) return Response.json({ error: claim.blokkade }, { status: 409 })
 
     let result: unknown
     switch (action) {
@@ -260,6 +271,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         return Response.json({ error: `Onbekende actie: ${action}` }, { status: 400 })
     }
 
+    await claim.vastleggen()
+
     // Vertrouwenslaag: onthoud wie deze wedstrijd aantekent. De eerste die scoort wordt official
     // scorer; elke volgende actie houdt die claim levend (zie score-trust.ts). Fire-and-forget.
     if (actorId != null && action !== 'reset') {
@@ -293,5 +306,49 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       )
     }
     return Response.json({ error: msg }, { status: 400 })
+  }
+}
+
+/**
+ * Bewaak de aantekenclaim (zie aantekenClaim in score-trust.ts): `blokkade` als iemand anders de
+ * lopende wedstrijd al aantekent, anders `vastleggen` om na een gelukte actie de claim weg te
+ * schrijven.
+ */
+async function liveClaim(
+  payload: Awaited<ReturnType<typeof getPayloadClient>>,
+  matchId: number,
+  action: string,
+  user: Awaited<ReturnType<typeof authUser>>,
+): Promise<{ blokkade: string | null; vastleggen: () => Promise<void> }> {
+  const niets = { blokkade: null, vastleggen: async () => {} }
+  const userId = typeof user?.id === 'number' ? user.id : null
+  const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0, overrideAccess: true }).catch(() => null)
+  if (!match || userId == null) return niets
+  const trust = sanitizeTrust((match as { scoreTrust?: unknown }).scoreTrust)
+  const besluit = aantekenClaim({
+    trust,
+    live: match.status === 'live',
+    action,
+    userId,
+    federatie: isFederationLevel(user),
+    vrijeWedstrijd: Boolean((match as { isDemo?: boolean }).isDemo || (match as { analyseOnly?: boolean }).analyseOnly),
+  })
+  if (besluit === 'blokkeer') {
+    return {
+      blokkade: `${trust.scorerName ?? 'Iemand anders'} tekent deze wedstrijd al aan. Er kan maar één persoon tegelijk aantekenen; pas als die "Wedstrijd was nog niet bezig" kiest, kan iemand anders overnemen.`,
+      vastleggen: async () => {},
+    }
+  }
+  if (besluit === 'vrij') return niets
+  const name = String((user as { name?: unknown })?.name ?? '').trim() || 'Aantekenaar'
+  return {
+    blokkade: null,
+    vastleggen: async () => {
+      // Enkel als de wedstrijd nu ook echt loopt (een start kan geweigerd zijn).
+      const na = await payload.findByID({ collection: 'matches', id: matchId, depth: 0, overrideAccess: true }).catch(() => null)
+      if (na?.status !== 'live') return
+      const huidig = sanitizeTrust((na as { scoreTrust?: unknown }).scoreTrust)
+      await writeMatchTrust(payload, matchId, claimScorer(huidig, { id: userId, name, trust: await userTrustScore(payload, userId) }))
+    },
   }
 }

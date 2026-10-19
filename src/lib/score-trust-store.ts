@@ -3,7 +3,7 @@ import type { Payload } from 'payload'
 import { getScoreMode } from './score-mode'
 import {
   applyMatchOutcome,
-  claimActive,
+  claimHeld,
   claimScorer,
   emptyTrust,
   markSettled,
@@ -164,7 +164,7 @@ async function run(matchId: number, user: { id: number; name: string }): Promise
     // Demo's en privé-analyseopnames hebben geen publiek vertrouwen te winnen.
     if ((match as { isDemo?: boolean }).isDemo || (match as { analyseOnly?: boolean }).analyseOnly) return
     let trust = sanitizeTrust((match as { scoreTrust?: unknown }).scoreTrust)
-    if (!claimActive(trust)) {
+    if (!claimHeld(trust, (match as { status?: string }).status === 'live')) {
       trust = claimScorer(trust, { ...user, trust: await userTrustScore(payload, user.id) })
     }
     await writeMatchTrust(payload, matchId, recordContribution(trust, user))

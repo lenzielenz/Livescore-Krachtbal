@@ -103,6 +103,13 @@
   @keyframes sk-clock-alarm { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
 }
 .sk-clock-ico { font-size: 0.8rem; }
+/* −/+ 1 minuut naast de klok (klok vergeten te starten). */
+.sk-clockwrap { display: inline-flex; align-items: center; gap: 4px; justify-self: center; }
+.sk-clockadj {
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line);
+  background: transparent; color: inherit; font: inherit; font-weight: 900; line-height: 1; cursor: pointer;
+}
+.sk-clockadj:disabled { opacity: 0.4; cursor: default; }
 .sk-half-chip { font-size: 0.62rem; background: rgba(255, 255, 255, 0.14); padding: 1px 5px; border-radius: 6px; }
 
 /* Kruisjes per ploeg, net onder de T.O.-balk (hoort visueel samen). Drie kruisjes

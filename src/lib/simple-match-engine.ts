@@ -1,7 +1,6 @@
 import type { Payload } from 'payload'
 
 import { buildMatchState, recordRefereeStop, recordTimeout } from './match-engine'
-import { elapsedSinceScheduledStart } from './match-start-window'
 import { isSupportersMode } from './score-mode'
 import {
   buildFixedSimpleScore,
@@ -72,10 +71,10 @@ export async function startSimpleMatch(payload: Payload, matchId: number) {
   if (status === 'finished') {
     throw new Error('Deze wedstrijd is al afgelopen — heropen ze eerst om verder te doen.')
   }
-  // Wie pas na de geplande aftrap begint aan te tekenen, start niet meer op 00:00. De verstreken
-  // tijd wordt de klokbasis; vanaf dit ogenblik loopt de klok gewoon verder.
+  // De tik op de klok ís het fluitsignaal: de klok loopt vanaf 00:00. Geen sprong naar het geplande
+  // uur — wie te laat tikte, telt er per minuut bij met de −/+-knoppen naast de klok.
   const now = new Date()
-  const startSeconds = elapsedSinceScheduledStart(huidig ?? {}, now)
+  const startSeconds = 0
   await payload.update({
     collection: 'matches',
     id: matchId,
@@ -112,7 +111,7 @@ export async function recordSimpleGoal(
   scorer?: SimpleScorer,
 ) {
   const { match, score, half, clock } = await loadSimpleMatch(payload, matchId)
-  let goalClock = clock
+  const goalClock = clock
   const teamId = side === 'home' ? relId(match.homeTeam) : relId(match.awayTeam)
 
   let player: { id: number; shirtNumber?: number | null; name?: string | null; team?: unknown } | null = null
@@ -133,20 +132,13 @@ export async function recordSimpleGoal(
     }
   }
 
-  // Een eerste doelpunt mag de wedstrijd automatisch starten. Is de wedstrijd al live gezet maar
-  // staat de klok nog op nul, dan geldt dezelfde regel: aansluiten op het geplande startuur.
-  if (match.status !== 'live' || (!match.clockRunning && clock <= 0)) {
-    const now = new Date()
-    goalClock = elapsedSinceScheduledStart(match, now)
+  // Een eerste doelpunt zet de wedstrijd live, maar de klok start niet vanzelf: die blijft staan
+  // tot de aantekenaar ze aanzet (en met −/+ bijstelt als hij ze vergat).
+  if (match.status !== 'live') {
     await payload.update({
       collection: 'matches',
       id: matchId,
-      data: {
-        status: 'live',
-        clockSeconds: goalClock,
-        clockRunning: true,
-        clockUpdatedAt: now.toISOString(),
-      },
+      data: { status: 'live' },
       overrideAccess: true,
     })
   }

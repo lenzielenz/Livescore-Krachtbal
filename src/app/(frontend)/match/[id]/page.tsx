@@ -394,7 +394,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       </Link>
       {/* Supporters-modus: vrije livescore. Iedereen kan meteen beginnen aantekenen — geen
           scheidsrechter of aftekenen nodig. */}
-      {supportersMode && state.match.status !== 'finished' && !toekomstig && (
+      {/* Tekent iemand anders deze lopende wedstrijd al aan, dan verdwijnt de knop: er kan maar één
+          aantekenaar tegelijk zijn (zie claimHeld in score-trust.ts). */}
+      {supportersMode && state.match.status !== 'finished' && !toekomstig && !(state.trust.claimActive && state.trust.scorerId != null && state.trust.scorerId !== myUid) && (
         <Link href={`/scorekeeper/${matchId}`} className="match-score-cta">
           <span aria-hidden>✏️</span>
           <span>

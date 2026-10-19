@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { ProfileTools } from '@/components/ProfileTools'
 import { SiteHeader } from '@/components/SiteHeader'
-import { hasRole, userClubId } from '@/lib/access'
+import { hasRole, isFederationLevel, userClubId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { clinchStatus } from '@/lib/championship'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
@@ -13,7 +13,7 @@ import { getProfile } from '@/lib/profiles'
 import { buildReeksStandings } from '@/lib/reeks-standings'
 import { reeksNaam, REEKS_OPTIONS } from '@/lib/reeksen'
 import { isSupportersMode } from '@/lib/score-mode'
-import { claimActive, sanitizeTrust } from '@/lib/score-trust'
+import { claimHeld, sanitizeTrust } from '@/lib/score-trust'
 import { clubActies, primaireActie } from '@/lib/wedstrijddag-acties'
 import { ClaimButton } from './ClaimButton'
 import { MyTeamsPicker } from './MyTeamsPicker'
@@ -123,9 +123,10 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
 
   const teamIdSet = new Set(teamIds.map(Number))
   const myUserId = Number((user as { id?: number }).id)
-  // Federatie/admin/scorekeeper mogen altijd overnemen — zelfde uitzondering als op het
-  // aantekenscherm zelf (scorekeeper/[id]/page.tsx), zodat een supervisor nooit vast komt te zitten.
-  const bypassClaim = hasRole(user, 'admin', 'federatie', 'scorekeeper')
+  // Federatie/admin mogen altijd overnemen — zelfde noodrem als op het aantekenscherm zelf en in
+  // de actie-route (scorekeeper/[id]/page.tsx, api/match/[id]/action), zodat een supervisor nooit
+  // vast komt te zitten.
+  const bypassClaim = isFederationLevel(user)
   const matches = await payload.find({
     collection: 'matches',
     where: {
@@ -175,7 +176,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
       const coach = (side === 'home' ? m.homeCoach : m.awayCoach) as { id?: number; name?: string; email?: string } | null
       const takeover = (side === 'home' ? m.homeTakeover : m.awayTakeover) as { id?: number; name?: string; email?: string } | null
       const trust = sanitizeTrust((m as { scoreTrust?: unknown }).scoreTrust)
-      const claimedByOther = !bypassClaim && claimActive(trust) && trust.scorerId != null && Number(trust.scorerId) !== myUserId
+      const claimedByOther = !bypassClaim && claimHeld(trust, m.status === 'live') && Number(trust.scorerId) !== myUserId
       rows.push({
         id: m.id,
         reeks: reeksNaam(m.reeks),

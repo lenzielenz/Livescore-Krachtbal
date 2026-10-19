@@ -202,6 +202,16 @@ export function SimpleScorekeeper({
     }))
   }
 
+  // Klok vergeten te starten (of te laat getikt)? Per minuut bijstellen met −/+. De klok blijft
+  // lopen of stilstaan zoals ze was; enkel de stand verschuift.
+  const klokBijstellen = (minuten: number) => {
+    const seconden = Math.max(0, Math.floor(clock) + minuten * 60)
+    void act({ action: 'clock', seconds: seconden }, (s) => ({
+      ...s,
+      match: { ...s.match, clockSeconds: seconden, clockUpdatedAt: new Date().toISOString() },
+    }))
+  }
+
   // Supporters-modus: doel is doel — noteer het doelpunt meteen, zonder een scorer te kiezen.
   const scoreAnon = (side: SimpleSide, points: 1 | 2) =>
     void act(
@@ -384,6 +394,18 @@ export function SimpleScorekeeper({
           <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size="clamp(60px, 15vw, 104px)" ringColor={state.teams.away.colors?.primary ?? null} />
         </span>
       </div>
+
+      {live && !finished && (
+        <div className="ssk-clockadj" role="group" aria-label="Klok per minuut bijstellen">
+          <button type="button" className="ssk-clockadj-btn" disabled={clock < 1} onClick={() => klokBijstellen(-1)} aria-label="Eén minuut van de klok af">
+            − 1 min
+          </button>
+          <span className="ssk-clockadj-lbl">klok bijstellen</span>
+          <button type="button" className="ssk-clockadj-btn" onClick={() => klokBijstellen(1)} aria-label="Eén minuut bij de klok">
+            + 1 min
+          </button>
+        </div>
+      )}
 
       <div className="ssk-board">
         {(['home', 'away'] as SimpleSide[]).map((side) => {

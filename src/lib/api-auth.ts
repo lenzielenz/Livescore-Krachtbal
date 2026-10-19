@@ -81,8 +81,8 @@ export async function mayScoreMatch(
     // Vertrouwenslaag: heeft iemand deze wedstrijd geclaimd als official scorer en is die claim nog
     // levend, dan tekent enkel hij aan — de rest bevestigt of betwist de stand (zie score-trust.ts).
     // Zo krijg je het beste van beide: crowd voor de liveness, één vertrouwd persoon voor de uitslag.
-    // Een claim vervalt bij lange stilte, zodat een lege batterij de wedstrijd nooit blokkeert.
-    return mayClaim(sanitizeTrust((match as { scoreTrust?: unknown }).scoreTrust), Number(user.id))
+    // Vóór de aftrap vervalt een claim bij lange stilte; op een lopende wedstrijd niet (claimHeld).
+    return mayClaim(sanitizeTrust((match as { scoreTrust?: unknown }).scoreTrust), Number(user.id), Date.now(), match.status === 'live')
   }
   if (!user) return false
   // Analyse-opname: de eigenaar (met analyse-toegang) tekent z'n eigen analysewedstrijd aan —

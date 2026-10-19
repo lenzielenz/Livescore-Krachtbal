@@ -16,7 +16,6 @@ import { reeksUsesSeniorThrows } from './reeksen'
 import { sanitizeTrust, trustView, type TrustView } from './score-trust'
 import { isOfficialScore } from './score-trust-store'
 import { readSimpleScore } from './simple-score'
-import { elapsedSinceScheduledStart } from './match-start-window'
 import type { ResetImpact } from './match-reset-policy'
 import {
   type SetupSide,
@@ -214,9 +213,9 @@ export async function startMatch(payload: Payload, matchId: number, startingTeam
     await assertValidLineup(payload, awayLineup, 'uitploeg')
   }
 
-  const now = new Date()
-  const startSeconds = elapsedSinceScheduledStart(match, now)
-  const startRunning = startSeconds > 0
+  // De klok start nooit vanzelf: de aantekenaar zet ze aan bij het fluitsignaal. Vergeten? Dan
+  // telt hij er per minuut bij met de −/+-knoppen naast de klok.
+  const startSeconds = 0
   await payload.update({
     collection: 'matches',
     id: matchId,
@@ -224,8 +223,8 @@ export async function startMatch(payload: Payload, matchId: number, startingTeam
       status: 'live',
       currentHalf: 1,
       clockSeconds: startSeconds,
-      clockRunning: startRunning,
-      clockUpdatedAt: startRunning ? now.toISOString() : null,
+      clockRunning: false,
+      clockUpdatedAt: null,
       homeLineup,
       awayLineup,
     },
@@ -291,23 +290,8 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
   const side = sideOfTeam(teamId, homeId)
   const dir = (open.dir as AttackDir | null) ?? attackDirForSide(side, match.currentHalf ?? 1)
   const half = match.currentHalf ?? 1
-  let clock = input.gameClock ?? match.clockSeconds ?? 0
+  const clock = input.gameClock ?? match.clockSeconds ?? 0
 
-  // Werd de wedstrijd vóór de aftrap klaargezet, maar begint de eerste invoer pas later, dan mag
-  // de klok niet op 00:00 blijven staan. Vanaf de eerste worp loopt ze verder vanaf het geplande uur.
-  if (!match.clockRunning && (match.clockSeconds ?? 0) <= 0) {
-    const now = new Date()
-    const elapsed = elapsedSinceScheduledStart(match, now)
-    if (elapsed > 0) {
-      clock = Math.max(clock, elapsed)
-      await payload.update({
-        collection: 'matches',
-        id: input.matchId,
-        data: { clockSeconds: clock, clockRunning: true, clockUpdatedAt: now.toISOString() },
-        overrideAccess: true,
-      })
-    }
-  }
 
   const existing = await payload.find({
     collection: 'throws',
@@ -2092,7 +2076,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
     lastSimpleGoal,
     lastSimpleGoalBySide,
     atHalfTime,
-    trust: trustView(sanitizeTrust((match as { scoreTrust?: unknown }).scoreTrust), { official }),
+    trust: trustView(sanitizeTrust((match as { scoreTrust?: unknown }).scoreTrust), { official, live: match.status === 'live' }),
     possession,
   }
 }
@@ -2319,7 +2303,7 @@ export async function buildScoreboards(
       crosses: totals.crosses,
       timeouts,
       refereeStops,
-      trust: trustView(sanitizeTrust(m.scoreTrust), { official }),
+      trust: trustView(sanitizeTrust(m.scoreTrust), { official, live: m.status === 'live' }),
       lastGoal,
       teams: {
         home: { id: homeId, name: home.name, logoUrl: clubLogoUrl(home), logoFit: clubLogoFit(home), colors: clubColors(home), clubId: clubIdOf(home), clubName: clubNameOf(home), ...clubLocationOf(home) },

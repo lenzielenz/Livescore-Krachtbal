@@ -54,12 +54,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     now,
   )
   return NextResponse.json({
-    trust: trustView(trust, { official, now }),
+    trust: trustView(trust, { official, now, live: match.status === 'live' }),
     official,
     me: me
       ? {
           isScorer: trust.scorerId === me.id,
-          mayClaim: !official && match.status !== 'finished' && mayClaim(trust, me.id, now),
+          mayClaim: !official && match.status !== 'finished' && mayClaim(trust, me.id, now, match.status === 'live'),
           mayVote: !official && windowOpen && mayVote(trust, me.id),
           myVote: trust.confirms.some((v) => v.userId === me.id)
             ? 'confirm'
@@ -120,7 +120,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (match.status === 'finished') {
         return NextResponse.json({ error: 'Deze wedstrijd is afgelopen.' }, { status: 409 })
       }
-      if (!mayClaim(trust, me.id, now)) {
+      if (!mayClaim(trust, me.id, now, match.status === 'live')) {
         return NextResponse.json(
           { error: `${trust.scorerName ?? 'Iemand anders'} tekent deze wedstrijd al aan.` },
           { status: 409 },
