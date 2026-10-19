@@ -3,12 +3,13 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
+import { aanwezigheidVoorBadges } from '@/lib/badge-stats'
 import { computeBadges, earnedCount } from '@/lib/badges'
 import { sanitizeCheckins } from '@/lib/checkins'
 import { buildFanLeaderboard, type FanInput } from '@/lib/fan-score'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { buildPredictionLeaderboard, type PredEntry } from '@/lib/prediction-score'
+import { buildPredictionLeaderboard, rankLeaderboard, type PredEntry } from '@/lib/prediction-score'
 import { trustLevel, trustScore } from '@/lib/score-trust'
 import { readUserTrust } from '@/lib/score-trust-store'
 import { seasonFromDate } from '@/lib/seasons'
@@ -112,7 +113,14 @@ export default async function WrappedPage() {
   const myFanScore = fanRankIdx >= 0 ? fanBoard[fanRankIdx].score : 0
   // Aantekenhistoriek (bevestigde wedstrijden) voor de aanteken-badges — zie score-trust.ts.
   const myScoreTrust = await readUserTrust(payload, myUserId)
+  // Zelfde zwaardere aanwezigheidsbadges als op /profiel/badges, zodat het aantal overeenkomt.
+  const eigenClub = idOf(u.club)
+  const aanwezig = await aanwezigheidVoorBadges(payload, myCheckins, eigenClub)
+  const myPredRank = rankLeaderboard(predBoard).find((r) => r.userId === myUserId)
   const badges = computeBadges({
+    ...aanwezig,
+    exactPredictions: myPred?.exact ?? 0,
+    predictionRank: myPredRank && myPredRank.points > 0 ? myPredRank.rank : null,
     checkins: myCheckins.length,
     photos: (photosRes as { totalDocs?: number }).totalDocs ?? 0,
     predictions: myPredictions,
