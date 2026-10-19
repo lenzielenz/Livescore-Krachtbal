@@ -29,6 +29,10 @@ export interface LiveScore {
   /** Kijkers nu op de wedstrijdpagina zelf (hetzelfde "oogje" als op het scorebord) — een
    *  goedkope in-memory lookup (viewerCountFor), geen extra verbinding per bordkaart. */
   viewers?: number
+  /** Wie deze wedstrijd nu aantekent (null = niemand): op een lopende wedstrijd verdwijnt de
+   *  "Aantekenen"-knop voor iedereen behalve die persoon (zie claimHeld in score-trust.ts).
+   *  Altijd meegestuurd, ook als null — anders blijft een vrijgegeven claim op het bord hangen. */
+  scorerId: number | null
 }
 
 /** Hoe vaak de gedeelde poller kijkt. Trager dan het match-kanaal (1,5 s): op een bord met tien
@@ -93,6 +97,7 @@ async function scoresForRange(payload: Payload, start: string, end: string, incl
       timeouts: c.timeouts,
       refereeStops: c.refereeStops,
       viewers: status === 'live' ? viewerCountFor(m.id) : 0,
+      scorerId: c.trust.claimActive ? c.trust.scorerId : null,
     })
   }
   return uit

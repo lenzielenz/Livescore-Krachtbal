@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { POSITION_OPTIONS } from '@/collections/Players'
@@ -70,6 +70,8 @@ export default async function ScorekeeperPage({
   const isAnalyse = Boolean((matchDoc as { analyseOnly?: boolean } | null)?.analyseOnly)
   // Globale supporters-modus (één knop voor alle wedstrijden) — geldt niet voor privé-analyse.
   const supportersMode = !isAnalyse && (await isSupportersMode(payload))
+  // In supportersmodus staat de demo uit (zie demo/page.tsx) — ook via een oude link.
+  if (isDemo && supportersMode) redirect('/')
 
   // Supporters-modus: iedereen mag aantekenen, maar je moet wél ingelogd zijn om de score te
   // veranderen. Toon een nette inlog-uitnodiging i.p.v. een 401 verderop in de flow.

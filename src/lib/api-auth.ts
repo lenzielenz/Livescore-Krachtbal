@@ -72,7 +72,8 @@ export async function mayScoreMatch(
   if (user && (isFederationLevel(user) || hasRole(user, 'scorekeeper'))) return true
   // Demo-wedstrijden zijn vrij speelbaar, ook zonder login (oefenmodus).
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
-  if (match && (match as { isDemo?: boolean }).isDemo) return true
+  // In supportersmodus staat de demo uit (zie demo/page.tsx).
+  if (match && (match as { isDemo?: boolean }).isDemo) return !(await isSupportersMode(payload))
   // Globale supporters-modus (één knop voor alle wedstrijden): vrije livescore, losgekoppeld van de
   // federatie — élke INGELOGDE gebruiker mag de score doorgeven (geen scheidsrechter/aftekenen nodig).
   // Aanmelden is wél verplicht: anonieme wijzigingen laten we niet toe. Private analyse-opnames

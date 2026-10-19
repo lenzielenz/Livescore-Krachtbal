@@ -81,7 +81,7 @@ describe('dagstroom voor het live-bord', () => {
     const { id } = await maakWedstrijd(offset)
     const rij = vind(await loadLiveScores(payload, dagVan(offset)), id)
     expect(Object.keys(rij!).sort()).toEqual(
-      ['awaitingResult', 'crosses', 'id', 'refereeStops', 'score', 'status', 'timeouts'].sort(),
+      ['awaitingResult', 'crosses', 'id', 'refereeStops', 'score', 'scorerId', 'status', 'timeouts', 'viewers'].sort(),
     )
   })
 

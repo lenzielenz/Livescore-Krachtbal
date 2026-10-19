@@ -182,6 +182,7 @@ function cardsToDayMatches(docs: { id: number; date?: unknown; reeks?: unknown }
       crosses: c.crosses,
       timeouts: c.timeouts,
       refereeStops: c.refereeStops,
+      scorerId: c.trust.claimActive ? c.trust.scorerId : null,
     })
   }
   return days
