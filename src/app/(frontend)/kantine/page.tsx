@@ -143,20 +143,16 @@ export default async function KantinePage() {
       <>
         <SiteHeader active="clubs" />
         <div className="kt-page">
-          <h1 className="page-title"><span className="brand">Kantine</span> · jouw scherm</h1>
-          <section className="kt-uitleg">
-            <h2 className="kt-uitleg-title">📺 Maak je eigen kantinescherm</h2>
-            <p className="kt-uitleg-lead">
-              Meld je aan en stel in één minuut je eigen scherm samen: kies je club en alle
-              wedstrijden komen er heel het jaar automatisch op — live zodra ze starten, en
-              doordeweeks zie je wat er die week gepland staat. Losse ploegen of affiches van andere
-              clubs mag je erbij kiezen.
-            </p>
-            <p>
-              <Link href="/login" className="kt-screen-btn">Aanmelden →</Link>
-            </p>
-          </section>
+          <h1 className="page-title"><span className="brand">Kantine</span>scherm</h1>
           <KantineClubLink clubs={clubs} myClubId={null} />
+          <section className="kt-uitleg kt-uitleg-klein">
+            <h2 className="kt-mijn-titel">Meer clubs of losse ploegen?</h2>
+            <p className="kt-blok-sub">
+              Meld je aan en stel je eigen scherm samen: meerdere clubs, losse ploegen of een affiche
+              van een andere club erbij.
+            </p>
+            <Link href="/login" className="kt-snel-knop">Aanmelden →</Link>
+          </section>
         </div>
       </>
     )
@@ -180,7 +176,9 @@ export default async function KantinePage() {
     <>
       <SiteHeader active="clubs" />
       <div className="kt-page">
-        <h1 className="page-title"><span className="brand">Kantine</span> · jouw scherm</h1>
+        <h1 className="page-title"><span className="brand">Kantine</span>scherm</h1>
+        {/* Eerst het snelle pad: één club, meteen op de tv. Het eigen scherm staat eronder. */}
+        <KantineClubLink clubs={clubs} myClubId={heeftEigenClub ? eigenClub : null} />
         <MijnKantineScherm
           userId={Number(me.id)}
           clubs={clubs}
@@ -188,7 +186,6 @@ export default async function KantinePage() {
           matches={matches}
           initieel={initieel}
         />
-        <KantineClubLink clubs={clubs} myClubId={heeftEigenClub ? eigenClub : null} />
       </div>
     </>
   )
