@@ -1,3 +1,4 @@
+import { GOUDEN_KRACHTBAL } from './gouden-krachtbal'
 import { normalizeLogoFit, type LogoFit } from './logo-fit'
 import type { WeekendMatch } from './instagram-weekend'
 
@@ -82,27 +83,6 @@ const r1 = (n: number) => Math.round(n * 10) / 10
 function naad(R: number, c: number, dir: 1 | -1): string {
   const y = r1(dir * KAP_Y * R * c)
   return `M${r1(-KAP_X * R)} ${y} A${r1(R)} ${r1(R * c)} 0 0 ${dir === -1 ? 1 : 0} ${r1(KAP_X * R)} ${y}`
-}
-
-/** Een volle krachtbal (leder, naden, kapjes, opdruk) rond (cx, cy), gedraaid over `rot` graden. */
-function krachtbal(cx: number, cy: number, R: number, rot: number): string {
-  const naden = NADEN.flatMap(c => [naad(R, c, -1), naad(R, c, 1)])
-  const strook = `${naad(R, NADEN[0], -1)} A${r1(R)} ${r1(R)} 0 0 1 ${r1(KAP_X * R)} ${r1(KAP_Y * R * NADEN[0])} A${r1(R)} ${r1(R * NADEN[0])} 0 0 1 ${r1(-KAP_X * R)} ${r1(KAP_Y * R * NADEN[0])} Z`
-  const kapjes = [-1, 1].map(k => `<ellipse cx="${r1(k * KAP_X * R)}" cy="0" rx="${r1(R * .07)}" ry="${r1(KAP_Y * R)}" fill="#7a5a10" fill-opacity=".25" stroke="#5a3d06" stroke-width="${r1(R * .028)}"/>`).join('')
-  return `<g transform="translate(${cx} ${cy}) rotate(${rot})">
-      <ellipse cx="${r1(R * .1)}" cy="${r1(R * 1.06)}" rx="${r1(R * .9)}" ry="${r1(R * .16)}" fill="#000" opacity=".35" filter="url(#zacht)"/>
-      <circle r="${r1(R * 1.45)}" fill="url(#goudgloed)"/>
-      <circle r="${R}" fill="url(#leer)"/>
-      <circle r="${R}" fill="url(#nerf)" opacity=".25"/>
-      <path d="${strook}" fill="#fff" fill-opacity=".07"/>
-      ${naden.map(d => `<path d="${d}" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="${r1(R * .02)}" transform="translate(0 ${r1(R * .012)})"/><path d="${d}" fill="none" stroke="#5a3d06" stroke-width="${r1(R * .032)}" stroke-linecap="round"/>`).join('')}
-      ${kapjes}
-      <text x="0" y="${r1(R * .085)}" text-anchor="middle" fill="#3b2606" fill-opacity=".9" font-family="DejaVu Sans, Arial, sans-serif" font-size="${r1(R * .2)}" font-weight="900" letter-spacing="${r1(R * .01)}">KRACHTBAL</text>
-      <circle r="${R}" fill="url(#bolschaduw)"/>
-      <circle r="${R}" fill="url(#metaal)"/>
-      <ellipse cx="${r1(-R * .38)}" cy="${r1(-R * .46)}" rx="${r1(R * .34)}" ry="${r1(R * .17)}" fill="url(#glans)" transform="rotate(-28 ${r1(-R * .38)} ${r1(-R * .46)})"/>
-      ${[[-.78, -.86, .09], [.92, -.5, .06], [.62, .94, .07]].map(([x, y, k]) => `<path d="M${r1(x * R)} ${r1(y * R - k * R)} L${r1(x * R + k * R * .28)} ${r1(y * R - k * R * .28)} L${r1(x * R + k * R)} ${r1(y * R)} L${r1(x * R + k * R * .28)} ${r1(y * R + k * R * .28)} L${r1(x * R)} ${r1(y * R + k * R)} L${r1(x * R - k * R * .28)} ${r1(y * R + k * R * .28)} L${r1(x * R - k * R)} ${r1(y * R)} L${r1(x * R - k * R * .28)} ${r1(y * R - k * R * .28)} Z" fill="#fff6c8"/>`).join('')}
-    </g>`
 }
 
 /** Klein balletje als icoon (de pil bovenaan, de T/U-badge, de voettekst): bol + de twee
@@ -318,7 +298,6 @@ export function renderWeekendDesign(o: {
       <linearGradient id="hero" x2="1" y2="1"><stop stop-color="#0a0e15" stop-opacity=".82"/><stop offset="1" stop-color="${o.primary}" stop-opacity=".3"/></linearGradient>
       <clipPath id="badge"><circle cx="${LX}" cy="${LY}" r="78"/></clipPath>
       <filter id="badgeGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="16"/></filter>
-      <filter id="zacht" x="-30%" y="-200%" width="160%" height="500%"><feGaussianBlur stdDeviation="10"/></filter>
       <radialGradient id="shine" cx=".32" cy=".26" r=".95">
         <stop offset="0" stop-color="#000" stop-opacity="0"/>
         <stop offset=".4" stop-color="#000" stop-opacity="0"/>
@@ -328,29 +307,11 @@ export function renderWeekendDesign(o: {
         <stop offset="0" stop-color="#fff" stop-opacity=".9"/>
         <stop offset="1" stop-color="#fff" stop-opacity="0"/>
       </radialGradient>
-      <!-- De GOUDEN krachtbal uit de goudjacht van het virtueel stadion (goudjacht.ts: basis
-           #f2c230, opdruk #3b2606, metaalglans): licht linksboven, diep amber in de hoek. -->
-      <radialGradient id="leer" cx=".36" cy=".3" r=".82">
-        <stop offset="0" stop-color="#fff4b8"/>
-        <stop offset=".28" stop-color="#ffd84d"/>
-        <stop offset=".62" stop-color="#f2c230"/>
-        <stop offset=".86" stop-color="#b8860b"/>
-        <stop offset="1" stop-color="#6b4a06"/>
-      </radialGradient>
-      <radialGradient id="goudgloed"><stop stop-color="#ffd84d" stop-opacity=".55"/><stop offset="1" stop-color="#ffd84d" stop-opacity="0"/></radialGradient>
-      <linearGradient id="metaal" x1="0" y1="0" x2="1" y2="1">
-        <stop offset=".3" stop-color="#fff" stop-opacity="0"/>
-        <stop offset=".45" stop-color="#fff" stop-opacity=".35"/>
-        <stop offset=".52" stop-color="#fff" stop-opacity="0"/>
-      </linearGradient>
-      <pattern id="nerf" patternUnits="userSpaceOnUse" width="9" height="9">
-        <circle cx="2" cy="3" r="1" fill="#3a1c06" opacity=".35"/><circle cx="7" cy="7" r=".8" fill="#fff" opacity=".18"/>
-      </pattern>
+      <radialGradient id="goudgloed"><stop stop-color="#ffd84d" stop-opacity=".4"/><stop offset="1" stop-color="#ffd84d" stop-opacity="0"/></radialGradient>
       <radialGradient id="bolschaduw" cx=".38" cy=".32" r=".75">
         <stop offset=".55" stop-color="#000" stop-opacity="0"/>
         <stop offset="1" stop-color="#000" stop-opacity=".45"/>
       </radialGradient>
-      <radialGradient id="glans"><stop stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
       <!-- Grasmat in de CLUBKLEUR + maaibanen van 2 m, zoals op het echte terrein. -->
       <linearGradient id="turf" x1="0" y1="0" x2="0.2" y2="1">
         <stop offset="0" stop-color="${o.primary}" stop-opacity=".5"/>
@@ -364,12 +325,15 @@ export function renderWeekendDesign(o: {
     ${veld(o.primary, o.secondary)}
     <rect width="1080" height="1920" fill="url(#turfvig)"/>
     <ellipse cx="900" cy="260" rx="620" ry="560" fill="url(#glow)"/>
+    <!-- De gouden krachtbal (het echte 3D-model, zie gouden-krachtbal.ts) groot in de achtergrond,
+         rechtsboven half uit beeld; de kop en de kaarten liggen er als glas overheen. -->
+    <ellipse cx="880" cy="170" rx="400" ry="380" fill="url(#goudgloed)"/>
+    <image href="${GOUDEN_KRACHTBAL}" x="580" y="-150" width="620" height="620" opacity=".95"/>
     <g font-family="DejaVu Sans, Arial, sans-serif">
       <rect x="64" y="70" width="252" height="50" rx="25" fill="#050912" fill-opacity=".78" stroke="#fff" stroke-opacity=".16"/>
       ${balIcoon(94, 95, 14, '#f2c230')}
       <text x="120" y="102" fill="#f5f7fb" font-size="21" font-weight="700">Krachtbal <tspan fill="#80baff">Live</tspan></text>
       <rect x="64" y="176" width="952" height="248" rx="32" fill="url(#hero)" stroke="#fff" stroke-opacity=".18"/>
-      ${krachtbal(952, 168, 150, -22)}
       <circle cx="${LX}" cy="${LY}" r="104" fill="${o.primary}" opacity=".45" filter="url(#badgeGlow)"/>
       <circle cx="${LX}" cy="${LY + 8}" r="85" fill="#000" opacity=".3"/>
       <circle cx="${LX}" cy="${LY}" r="84" fill="#fff" stroke="${o.primary}" stroke-width="5"/>
