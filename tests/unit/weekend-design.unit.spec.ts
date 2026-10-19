@@ -6,7 +6,7 @@ import type { WeekendMatch } from '@/lib/instagram-weekend'
 const matches = (n: number): WeekendMatch[] => Array.from({ length: n }, (_, i) => ({
   id: i, date: '2026-09-19T10:00:00Z', day: i < 6 ? 'zaterdag 19 september' : 'zondag 20 september',
   time: '12:00', side: i % 2 ? 'away' : 'home', team: 'KBC St. Michiels B',
-  opponent: 'T Botterken Baasrode A', series: 'Regionale Heren B', seriesCode: 'RHB',
+  opponent: 'T Botterken Baasrode A', place: 'Baasrode', series: 'Regionale Heren B', seriesCode: 'RHB',
 }))
 const options = {
   club: 'KBC St. Michiels', primary: '#ed1515', secondary: '#ffffff', title: '19 – 20 september',
@@ -50,7 +50,9 @@ describe('Weekendplan design', () => {
     expect(svg).toContain('Een zeer lange clubnaam met &amp; &lt;speciale&gt; tekens')
     expect(svg).not.toContain('…')
     expect(svg).not.toContain('KBC St. Michiels B</text>')
-    expect(svg).toContain('T Botterken Baasrode A')
+    // Enkel de plaatsnaam van de tegenstander, niet de volle ploegnaam.
+    expect(svg).toContain('>Baasrode</text>')
+    expect(svg).not.toContain('T Botterken Baasrode A')
   })
   it('rasterizes the same embedded-logo design to a full-size PNG', async () => {
     const logo = await sharp({ create: { width: 20, height: 20, channels: 4, background: '#ffffff' } }).png().toBuffer()
@@ -110,14 +112,29 @@ describe('Weekendplan design', () => {
       // "niet mooi gelijk"-effect. Nu is de grootte vast en kapt een te lange naam af.
       const rows = orderWeekendRows(matches(COLUMN_THRESHOLD + 4)).map((row, i) => ({
         ...row,
-        opponent: i === 0 ? 'Een extreem lange tegenstandersnaam die nooit op één rij past' : 'HO Beitem',
+        place: i === 0 ? 'Een extreem lange plaatsnaam die nooit op één rij past' : 'Beitem',
       }))
       const svg = renderWeekendDesign({ ...options, rows })
       const textEls = [...svg.matchAll(/<text[^>]*font-size="([\d.]+)"[^>]*>([^<]*)<\/text>/g)].map((m) => ({ size: Number(m[1]), text: m[2] }))
-      const opponentEls = textEls.filter((t) => t.text === 'HO Beitem' || t.text.endsWith('…'))
+      const opponentEls = textEls.filter((t) => t.text === 'Beitem' || t.text.endsWith('…'))
       expect(opponentEls.length).toBeGreaterThan(1)
       expect(opponentEls.some((t) => t.text.endsWith('…'))).toBe(true)
       expect(new Set(opponentEls.map((t) => t.size)).size).toBe(1)
     })
+  })
+})
+
+describe('clubPlaats — enkel de plaatsnaam op de Story', () => {
+  it('neemt het plaats-veld van de club', async () => {
+    const { clubPlaats } = await import('@/lib/instagram-weekend')
+    expect(clubPlaats({ plaats: 'Koekelare', name: 'D&W Koekelare' })).toBe('Koekelare')
+    expect(clubPlaats({ plaats: 'Sijsele, Damme', name: "Buffalo's Sijsele" })).toBe('Sijsele')
+  })
+  it('valt zonder plaats terug op de clubnaam zonder afkorting en ploegletter', async () => {
+    const { clubPlaats } = await import('@/lib/instagram-weekend')
+    expect(clubPlaats({ name: 'D&W Koekelare' })).toBe('Koekelare')
+    expect(clubPlaats({ name: 'KBK Ichtegem' })).toBe('Ichtegem')
+    expect(clubPlaats({ name: 'KBC St. Michiels A' })).toBe('St. Michiels')
+    expect(clubPlaats(null, 'HO Beitem')).toBe('Beitem')
   })
 })

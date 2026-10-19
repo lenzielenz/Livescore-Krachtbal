@@ -4,7 +4,7 @@ import { orderWeekendRows, renderWeekendDesign, weekendPages } from '@/lib/weeke
 import { userClubId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
-import { brusselsDateKey, nextPlayDayKeys, planningSearchWindow, type WeekendMatch } from '@/lib/instagram-weekend'
+import { brusselsDateKey, clubPlaats, nextPlayDayKeys, planningSearchWindow, type WeekendMatch } from '@/lib/instagram-weekend'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 
@@ -121,6 +121,11 @@ async function renderWeekendPost(request: Request) {
       side,
       team: ownTeams.get(ownId) ?? (side === 'home' ? nameOf(home) : nameOf(away)),
       opponent: side === 'home' ? nameOf(away) : nameOf(home),
+      // Enkel de plaatsnaam van de tegenstander (depth 2: ploeg → club → plaats).
+      place: clubPlaats(
+        ((side === 'home' ? away : home) as { club?: { plaats?: unknown; name?: unknown } } | null)?.club ?? null,
+        side === 'home' ? nameOf(away) : nameOf(home),
+      ),
       series: reeksNaam(reeksRaw as Parameters<typeof reeksNaam>[0]),
       seriesCode: reeksRaw || '—',
     })
