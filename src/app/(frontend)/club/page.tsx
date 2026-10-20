@@ -297,32 +297,6 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
         </p>
       )}
 
-      {champs.length > 0 && (
-        <div className="club-champ-wrap">
-          {champs.map((c, i) => {
-            const almost = c.winsToClinch != null && c.winsToClinch <= 2
-            const cls = c.clinched ? 'champion' : almost ? 'almost' : 'leading'
-            return (
-              <div key={i} className={`club-champ ${cls}`}>
-                <span className="club-champ-ico" aria-hidden>{c.clinched ? '🏆' : almost ? '🔥' : '📈'}</span>
-                <span className="club-champ-text">
-                  {c.clinched ? (
-                    <><strong>{c.teamName}</strong> is wiskundig <strong>KAMPIOEN</strong> in {c.reeks}! 🎉</>
-                  ) : c.pointsToClinch != null ? (
-                    <>
-                      <strong>{c.teamName}</strong> leidt in {c.reeks} — nog <strong>{c.pointsToClinch} {c.pointsToClinch === 1 ? 'punt' : 'punten'}</strong>
-                      {c.winsToClinch != null && <> ({c.winsToClinch} {c.winsToClinch === 1 ? 'overwinning' : 'overwinningen'})</>} voor de titel.{almost ? ' Bijna zover!' : ''}
-                    </>
-                  ) : (
-                    <><strong>{c.teamName}</strong> staat aan de leiding in {c.reeks}.</>
-                  )}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
       {visibleRows.length === 0 ? (
         <p className="empty">{focusing ? 'Geen geplande wedstrijden voor je gekozen ploeg(en).' : 'Geen geplande wedstrijden voor je ploegen.'}</p>
       ) : (
@@ -406,6 +380,32 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
           </div>
         </section>
         ))
+      )}
+
+      {champs.length > 0 && (
+        <div className="club-champ-wrap">
+          {champs.map((c, i) => {
+            const almost = c.winsToClinch != null && c.winsToClinch <= 2
+            const cls = c.clinched ? 'champion' : almost ? 'almost' : 'leading'
+            return (
+              <div key={i} className={`club-champ ${cls}`}>
+                <span className="club-champ-ico" aria-hidden>{c.clinched ? '🏆' : almost ? '🔥' : '📈'}</span>
+                <span className="club-champ-text">
+                  {c.clinched ? (
+                    <><strong>{c.teamName}</strong> is wiskundig <strong>KAMPIOEN</strong> in {c.reeks}! 🎉</>
+                  ) : c.pointsToClinch != null ? (
+                    <>
+                      <strong>{c.teamName}</strong> leidt in {c.reeks} — nog <strong>{c.pointsToClinch} {c.pointsToClinch === 1 ? 'punt' : 'punten'}</strong>
+                      {c.winsToClinch != null && <> ({c.winsToClinch} {c.winsToClinch === 1 ? 'overwinning' : 'overwinningen'})</>} voor de titel.{almost ? ' Bijna zover!' : ''}
+                    </>
+                  ) : (
+                    <><strong>{c.teamName}</strong> staat aan de leiding in {c.reeks}.</>
+                  )}
+                </span>
+              </div>
+            )
+          })}
+        </div>
       )}
 
       {/* De weekend-Story is leuk, maar geen dagelijks werk: ingeklapt onderaan i.p.v. een grote
