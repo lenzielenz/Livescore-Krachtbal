@@ -26,7 +26,7 @@ export default async function ClubLedenPage() {
     return (
       <>
         <SiteHeader active="clubs" />
-        <div className="site">
+        <div className="site site-breed">
           <h1 className="page-title">Leden &amp; registratie</h1>
           <p className="empty">
             {me ? 'Enkel de staf van een club (met een club aan het account) beheert de leden.' : 'Log in als clubverantwoordelijke.'}{' '}
@@ -87,7 +87,7 @@ export default async function ClubLedenPage() {
   return (
     <>
       <SiteHeader active="clubs" />
-      <div className="site">
+      <div className="site site-breed">
         <h1 className="page-title">
           Leden &amp; registratie <span className="cl-club">{String(club?.name ?? '')}</span>
         </h1>

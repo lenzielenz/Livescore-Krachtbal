@@ -24,7 +24,7 @@ export default async function KalenderPage() {
   return (
     <>
       <SiteHeader active="federatie" />
-      <div className="site">
+      <div className="site site-breed">
         <h1 className="page-title">Kalender opmaken</h1>
         <p className="acc-page-intro">
           Kies een reeks en de eerste speeldag. Elke ploeg speelt één keer thuis en één keer uit tegen elke andere; thuis en uit

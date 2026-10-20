@@ -50,7 +50,7 @@ export default async function FederatiePage() {
     return (
       <>
         <SiteHeader active="federatie" />
-        <div className="site">
+        <div className="site site-breed">
           <h1 className="page-title"><span className="brand">Federatie</span></h1>
           <p className="empty">
             Enkel de federatie/admin heeft toegang tot dit luik.{' '}
@@ -70,7 +70,7 @@ export default async function FederatiePage() {
   return (
     <>
       <SiteHeader active="federatie" />
-      <div className="site">
+      <div className="site site-breed">
         <h1 className="page-title">
           <span className="brand">Federatie</span>
         </h1>

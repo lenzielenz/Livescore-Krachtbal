@@ -71,7 +71,7 @@ export default async function ScheidsrechtersPage() {
   return (
     <>
       <SiteHeader active="federatie" />
-      <div className="site">
+      <div className="site site-breed">
         <h1 className="page-title">Scheidsrechters toewijzen</h1>
         <p className="acc-page-intro">
           De komende {DAGEN} dagen, per speeldag. Kies per wedstrijd een scheidsrechter of laat het voorstel de lege plaatsen

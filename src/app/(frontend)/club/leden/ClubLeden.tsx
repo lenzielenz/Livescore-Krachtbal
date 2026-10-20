@@ -4,7 +4,12 @@ import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
 import { toast } from '@/components/Toaster'
-import { clubMagBewerken, ontbreektVoorIndienen, registratieIcoon, type RegistratieInput } from '@/lib/registratie'
+import {
+  clubMagBewerken,
+  ontbreektVoorIndienen,
+  registratieIcoon,
+  type RegistratieInput,
+} from '@/lib/registratie'
 
 export type ClubLid = {
   id: number
@@ -49,7 +54,10 @@ const splitsNaam = (naam: string): [string, string] => {
   return i < 0 ? [naam, ''] : [naam.slice(0, i), naam.slice(i + 1)]
 }
 
-async function post(url: string, body: unknown): Promise<{ ok: boolean; data: Record<string, unknown> }> {
+async function post(
+  url: string,
+  body: unknown,
+): Promise<{ ok: boolean; data: Record<string, unknown> }> {
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -70,7 +78,11 @@ function LidFormulier({
   standaardTeam: number
   onKlaar: () => void
 }) {
-  const [vn0, an0] = lid ? (lid.voornaam || lid.achternaam ? [lid.voornaam, lid.achternaam] : splitsNaam(lid.naam)) : ['', '']
+  const [vn0, an0] = lid
+    ? lid.voornaam || lid.achternaam
+      ? [lid.voornaam, lid.achternaam]
+      : splitsNaam(lid.naam)
+    : ['', '']
   const [v, setV] = useState({
     teamId: lid?.teamId ?? standaardTeam,
     voornaam: vn0,
@@ -83,7 +95,8 @@ function LidFormulier({
   })
   const [bestand, setBestand] = useState<File | null>(null)
   const [bezig, setBezig] = useState(false)
-  const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV((o) => ({ ...o, [k]: e.target.value }))
+  const set = (k: keyof typeof v) => (e: { target: { value: string } }) =>
+    setV((o) => ({ ...o, [k]: e.target.value }))
 
   const bewaar = async () => {
     setBezig(true)
@@ -97,7 +110,11 @@ function LidFormulier({
         const fd = new FormData()
         fd.set('playerId', String(r.data.id))
         fd.set('bestand', bestand)
-        const res = await fetch('/api/club/leden/attest', { method: 'POST', body: fd, credentials: 'include' })
+        const res = await fetch('/api/club/leden/attest', {
+          method: 'POST',
+          body: fd,
+          credentials: 'include',
+        })
         const d = (await res.json().catch(() => ({}))) as { error?: string }
         if (!res.ok) {
           toast('error', `Lid bewaard, maar het attest niet: ${d.error ?? 'fout'}`)
@@ -145,7 +162,10 @@ function LidFormulier({
         </label>
         <label>
           Ploeg
-          <select value={v.teamId} onChange={(e) => setV((o) => ({ ...o, teamId: Number(e.target.value) }))}>
+          <select
+            value={v.teamId}
+            onChange={(e) => setV((o) => ({ ...o, teamId: Number(e.target.value) }))}
+          >
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.naam}
@@ -156,7 +176,12 @@ function LidFormulier({
         </label>
         <label>
           Rugnummer
-          <input inputMode="numeric" value={v.shirtNumber} onChange={set('shirtNumber')} placeholder="vanzelf" />
+          <input
+            inputMode="numeric"
+            value={v.shirtNumber}
+            onChange={set('shirtNumber')}
+            placeholder="vanzelf"
+          />
         </label>
         {speler && (
           <label>
@@ -166,8 +191,13 @@ function LidFormulier({
         )}
         {speler && (
           <label className="cl-wide">
-            Doktersattest (PDF of foto){lid?.attestUrl ? ' — er is er al één; kies een nieuw om te vervangen' : ''}
-            <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={(e) => setBestand(e.target.files?.[0] ?? null)} />
+            Doktersattest (PDF of foto)
+            {lid?.attestUrl ? ' — er is er al één; kies een nieuw om te vervangen' : ''}
+            <input
+              type="file"
+              accept="application/pdf,image/jpeg,image/png,image/webp"
+              onChange={(e) => setBestand(e.target.files?.[0] ?? null)}
+            />
           </label>
         )}
       </div>
@@ -209,7 +239,9 @@ export function ClubLeden({ teams, leden }: { teams: Team[]; leden: ClubLid[] })
       arr.push(l)
       map.set(l.teamId, arr)
     }
-    return teams.map((t) => ({ team: t, leden: map.get(t.id) ?? [] })).filter((g) => g.leden.length > 0)
+    return teams
+      .map((t) => ({ team: t, leden: map.get(t.id) ?? [] }))
+      .filter((g) => g.leden.length > 0)
   }, [leden, teams, zoek, filter])
 
   const tel = useMemo(() => {
@@ -264,19 +296,38 @@ export function ClubLeden({ teams, leden }: { teams: Team[]; leden: ClubLid[] })
   return (
     <div className="cl-wrap">
       <div className="cl-tellers">
-        <button type="button" className={`cl-teller ${filter === 'ok' ? 'on' : ''}`} onClick={() => setFilter(filter === 'ok' ? 'alle' : 'ok')}>
+        <button
+          type="button"
+          className={`cl-teller ${filter === 'ok' ? 'on' : ''}`}
+          onClick={() => setFilter(filter === 'ok' ? 'alle' : 'ok')}
+        >
           <strong>✅ {tel.ok}</strong> mag spelen
         </button>
-        <button type="button" className={`cl-teller ${filter === 'wacht' ? 'on' : ''}`} onClick={() => setFilter(filter === 'wacht' ? 'alle' : 'wacht')}>
+        <button
+          type="button"
+          className={`cl-teller ${filter === 'wacht' ? 'on' : ''}`}
+          onClick={() => setFilter(filter === 'wacht' ? 'alle' : 'wacht')}
+        >
           <strong>⏳ {tel.wacht}</strong> bij de federatie
         </button>
-        <button type="button" className={`cl-teller ${filter === 'todo' ? 'on' : ''}`} onClick={() => setFilter(filter === 'todo' ? 'alle' : 'todo')}>
+        <button
+          type="button"
+          className={`cl-teller ${filter === 'todo' ? 'on' : ''}`}
+          onClick={() => setFilter(filter === 'todo' ? 'alle' : 'todo')}
+        >
           <strong>✎ {tel.todo}</strong> te doen
         </button>
       </div>
 
       <div className="cl-toolbar">
-        <input className="acc-search" type="search" value={zoek} onChange={(e) => setZoek(e.target.value)} placeholder="Zoek een lid…" aria-label="Zoek een lid" />
+        <input
+          className="acc-search"
+          type="search"
+          value={zoek}
+          onChange={(e) => setZoek(e.target.value)}
+          placeholder="Zoek een lid…"
+          aria-label="Zoek een lid"
+        />
         <button type="button" className="cl-btn cl-btn-primary" onClick={() => setBewerk('nieuw')}>
           + Lid toevoegen
         </button>
@@ -291,58 +342,81 @@ export function ClubLeden({ teams, leden }: { teams: Team[]; leden: ClubLid[] })
         </button>
       </div>
 
-      {bewerk === 'nieuw' && <LidFormulier lid={null} teams={teams} standaardTeam={teams[0]?.id ?? 0} onKlaar={klaar} />}
+      {bewerk === 'nieuw' && (
+        <LidFormulier lid={null} teams={teams} standaardTeam={teams[0]?.id ?? 0} onKlaar={klaar} />
+      )}
 
       {perPloeg.length === 0 ? (
         <p className="empty">Geen leden gevonden.</p>
       ) : (
-        perPloeg.map(({ team, leden: lijst }) => (
-          <section key={team.id} className="cl-ploeg">
-            <h2 className="acc-group-head">
-              {team.naam} {team.reeks && <span className="acc-count">{team.reeks}</span>} <span className="acc-count">· {lijst.length}</span>
-            </h2>
-            {lijst.map((l) => {
-              const ic = registratieIcoon(input(l))
-              const kan = indienbaar(l)
-              return (
-                <div key={l.id} className={`cl-rij cl-${ic.toon}`}>
-                  <div className="cl-rij-hoofd">
-                    <input
-                      type="checkbox"
-                      checked={gekozen.has(l.id)}
-                      disabled={!kan}
-                      onChange={() => toggle(l.id)}
-                      aria-label={`Kies ${l.naam} om in te dienen`}
-                    />
-                    <span className="cl-icoon" title={ic.label} aria-label={ic.label}>
-                      {ic.icoon}
-                    </span>
-                    <span className="cl-id">
-                      <span className="cl-naam">
-                        #{l.shirtNumber} {l.naam}
+        <div className="cl-ploegen">
+          {perPloeg.map(({ team, leden: lijst }) => (
+            <section key={team.id} className="cl-ploeg">
+              <h2 className="acc-group-head">
+                {team.naam} {team.reeks && <span className="acc-count">{team.reeks}</span>}{' '}
+                <span className="acc-count">· {lijst.length}</span>
+              </h2>
+              {lijst.map((l) => {
+                const ic = registratieIcoon(input(l))
+                const kan = indienbaar(l)
+                return (
+                  <div key={l.id} className={`cl-rij cl-${ic.toon}`}>
+                    <div className="cl-rij-hoofd">
+                      <input
+                        type="checkbox"
+                        checked={gekozen.has(l.id)}
+                        disabled={!kan}
+                        onChange={() => toggle(l.id)}
+                        aria-label={`Kies ${l.naam} om in te dienen`}
+                      />
+                      <span className="cl-icoon" title={ic.label} aria-label={ic.label}>
+                        {ic.icoon}
                       </span>
-                      <span className="cl-sub">
-                        {ic.label}
-                        {l.registratieStatus === 'afgekeurd' && l.afkeurReden ? ` — ${l.afkeurReden}` : ''}
+                      <span className="cl-id">
+                        <span className="cl-naam">
+                          #{l.shirtNumber} {l.naam}
+                        </span>
+                        <span className="cl-sub">
+                          {ic.label}
+                          {l.registratieStatus === 'afgekeurd' && l.afkeurReden
+                            ? ` — ${l.afkeurReden}`
+                            : ''}
+                        </span>
                       </span>
-                    </span>
-                    {l.attestUrl && (
-                      <a className="cl-link" href={l.attestUrl} target="_blank" rel="noopener noreferrer">
-                        📄 attest
-                      </a>
-                    )}
-                    {clubMagBewerken(l.registratieStatus) && (
-                      <button type="button" className="cl-btn" onClick={() => setBewerk(bewerk === l.id ? null : l.id)}>
-                        {bewerk === l.id ? 'Sluiten' : 'Bewerken'}
-                      </button>
+                      {l.attestUrl && (
+                        <a
+                          className="cl-link"
+                          href={l.attestUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          📄 attest
+                        </a>
+                      )}
+                      {clubMagBewerken(l.registratieStatus) && (
+                        <button
+                          type="button"
+                          className="cl-btn"
+                          onClick={() => setBewerk(bewerk === l.id ? null : l.id)}
+                        >
+                          {bewerk === l.id ? 'Sluiten' : 'Bewerken'}
+                        </button>
+                      )}
+                    </div>
+                    {bewerk === l.id && (
+                      <LidFormulier
+                        lid={l}
+                        teams={teams}
+                        standaardTeam={l.teamId}
+                        onKlaar={klaar}
+                      />
                     )}
                   </div>
-                  {bewerk === l.id && <LidFormulier lid={l} teams={teams} standaardTeam={l.teamId} onKlaar={klaar} />}
-                </div>
-              )
-            })}
-          </section>
-        ))
+                )
+              })}
+            </section>
+          ))}
+        </div>
       )}
     </div>
   )

@@ -30,7 +30,9 @@ function LidRow({ lid }: { lid: Lid }) {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
-  const save = async (patch: Partial<Pick<Lid, 'vergunningsstatus' | 'medischAttest' | 'hogerSpelenVerbod'>>) => {
+  const save = async (
+    patch: Partial<Pick<Lid, 'vergunningsstatus' | 'medischAttest' | 'hogerSpelenVerbod'>>,
+  ) => {
     setSaving(true)
     setMsg(null)
     try {
@@ -59,9 +61,14 @@ function LidRow({ lid }: { lid: Lid }) {
   const ok = isSpeelgerechtigd({ vergunningsstatus: verg, medischAttest: med })
   return (
     <div className="led-row">
-      <span className={`led-bol ${ok ? 'ok' : verg === 'geldig' || med ? 'partial' : 'no'}`} title={ok ? 'Speelgerechtigd' : 'Niet (volledig) in orde'} />
+      <span
+        className={`led-bol ${ok ? 'ok' : verg === 'geldig' || med ? 'partial' : 'no'}`}
+        title={ok ? 'Speelgerechtigd' : 'Niet (volledig) in orde'}
+      />
       <span className="led-id">
-        <span className="led-name">#{lid.shirtNumber} {lid.name}</span>
+        <span className="led-name">
+          #{lid.shirtNumber} {lid.name}
+        </span>
         <span className="led-team">{lid.teamName}</span>
       </span>
       <div className="led-controls">
@@ -149,21 +156,32 @@ export function LedenManager({ leden }: { leden: Lid[] }) {
           aria-label="Zoek lid"
         />
         <label className="led-todo">
-          <input type="checkbox" checked={onlyTodo} onChange={(e) => setOnlyTodo(e.target.checked)} /> enkel nog te keuren
+          <input
+            type="checkbox"
+            checked={onlyTodo}
+            onChange={(e) => setOnlyTodo(e.target.checked)}
+          />{' '}
+          enkel nog te keuren
         </label>
-        <span className="led-stat">{okCount}/{leden.length} speelgerechtigd</span>
+        <span className="led-stat">
+          {okCount}/{leden.length} speelgerechtigd
+        </span>
       </div>
       {groups.length === 0 ? (
         <p className="empty">Geen leden gevonden.</p>
       ) : (
-        groups.map(([club, list]) => (
-          <section key={club} className="led-group">
-            <h2 className="acc-group-head">{club} <span className="acc-count">{list.length}</span></h2>
-            {list.map((l) => (
-              <LidRow key={l.id} lid={l} />
-            ))}
-          </section>
-        ))
+        <div className="led-kolommen">
+          {groups.map(([club, list]) => (
+            <section key={club} className="led-group">
+              <h2 className="acc-group-head">
+                {club} <span className="acc-count">{list.length}</span>
+              </h2>
+              {list.map((l) => (
+                <LidRow key={l.id} lid={l} />
+              ))}
+            </section>
+          ))}
+        </div>
       )}
     </div>
   )

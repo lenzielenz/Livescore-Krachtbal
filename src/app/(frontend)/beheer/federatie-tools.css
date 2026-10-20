@@ -63,3 +63,12 @@
 @media (max-width: 560px) {
   .ft-rij { grid-template-columns: 1fr; }
 }
+
+/* Laptop/desktop: speeldagen en lijsten naast elkaar, zodat je een heel weekend in één oogopslag ziet. */
+.ft-dagen { display: flex; flex-direction: column; gap: 14px; }
+.ft-lijst { display: flex; flex-direction: column; gap: 6px; }
+@media (min-width: 1100px) {
+  .ft-dagen { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); align-items: start; gap: 18px; }
+  .ft-lijst { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: 8px; }
+  .ft-balk { padding: 10px 0; }
+}

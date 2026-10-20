@@ -27,7 +27,7 @@ export default async function ReferendumBeheerPage() {
   return (
     <>
       <SiteHeader active="federatie" />
-      <div className="site">
+      <div className="site site-breed">
         <h1 className="page-title">🏅 Referendum</h1>
         <p className="acc-page-intro">
           Spelers uit {huidig?.reeksHeren ?? '1NAH'} en {huidig?.reeksDames ?? '1NAD'} met minstens {huidig?.minWedstrijden ?? 5} gespeelde

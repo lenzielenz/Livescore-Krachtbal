@@ -31,7 +31,7 @@ export default async function ClubTeamPage() {
     return (
       <>
         <SiteHeader active="clubs" />
-        <div className="site">
+        <div className="site site-breed">
           <h1 className="page-title"><span className="brand">Clubteam</span></h1>
           <p className="empty">
             Enkel een club-beheerder kan het clubteam beheren.{' '}
@@ -46,7 +46,7 @@ export default async function ClubTeamPage() {
     return (
       <>
         <SiteHeader active="clubs" />
-        <div className="site">
+        <div className="site site-breed">
           <h1 className="page-title"><span className="brand">Clubteam</span></h1>
           <p className="empty">
             Je account is nog niet aan een club gekoppeld. Vraag de federatie om je gebruiker aan je
@@ -106,7 +106,7 @@ export default async function ClubTeamPage() {
   return (
     <>
       <SiteHeader active="clubs" />
-      <div className="site">
+      <div className="site site-breed">
         <h1 className="page-title"><span className="brand">Clubteam</span></h1>
         <p className="empty" style={{ marginBottom: 16 }}>
           Geef leden van je club een rol. <strong>Club-medewerker</strong> mag aantekenen, opstellingen

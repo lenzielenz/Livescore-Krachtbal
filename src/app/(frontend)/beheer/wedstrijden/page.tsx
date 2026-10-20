@@ -67,7 +67,7 @@ export default async function WedstrijdenPage({ searchParams }: { searchParams: 
   return (
     <>
       <SiteHeader active="federatie" />
-      <div className="site">
+      <div className="site site-breed">
         <h1 className="page-title">{filter === 'komend' ? 'Wedstrijden verplaatsen' : FILTERS[filter]}</h1>
         <p className="ft-stat" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {(Object.keys(FILTERS) as Filter[]).map((f) => (
@@ -81,7 +81,7 @@ export default async function WedstrijdenPage({ searchParams }: { searchParams: 
         ) : filter === 'komend' ? (
           <Verplaatsen wedstrijden={wedstrijden} />
         ) : (
-          <div className="ft-wrap">
+          <div className="ft-lijst">
             {wedstrijden.map((w) => (
               <div key={w.matchId} className="ft-rij">
                 <div className="ft-wedstrijd">

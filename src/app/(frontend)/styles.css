@@ -228,6 +228,17 @@ h3,
 }
 /* Matchpagina: minder lege ruimte tussen de sticky header en "Alle wedstrijden" — hier telt de
    ruimte extra want de wedstrijdinfo moet meteen in beeld komen, i.p.v. onder een kale marge. */
+/* Werkschermen van federatie en clubbeheer: die gebruikt men vooral op een laptop. Breed genoeg
+   voor tabellen en kolommen naast elkaar; op gsm blijft alles zoals de gewone .site. */
+.site.site-breed {
+  max-width: 1440px;
+}
+@media (min-width: 1100px) {
+  .site.site-breed {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
 .site--tight-top {
   padding-top: 12px;
 }

@@ -20,7 +20,7 @@ export default async function AccountsPage() {
     return (
       <>
         <SiteHeader active="federatie" />
-        <div className="site">
+        <div className="site site-breed">
           <h1 className="page-title"><span className="brand">Accounts</span></h1>
           <p className="empty">
             Enkel een admin kan accounts beheren.{' '}
@@ -67,7 +67,7 @@ export default async function AccountsPage() {
   return (
     <>
       <SiteHeader active="federatie" />
-      <div className="site">
+      <div className="site site-breed">
         <h1 className="page-title"><span className="brand">Accounts</span></h1>
         <p className="acc-page-intro">
           Beheer alle accounts: ken rollen toe (supporter, club, scheidsrechter, federatie, admin), geef

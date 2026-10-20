@@ -44,7 +44,7 @@ export default async function PlanningPage() {
   return (
     <>
       <SiteHeader active="federatie" />
-      <div className="site">
+      <div className="site site-breed">
         <h1 className="page-title"><span className="brand">Seizoensplanning</span> · import</h1>
         {!allowed ? (
           <p className="empty">

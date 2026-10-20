@@ -42,7 +42,7 @@ export default async function ClubsPage() {
   return (
     <>
       <SiteHeader active="federatie" />
-      <div className="site">
+      <div className="site site-breed">
         <h1 className="page-title">Clubs &amp; logins</h1>
         <p className="acc-page-intro">
           Elke club heeft minstens één clubbeheerder nodig: die registreert de leden, maakt de opstellingen en geeft zijn eigen

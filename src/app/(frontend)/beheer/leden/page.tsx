@@ -29,7 +29,7 @@ export default async function LedenPage() {
     return (
       <>
         <SiteHeader active="federatie" />
-        <div className="site">
+        <div className="site site-breed">
           <h1 className="page-title"><span className="brand">Ledenkeuring</span></h1>
           <p className="empty">
             Enkel de federatie/admin kan de medische keuring beheren.{' '}
@@ -95,7 +95,7 @@ export default async function LedenPage() {
   return (
     <>
       <SiteHeader active="federatie" />
-      <div className="site">
+      <div className="site site-breed">
         <h1 className="page-title"><span className="brand">Ledenkeuring</span></h1>
         <p className="acc-page-intro">
           Alle leden met hun <strong>vergunning (paspoort)</strong> en <strong>medische keuring</strong>. Duid aan wie
