@@ -59,16 +59,26 @@ describe('wachtwoord herstellen', () => {
     userId = user.id as number
   }, 90_000)
 
-  it('laat enkel een admin een herstellink maken', async () => {
+  it('enkel admin, federatie of de eigen clubverantwoordelijke maakt een herstellink', async () => {
     alsWie = null
     expect((await vraagLink({ userId })).status).toBe(401)
 
     alsWie = { id: 999_999, roles: ['viewer'] }
     expect((await vraagLink({ userId })).status).toBe(403)
 
-    // Federatie is niet genoeg: accountbeheer is admin-werk (zelfde grens als /api/admin/users).
+    // De federatie mag het voor een gewoon account (zie de route)...
     alsWie = { id: 999_998, roles: ['federatie'] }
-    expect((await vraagLink({ userId })).status).toBe(403)
+    expect((await vraagLink({ userId })).status).toBe(200)
+
+    // ...maar niet voor een admin- of federatieaccount: daarmee kon ze dat account overnemen.
+    const collega = await payload.create({
+      collection: 'users',
+      data: { email: `collega-${Date.now()}@test.be`, password: 'collega-wachtwoord-1', roles: ['federatie'] },
+      overrideAccess: true,
+    })
+    expect((await vraagLink({ userId: collega.id })).status).toBe(403)
+    alsWie = { id: 1, roles: ['admin'] }
+    expect((await vraagLink({ userId: collega.id })).status).toBe(200)
   })
 
   it('geeft een nette fout voor een onbekend account', async () => {
