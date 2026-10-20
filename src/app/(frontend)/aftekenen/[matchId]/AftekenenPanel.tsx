@@ -47,7 +47,7 @@ function SignaturePad({
   /** Vooraf gekende naam (kapitein/scheidsrechter uit de wedstrijd) — niemand hoeft te typen. */
   defaultNaam?: string
   aanDeBeurt: boolean
-  onSigned?: (s: SignatureData) => void
+  onSigned?: (s: SignatureData, r: { ingediend?: boolean; nogTeDoen?: string | null }) => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawing = useRef(false)
@@ -135,7 +135,7 @@ function SignaturePad({
         setSignedAt(nu)
         setLocked(true)
         setMsg(null)
-        onSigned?.({ naam, handtekening: dataUrl, akkoord: true, tijdstip: nu })
+        onSigned?.({ naam, handtekening: dataUrl, akkoord: true, tijdstip: nu }, { ingediend: Boolean(json.ingediend), nogTeDoen: json.nogTeDoen ?? null })
       } else {
         setMsg(json.error || 'Aftekenen mislukt.')
       }
@@ -248,9 +248,18 @@ export function AftekenenPanel({
   const volgende = nodig.find((w) => !getekend[w]) ?? null
   const klaar = volgende == null
 
-  const naGetekend = (w: Who, s: SignatureData) => {
+  const naGetekend = (w: Who, s: SignatureData, r: { ingediend?: boolean; nogTeDoen?: string | null }) => {
     const nieuw = { ...getekend, [w]: s }
     setGetekend(nieuw)
+    // De laatste handtekening dient automatisch in (sign-route): dan is het blad meteen bij de
+    // federatie en beide clubs.
+    if (r.ingediend) {
+      setStatus('ingediend')
+      setMsg({ ok: true, tekst: 'Alle handtekeningen staan erop: het blad is automatisch ingediend en is nu bij de federatie en beide clubs.' })
+      router.refresh()
+      return
+    }
+    if (r.nogTeDoen) setMsg({ ok: false, tekst: `Alle handtekeningen staan erop, maar het blad kon nog niet ingediend worden: ${r.nogTeDoen}` })
     const next = nodig.find((x) => !nieuw[x])
     // Even wachten tot de zojuist vergrendelde kaart opnieuw gerenderd is.
     setTimeout(() => {
@@ -339,7 +348,7 @@ export function AftekenenPanel({
                   initial={signatures?.[w]}
                   defaultNaam={defaultNames?.[w]}
                   aanDeBeurt={volgende === w}
-                  onSigned={(s) => naGetekend(w, s)}
+                  onSigned={(s, r) => naGetekend(w, s, r)}
                 />
               </div>
             ))}
@@ -354,8 +363,8 @@ export function AftekenenPanel({
               ))}
               <p>
                 {klaar
-                  ? 'Alle handtekeningen staan erop. De scheidsrechter dient in: het blad gaat als PDF naar beide clubs en naar de federatie, en is daarna definitief.'
-                  : `Nog ${nodig.filter((w) => !getekend[w]).length} van de ${nodig.length} handtekeningen. Daarna dient de scheidsrechter in.`}
+                  ? 'Alle handtekeningen staan erop. Dien in zodra hierboven niets meer openstaat: het blad gaat naar de federatie en beide clubs en is daarna definitief.'
+                  : `Nog ${nodig.filter((w) => !getekend[w]).length} van de ${nodig.length} handtekeningen. Na de laatste handtekening gaat het blad vanzelf naar de federatie en beide clubs.`}
               </p>
             </div>
             <button type="button" onClick={submit} disabled={busy || !klaar || voorwaarden.length > 0} className="wb-btn wb-btn-primary">

@@ -2,7 +2,7 @@
 // een bepaalde rol (één tik: rol wisselen + doorgaan). Puur — de pagina vult de wedstrijd-id's in
 // uit de klaargezette demowereld (lib/demoruimte/klaarzetten.ts → demoWedstrijden).
 
-export type DemoIds = { hoofd: number | null; dames: number | null; live: number | null; afgelopen: number | null; afgelast: number | null }
+export type DemoIds = { hoofd: number | null; dames: number | null; live: number | null; afgelopen: number | null; afgelast: number | null; ingediend?: number | null }
 export type DemoStap = { rol: string; href: string | null; tekst: string }
 export type Hoofdstuk = { sleutel: string; icoon: string; titel: string; verhaal: string; stappen: DemoStap[] }
 
@@ -68,6 +68,19 @@ export function draaiboek(ids: DemoIds): Hoofdstuk[] {
         { rol: 'speler', href: m(ids.afgelopen, (id) => `/api/matchsheet/${id}/pdf`), tekst: 'Het wedstrijdblad als PDF, om te printen' },
         { rol: 'speler', href: '/profiel', tekst: 'De speler: aangifte en getuigschrift invullen en terugsturen' },
         { rol: 'federatie', href: '/ongevallen', tekst: 'Federatie: ongevallendossiers' },
+      ],
+    },
+    {
+      sleutel: 'klacht',
+      icoon: '⚖️',
+      titel: 'Wedstrijdbladen en klachten',
+      verhaal:
+        'Na de laatste handtekening gaat het blad vanzelf naar de federatie en beide clubs, en staat het altijd in de wedstrijdbladen met de PDF. Klopt er iets niet, dan dient een club een klacht in; de federatie heropent het blad (opnieuw ondertekenen) of wijst af. Baasrode klaagde al over een rugworp die als nekworp genoteerd staat.',
+      stappen: [
+        { rol: 'clubbeheer', href: '/wedstrijdbladen', tekst: 'Club: alle wedstrijdbladen van de club, met de PDF' },
+        { rol: 'clubbeheer', href: m(ids.ingediend ?? null, (id) => `/aftekenen/${id}`), tekst: 'Club: klacht indienen over een ingediend blad' },
+        { rol: 'federatie', href: '/beheer/klachten', tekst: 'Federatie: klachten — blad heropenen of afwijzen' },
+        { rol: 'federatie', href: '/wedstrijdbladen', tekst: 'Federatie: alle wedstrijdbladen, met filter op klacht' },
       ],
     },
     {

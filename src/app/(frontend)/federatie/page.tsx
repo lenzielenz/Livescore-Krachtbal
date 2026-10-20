@@ -23,6 +23,8 @@ const TOOLGROEPEN: { titel: string; tools: { href: string; icoon: string; label:
       { href: '/beheer/afgelastingen', icoon: '⛈️', label: 'Afgelastingen', uitleg: "Door de scheidsrechter afgelast, met foto's; nieuwe datum plannen." },
       { href: '/beheer/inschrijvingen', icoon: '📝', label: 'Inschrijvingen & kalender', uitleg: 'Ronde openen, inschrijvingen van de clubs verwerken, seizoenskalender met hun voorkeuren maken.' },
       { href: '/beheer/planner', icoon: '🧩', label: 'Planner', uitleg: 'Wedstrijden per weekend verslepen; botsingen meteen zichtbaar; verplaatsingsaanvragen beslissen.' },
+      { href: '/wedstrijdbladen', icoon: '📄', label: 'Wedstrijdbladen', uitleg: 'Elk ingediend blad met de PDF; zoeken op ploeg, reeks en status.' },
+      { href: '/beheer/klachten', icoon: '⚖️', label: 'Klachten', uitleg: 'Klachten van clubs over een blad: heropenen of afwijzen.' },
       { href: '/beheer/boetes', icoon: '💶', label: 'Boetes', uitleg: 'Voorstellen (forfait, blad te laat, aftrap later) beoordelen, opleggen, betalingen bevestigen.' },
       { href: '/beheer/planning', icoon: '📅', label: 'Planning importeren', uitleg: 'Kalender of reeksindeling uit een bestand.' },
       { href: '/federatie/reglement', icoon: '📖', label: 'Reglement & regels', uitleg: 'Versies, verslagen, vastspelen en eindrondes.' },

@@ -14,6 +14,8 @@ import { federationUpload } from './federation'
 import { mailMatchSheet } from './mail'
 import { generateMatchSheetPdf, type MatchSheetPdfData, type PdfLineupRow } from './pdf'
 import { formatDateTimeBE } from '../datetime'
+import { SYSTEEM_STATUS } from '../blad-status'
+import { clubStaf, federatieAccounts, meld } from '../meldingen'
 
 export type SubmitResult = {
   ok: boolean
@@ -140,6 +142,8 @@ export async function submitMatchSheet(
   payload: Payload,
   matchId: number | string,
   user: User,
+  /** Automatisch na de laatste handtekening (sign-route): dan dient het systeem in, niet de gebruiker. */
+  opts: { automatisch?: boolean } = {},
 ): Promise<SubmitResult> {
   const found = await payload.find({
     collection: 'matchsheets',
@@ -244,14 +248,32 @@ export async function submitMatchSheet(
 
   const federation = await federationUpload({ matchId, data: pdfData })
 
-  // Pas als laatste stap: definitief op 'ingediend' (daarna onwijzigbaar).
+  // Pas als laatste stap: definitief op 'ingediend' (daarna onwijzigbaar). Automatisch (na de
+  // laatste handtekening, door wie die ook zette) is een systeemovergang: alle controles hierboven
+  // zijn dan al gebeurd, enkel de rol van de laatste ondertekenaar telt niet.
   const updated = await payload.update({
     collection: 'matchsheets',
     id: sheet.id,
     data: { status: 'ingediend', ...(pdfMediaId ? { pdf: pdfMediaId } : {}) },
-    user,
-    overrideAccess: false,
+    ...(opts.automatisch ? { overrideAccess: true, context: { [SYSTEEM_STATUS]: true } } : { user, overrideAccess: false }),
   })
+
+  // Iedereen die het blad moet hebben, krijgt het meteen: de staf van beide clubs en de federatie,
+  // in hun meldingen (en push), met de link naar het blad en de PDF. Ook zonder mailserver.
+  const clubIdVan = (team: unknown) => {
+    const c = (team as { club?: unknown } | null)?.club
+    return c && typeof c === 'object' ? Number((c as { id?: unknown }).id) : c == null ? null : Number(c)
+  }
+  const ontvangers = [
+    ...(await clubStaf(payload, clubIdVan(match?.homeTeam))),
+    ...(await clubStaf(payload, clubIdVan(match?.awayTeam))),
+    ...(await federatieAccounts(payload)),
+  ]
+  await meld(payload, ontvangers, {
+    titel: `📄 Wedstrijdblad ingediend: ${pdfData.homeTeam} ${pdfData.score?.home ?? ''}–${pdfData.score?.away ?? ''} ${pdfData.awayTeam}`.replace(/ –/, ' –'),
+    tekst: 'Afgetekend door beide kapiteins en de scheidsrechter. Het blad en de PDF staan bij de wedstrijdbladen.',
+    url: `/aftekenen/${matchId}`,
+  }).catch(() => 0)
 
   return {
     ok: true,

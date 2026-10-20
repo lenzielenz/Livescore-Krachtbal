@@ -91,3 +91,16 @@
 .aft-melding.fout { background: color-mix(in srgb, #f0b04a 16%, transparent); }
 .aft-indienen p.aft-voorwaarde { color: #f0b04a; font-weight: 600; margin-bottom: 6px; }
 .aft-voorwaarde a { color: var(--accent); font-weight: 700; }
+.aft-klacht { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); padding: 14px; display: grid; gap: 10px; }
+.aft-klacht h3 { margin: 0; font-size: 1rem; }
+.aft-klacht-item { border-left: 3px solid #f0b04a; padding: 6px 10px; display: grid; gap: 4px; background: color-mix(in srgb, var(--txt) 3%, transparent); border-radius: 0 10px 10px 0; }
+.aft-klacht-item.heropend { border-left-color: #4cc9f0; }
+.aft-klacht-item.afgewezen { border-left-color: var(--line); }
+.aft-klacht-item p { margin: 0; font-size: 0.88rem; }
+.aft-klacht-item small { color: var(--dim); font-size: 0.74rem; }
+.aft-klacht-kop { display: flex; justify-content: space-between; gap: 8px; font-size: 0.86rem; }
+.aft-klacht-kop span { color: var(--dim); font-weight: 700; }
+.aft-klacht-beslissing { color: var(--dim); }
+.aft-klacht-form { display: grid; gap: 8px; }
+.aft-klacht-form label { display: grid; gap: 6px; font-weight: 700; font-size: 0.88rem; }
+.aft-klacht-form textarea { width: 100%; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--txt); padding: 10px; font: inherit; }

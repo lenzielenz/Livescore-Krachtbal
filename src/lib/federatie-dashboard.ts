@@ -43,6 +43,9 @@ export async function federatieTaken(payload: Payload, nu: Date = new Date()): P
   const boetesOpen = await payload
     .count({ collection: 'boetes', where: { status: { in: ['voorstel', 'betwist', 'betaling_gemeld'] } }, overrideAccess: true })
     .catch(() => ({ totalDocs: 0 }))
+  const klachtenOpen = await payload
+    .count({ collection: 'klachten', where: { status: { equals: 'open' } }, overrideAccess: true })
+    .catch(() => ({ totalDocs: 0 }))
   const iso = (ms: number) => new Date(ms).toISOString()
 
   const [registraties, komend, live, recentAf, clubs, beheerders, kaarten, ongevallen, ongevallenOpen, afgelast] = await Promise.all([
@@ -160,6 +163,17 @@ export async function federatieTaken(payload: Payload, nu: Date = new Date()): P
       dringend: kleur(inschrijvingenOpen.totalDocs, false),
       href: '/beheer/inschrijvingen',
       actie: 'Verwerken',
+      items: [],
+    },
+    {
+      sleutel: 'klachten',
+      icoon: '⚖️',
+      titel: 'Klachten over wedstrijdbladen',
+      uitleg: 'Een club klaagt over een ingediend blad: heropenen (opnieuw ondertekenen) of afwijzen.',
+      aantal: klachtenOpen.totalDocs,
+      dringend: kleur(klachtenOpen.totalDocs, true),
+      href: '/beheer/klachten',
+      actie: 'Beslissen',
       items: [],
     },
     {

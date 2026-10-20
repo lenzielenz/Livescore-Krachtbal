@@ -12,6 +12,9 @@ import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
 import { isSupportersMode } from '@/lib/score-mode'
 import { AftekenenPanel, type SignatureData } from './AftekenenPanel'
+import { KlachtIndienen, type KlachtInfo } from './KlachtIndienen'
+import { hasRole, isFederationLevel, userClubId } from '@/lib/access'
+import { klachtWeigering } from '@/lib/klacht'
 import { TeamLogo } from '@/components/TeamLogo'
 import { validateOfficials } from '@/lib/officials-rules'
 import type { Reeks } from '@/lib/reeksen'
@@ -73,6 +76,31 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
     kapiteinUit: naamVan(match.awayCaptain),
     scheidsrechter: naamVan(refereeRes?.docs[0]?.assignedReferee),
   }
+
+  // Klachten over dit blad (federatie en de staf van beide clubs zien ze; lib/klacht.ts).
+  const relIdK = (v: unknown) => (v && typeof v === 'object' ? Number((v as { id?: unknown }).id) : v == null ? null : Number(v))
+  const homeClubId = match.homeTeam && typeof match.homeTeam === 'object' ? relIdK((match.homeTeam as { club?: unknown }).club) : null
+  const awayClubId = match.awayTeam && typeof match.awayTeam === 'object' ? relIdK((match.awayTeam as { club?: unknown }).club) : null
+  const klachtenRes = await payload.find({ collection: 'klachten', where: { match: { equals: Number(matchId) } }, depth: 1, sort: '-createdAt', limit: 20, overrideAccess: true }).catch(() => ({ docs: [] }))
+  const eigenClub = userClubId(user)
+  const zietKlachten = isFederationLevel(user) || (hasRole(user, 'club-beheerder', 'club-medewerker') && [homeClubId, awayClubId].some((c) => c != null && String(c) === String(eigenClub)))
+  const klachtLijst: KlachtInfo[] = zietKlachten
+    ? klachtenRes.docs.map((k) => ({
+        id: Number(k.id),
+        club: k.club && typeof k.club === 'object' ? String(k.club.name ?? '') : '',
+        reden: String(k.reden ?? ''),
+        status: String(k.status ?? 'open'),
+        beslissing: k.beslissing ? String(k.beslissing) : null,
+        op: String(k.createdAt),
+      }))
+    : []
+  const klachtReden = klachtWeigering(user, {
+    bladStatus: String(sheet.status ?? ''),
+    homeClub: homeClubId,
+    awayClub: awayClubId,
+    openKlachtVanClub: klachtenRes.docs.some((k) => k.status === 'open' && relIdK(k.club) === Number(eigenClub)),
+  })
+  const klachtMag = klachtReden == null
 
   // Dezelfde gegevens als de PDF: wat de kapitein hier ziet, is exact wat er op het blad staat.
   const blad = await buildMatchSheetPdfData(payload, matchId).catch(() => null)
@@ -206,6 +234,10 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
             scheidsrechter: sheet.scheidsrechter as SignatureData | undefined,
           }}
         />
+
+        {sheet.status === 'ingediend' || klachtLijst.length > 0 ? (
+          <KlachtIndienen matchId={matchId} klachten={klachtLijst} magIndienen={klachtMag} weigering={klachtReden} />
+        ) : null}
       </div>
     </>
   )

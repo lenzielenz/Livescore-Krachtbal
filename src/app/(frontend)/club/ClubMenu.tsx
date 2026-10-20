@@ -16,6 +16,7 @@ const NODIG: Tegel[] = [
   { href: '/beheer/spelers', icoon: '➕', label: 'Speler toevoegen', staf: true },
   { href: '/ongevallen', icoon: '🚑', label: 'Blessures', staf: true },
   { href: '/beheer/club-team', icoon: '👥', label: 'Coaches & tafel', beheerder: true },
+  { href: '/wedstrijdbladen', icoon: '📄', label: 'Wedstrijdbladen' },
   { href: '/club/boetes', icoon: '💶', label: 'Boetes & kosten', staf: true },
   { href: '/club/inschrijving', icoon: '📝', label: 'Inschrijving seizoen', staf: true },
 ]

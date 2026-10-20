@@ -1,0 +1,20 @@
+.wbl { display: grid; gap: 14px; }
+.wbl-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.wbl-filters .acc-search { flex: 1 1 200px; margin: 0; }
+.wbl-filters select { min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--txt); padding: 0 10px; }
+.wbl-tabs { display: flex; flex-wrap: wrap; gap: 6px; flex-basis: 100%; }
+.wbl-tabs button { border: 1px solid var(--line); background: var(--panel); color: var(--dim); border-radius: 999px; padding: 6px 12px; font-weight: 700; font-size: 0.82rem; cursor: pointer; }
+.wbl-tabs button.on { border-color: var(--accent); color: var(--txt); background: color-mix(in srgb, var(--accent) 14%, var(--panel)); }
+.wbl-lijst { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.wbl-rij { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.wbl-info { display: grid; gap: 3px; min-width: 0; flex: 1 1 240px; }
+.wbl-meta { font-size: 0.76rem; color: var(--dim); }
+.wbl-teams { font-weight: 700; }
+.wbl-teams strong { margin: 0 6px; font-variant-numeric: tabular-nums; }
+.wbl-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.wbl-badge { font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+.wbl-badge.ok { background: color-mix(in srgb, #2ec27e 18%, transparent); color: #2ec27e; }
+.wbl-badge.wacht { background: color-mix(in srgb, #f0b04a 18%, transparent); color: #f0b04a; }
+.wbl-badge.klacht { background: color-mix(in srgb, #ff6b6b 18%, transparent); color: #ff8a8a; }
+.wbl-acties { display: flex; gap: 6px; }
+.wbl-acties .wb-btn { text-decoration: none; }

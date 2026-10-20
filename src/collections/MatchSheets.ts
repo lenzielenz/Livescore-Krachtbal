@@ -9,6 +9,7 @@ import {
   nextStatus,
 } from '../lib/matchsheet-workflow'
 import { SYSTEEM_STATUS } from '../lib/blad-status'
+import { BLAD_HEROPENEN } from '../lib/klacht'
 
 // Eén opstellingsregel (per speler op het blad).
 const lineupFields: Field[] = [
@@ -40,7 +41,9 @@ const enforceWorkflow: CollectionBeforeChangeHook = async ({ data, originalDoc, 
   const from = originalDoc?.status as MatchSheetStatus | undefined
   const to = data?.status as MatchSheetStatus | undefined
 
-  // Na indienen is niets meer wijzigbaar (reglement Item 37).
+  // Na indienen is niets meer wijzigbaar (reglement Item 37) — tenzij de federatie het blad na een
+  // klacht heropent (lib/klacht.ts): dan enkel terug naar "af te tekenen", gelogd in de overrideLog.
+  if (from === 'ingediend' && context?.[BLAD_HEROPENEN] && to === 'af_te_tekenen') return data
   if (from === 'ingediend') {
     throw new Error('Het wedstrijdblad is ingediend en kan niet meer gewijzigd worden (Item 37).')
   }

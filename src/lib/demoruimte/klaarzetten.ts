@@ -14,6 +14,7 @@ import { kaartAanvragen } from '../medische-kaart'
 import { SYSTEEM_STATUS, volgBladStatus } from '../blad-status'
 import { advanceSimpleHalf, recordSimpleGoal } from '../simple-match-engine'
 import { verplaatsingAanvragen, verplaatsingBeantwoorden } from '../verplaatsing'
+import { klachtIndienen } from '../klacht'
 import { demoHandtekening } from './handtekening'
 import { demoReferendumKlaarzetten } from './referendum'
 import { DEMO_ROLLEN, demoEmail, isDemoAccount } from './rollen'
@@ -550,6 +551,19 @@ export async function demoKlaarzetten(payload: Payload, opties: { forceer?: bool
       context: { [SYSTEEM_STATUS]: true },
     } as never)
 
+    // ── Een klacht van Baasrode over een ingediend blad: de federatie kan heropenen of afwijzen ──
+    {
+      const baH = ploeg['BA-H']
+      const ms = await payload.find({ collection: 'matches', where: { and: [{ status: { equals: 'finished' } }, { or: [{ homeTeam: { equals: baH } }, { awayTeam: { equals: baH } }] }] }, sort: 'date', depth: 0, limit: 20, overrideAccess: true })
+      for (const m of ms.docs) {
+        const blad = (await payload.find({ collection: 'matchsheets', where: { match: { equals: m.id } }, depth: 0, limit: 1, overrideAccess: true })).docs[0]
+        if (blad?.status !== 'ingediend' || (blad.forfait as { uitslag?: string } | undefined)?.uitslag !== 'geen') continue
+        await klachtIndienen(payload, gebruiker['clubbeheer-baasrode'], Number(m.id), 'Onze speler Jens Aerts scoorde in de 2e helft een rugworp (+2), op het blad staat hij met een nekworp (+1). De eindstand klopt dus niet.')
+        stap('Klacht van Baasrode over een ingediend blad: wacht op de federatie')
+        break
+      }
+    }
+
     // ── Referendum: open stemronde, de demo-speler mag stemmen ─────────────────────────────────
     stap(await demoReferendumKlaarzetten(payload))
 
@@ -576,5 +590,15 @@ export async function demoWedstrijden(payload: Payload) {
     live: await zoek('Sint-Michiels U14', 'Baasrode U14'),
     afgelopen: await zoek('Zandberg Heren', 'Baasrode Heren'),
     afgelast: await zoek('Lebbeke Dames', 'Zandberg Dames'),
+    ingediend: await (async () => {
+      const smH = await ploeg('Sint-Michiels Heren')
+      if (smH == null) return null
+      const ms = await payload.find({ collection: 'matches', where: { and: [{ status: { equals: 'finished' } }, { or: [{ homeTeam: { equals: smH } }, { awayTeam: { equals: smH } }] }] }, sort: '-date', depth: 0, limit: 10, overrideAccess: true })
+      for (const m of ms.docs) {
+        const blad = (await payload.find({ collection: 'matchsheets', where: { match: { equals: m.id } }, depth: 0, limit: 1, overrideAccess: true })).docs[0]
+        if (blad?.status === 'ingediend') return Number(m.id)
+      }
+      return null
+    })(),
   }
 }
