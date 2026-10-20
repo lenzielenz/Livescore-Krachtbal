@@ -211,6 +211,7 @@ export async function buildRoster(
         hogerSpelenVerbod: p.hogerSpelenVerbod as boolean,
         medischAttest: p.medischAttest as boolean,
         actief: p.actief as boolean,
+        soortLid: (p as { soortLid?: string | null }).soortLid,
         knipjesGeblokkeerd: isKnipjesBlocked(knipjesPerPlayer.get(p.id as number) ?? 0, drempel),
       },
       team.category,

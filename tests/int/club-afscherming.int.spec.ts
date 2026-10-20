@@ -46,7 +46,7 @@ describe('afscherming tussen clubs', () => {
     // Wedstrijd A: club A speelt mee. Wedstrijd B: club A niet (B tegen B2).
     ids.matchA = await match(ids.ploegA, ids.ploegB)
     ids.matchB = await match(ids.ploegB, ids.ploegB2)
-    const blad = async (m: number) => (await payload.create({ collection: 'matchsheets', data: { match: m }, overrideAccess: true })).id as number
+    const blad = async (m: number) => (await payload.create({ collection: 'matchsheets', data: { match: m, status: 'concept' }, overrideAccess: true })).id as number
     ids.bladA = await blad(ids.matchA)
     ids.bladB = await blad(ids.matchB)
   }, 90_000)

@@ -17,6 +17,8 @@ export type SelectablePlayerInput = {
   hogerSpelenVerbod?: boolean | null
   medischAttest?: boolean | null
   actief?: boolean | null
+  /** 'lid' = gewoon lid (geen speler): nooit opstelbaar. */
+  soortLid?: string | null
   /** Geblokkeerd door administratieve knipjes (fase 8). */
   knipjesGeblokkeerd?: boolean
 }
@@ -41,6 +43,11 @@ export function playerSelectability(
   if (player.actief === false) {
     level = worst(level, 'block')
     reasons.push('Inactief lid.')
+  }
+
+  if (player.soortLid === 'lid') {
+    level = worst(level, 'block')
+    reasons.push('Gewoon lid — geen speler.')
   }
 
   if (player.vergunningsstatus !== 'geldig') {

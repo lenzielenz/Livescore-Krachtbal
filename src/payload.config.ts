@@ -12,6 +12,7 @@ import { TornooiFotos } from './collections/TornooiFotos'
 import { Clubs } from './collections/Clubs'
 import { Teams } from './collections/Teams'
 import { Players } from './collections/Players'
+import { MedischeAttesten } from './collections/MedischeAttesten'
 import { Matches } from './collections/Matches'
 import { FieldScreens } from './collections/FieldScreens'
 import { Possessions } from './collections/Possessions'
@@ -113,6 +114,7 @@ export default buildConfig({
     Clubs,
     Teams,
     Players,
+    MedischeAttesten,
     Matches,
     FieldScreens,
     MatchSheets,

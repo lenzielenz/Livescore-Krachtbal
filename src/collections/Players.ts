@@ -3,6 +3,7 @@ import { APIError, type Access, type CollectionConfig, type FieldAccess } from '
 import { fieldIsFederation, hasRole, isFederationLevel, userClubId } from '../lib/access'
 import { analyseEntityFields } from '../lib/analyse-fields'
 import { POSITION_OPTIONS } from '../lib/positions'
+import { GESLACHT_OPTIONS, REGISTRATIE_OPTIONS, SOORT_LID_OPTIONS, volledigeNaam } from '../lib/registratie'
 import { bewaakSpelerVerwijderen } from '../lib/speler-verwijderen'
 
 export { POSITION_OPTIONS }
@@ -73,6 +74,11 @@ export const Players: CollectionConfig = {
     beforeValidate: [
       async ({ data, originalDoc, req }) => {
         if (!data) return data
+        // Voornaam + naam ingevuld → de weergavenaam volgt (één bron, geen twee namen die verschillen).
+        const orig = originalDoc as { voornaam?: string | null; achternaam?: string | null } | undefined
+        const voornaam = String(data.voornaam ?? orig?.voornaam ?? '').trim()
+        const achternaam = String(data.achternaam ?? orig?.achternaam ?? '').trim()
+        if (voornaam && achternaam) data.name = volledigeNaam(voornaam, achternaam)
         const rawTeam = data.team ?? (originalDoc as { team?: unknown } | undefined)?.team
         const teamId = rawTeam && typeof rawTeam === 'object' ? (rawTeam as { id?: unknown }).id : rawTeam
         if (teamId == null || !Number.isFinite(Number(teamId))) return data
@@ -241,6 +247,85 @@ export const Players: CollectionConfig = {
           type: 'checkbox',
           defaultValue: true,
         },
+      ],
+    },
+    {
+      // Spelersregistratie (lib/registratie.ts): de club vult dit in en dient in, de federatie keurt.
+      label: 'Registratie',
+      type: 'collapsible',
+      admin: { initCollapsed: false },
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            { name: 'voornaam', label: 'Voornaam', type: 'text' },
+            { name: 'achternaam', label: 'Naam', type: 'text' },
+            { name: 'geslacht', label: 'Geslacht', type: 'select', options: [...GESLACHT_OPTIONS] },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'soortLid',
+              label: 'Soort lid',
+              type: 'select',
+              options: [...SOORT_LID_OPTIONS],
+              defaultValue: 'speler',
+              admin: { description: 'Een gewoon lid speelt geen wedstrijden en heeft geen vergunning nodig.' },
+            },
+            {
+              name: 'vergunningsnummer',
+              label: 'Vergunningsnummer',
+              type: 'text',
+              access: { read: sensitiveFieldRead, ...federatieVeld },
+              admin: { description: 'Enkel de federatie vult dit in.' },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'medischeKeuringOp',
+              label: 'Datum medische keuring',
+              type: 'date',
+              access: { read: sensitiveFieldRead },
+              admin: { date: { pickerAppearance: 'dayOnly', displayFormat: 'dd/MM/yyyy' } },
+            },
+            {
+              name: 'medischAttestBestand',
+              label: 'Doktersattest',
+              type: 'upload',
+              relationTo: 'medische-attesten',
+              access: { read: sensitiveFieldRead },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'registratieStatus',
+              label: 'Status registratie',
+              type: 'select',
+              options: [...REGISTRATIE_OPTIONS],
+              // De club dient in via /api/club/leden, de federatie beslist via
+              // /api/federatie/registraties (beide met overrideAccess); rechtstreeks enkel de federatie.
+              access: federatieVeld,
+              index: true,
+            },
+            { name: 'ingediendOp', label: 'Ingediend op', type: 'date', access: federatieVeld, admin: { readOnly: true } },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            { name: 'beoordeeldOp', label: 'Beoordeeld op', type: 'date', access: federatieVeld, admin: { readOnly: true } },
+            { name: 'beoordeeldDoor', label: 'Beoordeeld door', type: 'relationship', relationTo: 'users', access: federatieVeld, admin: { readOnly: true } },
+          ],
+        },
+        { name: 'afkeurReden', label: 'Reden van afkeuring', type: 'text', access: federatieVeld },
       ],
     },
     ...analyseEntityFields,

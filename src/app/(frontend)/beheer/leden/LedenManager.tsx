@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react'
 
+import { isSpeelgerechtigd } from '@/lib/registratie'
+
 export type Lid = {
   id: number
   name: string
@@ -15,9 +17,10 @@ export type Lid = {
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 
-// Speelgerechtigd = geldige vergunning + medisch attest + geen doktersverbod.
+// Speelgerechtigd: dezelfde definitie als de clublijst en de opstelling (lib/registratie.ts). Het
+// doktersverbod telt niet mee: dat verbiedt enkel HOGER spelen, niet spelen.
 function eligible(l: Lid): boolean {
-  return l.vergunningsstatus === 'geldig' && l.medischAttest && !l.hogerSpelenVerbod
+  return isSpeelgerechtigd(l)
 }
 
 function LidRow({ lid }: { lid: Lid }) {
@@ -53,7 +56,7 @@ function LidRow({ lid }: { lid: Lid }) {
     }
   }
 
-  const ok = verg === 'geldig' && med && !verbod
+  const ok = isSpeelgerechtigd({ vergunningsstatus: verg, medischAttest: med })
   return (
     <div className="led-row">
       <span className={`led-bol ${ok ? 'ok' : verg === 'geldig' || med ? 'partial' : 'no'}`} title={ok ? 'Speelgerechtigd' : 'Niet (volledig) in orde'} />

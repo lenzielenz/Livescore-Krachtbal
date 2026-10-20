@@ -70,6 +70,7 @@ export interface Config {
     clubs: Club;
     teams: Team;
     players: Player;
+    'medische-attesten': MedischeAttesten;
     matches: Match;
     'field-screens': FieldScreen;
     matchsheets: Matchsheet;
@@ -119,6 +120,7 @@ export interface Config {
     clubs: ClubsSelect<false> | ClubsSelect<true>;
     teams: TeamsSelect<false> | TeamsSelect<true>;
     players: PlayersSelect<false> | PlayersSelect<true>;
+    'medische-attesten': MedischeAttestenSelect<false> | MedischeAttestenSelect<true>;
     matches: MatchesSelect<false> | MatchesSelect<true>;
     'field-screens': FieldScreensSelect<false> | FieldScreensSelect<true>;
     matchsheets: MatchsheetsSelect<false> | MatchsheetsSelect<true>;
@@ -605,6 +607,24 @@ export interface Player {
    */
   hogerSpelenVerbod?: boolean | null;
   actief?: boolean | null;
+  voornaam?: string | null;
+  achternaam?: string | null;
+  geslacht?: ('m' | 'v') | null;
+  /**
+   * Een gewoon lid speelt geen wedstrijden en heeft geen vergunning nodig.
+   */
+  soortLid?: ('speler' | 'lid') | null;
+  /**
+   * Enkel de federatie vult dit in.
+   */
+  vergunningsnummer?: string | null;
+  medischeKeuringOp?: string | null;
+  medischAttestBestand?: (number | null) | MedischeAttesten;
+  registratieStatus?: ('concept' | 'ingediend' | 'goedgekeurd' | 'afgekeurd') | null;
+  ingediendOp?: string | null;
+  beoordeeldOp?: string | null;
+  beoordeeldDoor?: (number | null) | User;
+  afkeurReden?: string | null;
   /**
    * Aangemaakt in de analysemodule. Verschijnt nooit in de competitie (live, rangschikking, beheer) — enkel in de eigen analyse-database.
    */
@@ -615,6 +635,29 @@ export interface Player {
   analyseOwner?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * Doktersattesten bij de spelersregistratie. Zichtbaar via het veld "Attest" op de speler.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "medische-attesten".
+ */
+export interface MedischeAttesten {
+  id: number;
+  player?: (number | null) | Player;
+  club?: (number | null) | Club;
+  geuploadDoor?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2227,6 +2270,10 @@ export interface PayloadLockedDocument {
         value: number | Player;
       } | null)
     | ({
+        relationTo: 'medische-attesten';
+        value: number | MedischeAttesten;
+      } | null)
+    | ({
         relationTo: 'matches';
         value: number | Match;
       } | null)
@@ -2491,10 +2538,42 @@ export interface PlayersSelect<T extends boolean = true> {
   medischAttest?: T;
   hogerSpelenVerbod?: T;
   actief?: T;
+  voornaam?: T;
+  achternaam?: T;
+  geslacht?: T;
+  soortLid?: T;
+  vergunningsnummer?: T;
+  medischeKeuringOp?: T;
+  medischAttestBestand?: T;
+  registratieStatus?: T;
+  ingediendOp?: T;
+  beoordeeldOp?: T;
+  beoordeeldDoor?: T;
+  afkeurReden?: T;
   analyseOnly?: T;
   analyseOwner?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "medische-attesten_select".
+ */
+export interface MedischeAttestenSelect<T extends boolean = true> {
+  player?: T;
+  club?: T;
+  geuploadDoor?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

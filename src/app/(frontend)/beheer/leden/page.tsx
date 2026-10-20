@@ -7,6 +7,8 @@ import { getAuthUser } from '@/lib/auth-user'
 import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 import { LedenManager, type Lid } from './LedenManager'
+import { RegistratieWachtrij, type Aanvraag } from './RegistratieWachtrij'
+import '../../club/leden/club-leden.css'
 import './leden.css'
 
 export const dynamic = 'force-dynamic'
@@ -57,6 +59,39 @@ export default async function LedenPage() {
     }
   })
 
+  // Wachtrij: wat clubs ingediend hebben, oudste eerst (wie eerst indient, wordt eerst bekeken).
+  const dag = (v: unknown) => (v ? new Date(String(v)).toISOString().slice(0, 10) : '')
+  const ingediend = await payload
+    .find({
+      collection: 'players',
+      where: { registratieStatus: { equals: 'ingediend' } },
+      sort: 'ingediendOp',
+      depth: 2,
+      limit: 1000,
+      pagination: false,
+      overrideAccess: true,
+    })
+    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  const aanvragen: Aanvraag[] = ingediend.docs.map((p) => {
+    const r = p as Record<string, unknown>
+    const team = rel(r.team)
+    const club = team.id != null ? rel((r.team as { club?: unknown } | undefined)?.club) : { id: null, name: '—' }
+    const attest = r.medischAttestBestand && typeof r.medischAttestBestand === 'object' ? (r.medischAttestBestand as { filename?: unknown }) : null
+    return {
+      id: Number(r.id),
+      naam: String(r.name ?? '—'),
+      clubNaam: club.name,
+      teamNaam: team.name,
+      birthDate: dag(r.birthDate),
+      geslacht: String(r.geslacht ?? ''),
+      soortLid: String(r.soortLid ?? 'speler'),
+      medischeKeuringOp: dag(r.medischeKeuringOp),
+      attestUrl: attest?.filename ? `/api/medische-attesten/file/${encodeURIComponent(String(attest.filename))}` : null,
+      ingediendOp: dag(r.ingediendOp),
+      vergunningsnummer: String(r.vergunningsnummer ?? ''),
+    }
+  })
+
   return (
     <>
       <SiteHeader active="federatie" />
@@ -67,6 +102,7 @@ export default async function LedenPage() {
           medisch gekeurd is en mag spelen — een groene bol = speelgerechtigd. Dit werkt meteen door in de opstelling
           en bij de scheidsrechter: enkel gekeurde, vergunde leden kunnen opgesteld worden.
         </p>
+        <RegistratieWachtrij aanvragen={aanvragen} />
         <LedenManager leden={leden} />
       </div>
     </>

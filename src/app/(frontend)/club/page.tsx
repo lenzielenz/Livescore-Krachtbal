@@ -261,6 +261,11 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
       <MyTeamsPicker teams={allTeams} initial={myTeams} />
       <InstagramWeekendCard />
 
+      {hasRole(user, 'club-beheerder', 'club-medewerker') && (
+        <p className="myteams-focusbar">
+          <Link href="/club/leden" className="myteams-link">🪪 Leden &amp; registratie — wie mag spelen →</Link>
+        </p>
+      )}
       {isBeheerder && (
         <p className="myteams-focusbar">
           <Link href="/beheer/club-team" className="myteams-link">👥 Clubteam beheren — leden een rol geven →</Link>
