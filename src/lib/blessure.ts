@@ -18,6 +18,20 @@ import { wedstrijdSelectie, type Kant } from './wedstrijd-selectie'
 // of de staf van de ploeg van de speler, en de federatie.
 
 export type BlessureInvoer = { side: Kant; playerId?: number | null; naam?: string | null; omschrijving: string }
+/**
+ * De omschrijving zonder het voorvoegsel "Wedstrijd (ploeg), <moment>: " dat in de aangifte staat.
+ * Het moment bevat zelf een dubbele punt (klok "23:05"), dus knippen we na het bewaarde moment.
+ */
+export function zonderVoorvoegsel(omstandigheden: unknown, moment: unknown): string {
+  const t = String(omstandigheden ?? '')
+  const m = String(moment ?? '')
+  if (m) {
+    const i = t.indexOf(`${m}: `)
+    if (t.startsWith('Wedstrijd') && i >= 0) return t.slice(i + m.length + 2)
+  }
+  return t.replace(/^Wedstrijd[^:]*:\s*/, '')
+}
+
 export type BlessureRij = { id: number; naam: string; kant: Kant | null; moment: string; omschrijving: string; tijdstip: string }
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -168,7 +182,7 @@ export async function blessuresVanWedstrijd(payload: Payload, matchId: number): 
       kant: c != null && c === clubThuis ? 'home' : c != null && c === clubUit ? 'away' : null,
       moment: String(a.moment ?? ''),
       // Zonder het voorvoegsel "Wedstrijd (ploeg), moment:" — dat staat er al apart.
-      omschrijving: String(a.omstandigheden ?? '').replace(/^Wedstrijd[^:]*:\s*/, ''),
+      omschrijving: zonderVoorvoegsel(a.omstandigheden, a.moment),
       tijdstip: String(a.createdAt),
     }
   })

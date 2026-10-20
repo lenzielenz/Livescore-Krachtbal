@@ -1,8 +1,12 @@
-import { andereOmgeving, isTestOmgeving } from '@/lib/omgeving'
+import { andereOmgeving, isDemoOmgeving, isTestOmgeving } from '@/lib/omgeving'
 
-// Een duidelijke band bovenaan elke pagina van de federatie-testomgeving: wie een demo krijgt of
-// zelf test, ziet meteen dat dit niet de live site is (zie omgeving.ts). Op live: niets.
+import { DemoRolBand } from './DemoRolBand'
+
+// Een duidelijke band bovenaan elke pagina van de federatie-testomgeving en de demoruimte: wie een
+// demo krijgt of zelf test, ziet meteen dat dit niet de live site is (zie omgeving.ts). Op live: niets.
+// In de demoruimte toont de band ook als wie je nu kijkt, met één tik terug naar het draaiboek.
 export function TestOmgevingBand() {
+  if (isDemoOmgeving()) return <DemoRolBand />
   if (!isTestOmgeving()) return null
   const terug = andereOmgeving()
   return (

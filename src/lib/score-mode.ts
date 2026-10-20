@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 
-import { isTestOmgeving } from './omgeving'
+import { isFederatieOmgeving } from './omgeving'
 
 // Globale aantekenmodus: één knop voor ALLE wedstrijden (staat op de settings-global).
 //  - 'federatie' (standaard): de volledige flow — opstelling + scheidsrechtersakkoord vóór de
@@ -14,12 +14,12 @@ export const SCORE_MODES = ['federatie', 'supporters'] as const
 export type ScoreMode = (typeof SCORE_MODES)[number]
 
 /**
- * Lees de globale aantekenmodus (standaard 'federatie'). In de federatie-testomgeving staat ze
+ * Lees de globale aantekenmodus (standaard 'federatie'). In de federatie-testomgeving (en de demoruimte) staat ze
  * altijd op 'federatie', wat er ook in de settings staat (zie omgeving.ts): daar test je net de
  * federatieflow, en een per ongeluk omgezette knop mag dat niet ongemerkt uitschakelen.
  */
 export async function getScoreMode(payload: Payload): Promise<ScoreMode> {
-  if (isTestOmgeving()) return 'federatie'
+  if (isFederatieOmgeving()) return 'federatie'
   const s = await payload.findGlobal({ slug: 'settings', depth: 0 }).catch(() => null)
   return (s as { scoreMode?: string } | null)?.scoreMode === 'supporters' ? 'supporters' : 'federatie'
 }

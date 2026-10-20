@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-import { andereOmgeving, isTestOmgeving } from '@/lib/omgeving'
+import { andereOmgeving, isDemoOmgeving, isFederatieOmgeving } from '@/lib/omgeving'
 
 // Extra nav-links in de Payload-admin.
 //
@@ -19,13 +19,13 @@ const linkStyle = {
 
 export function BackToSite() {
   // Overstappen tussen live en de federatie-testomgeving (zie omgeving.ts / docs/TESTOMGEVING.md).
-  const test = isTestOmgeving()
+  const test = isFederatieOmgeving()
   const ander = andereOmgeving()
   return (
     <div style={{ marginBottom: 8 }}>
       {test && (
         <div style={{ margin: '0 0 8px', padding: '6px 10px', borderRadius: 8, background: '#f4c542', color: '#1d1600', fontWeight: 800, fontSize: 13 }}>
-          🧪 Federatie-testomgeving
+          {isDemoOmgeving() ? '🎬 Demoruimte' : '🧪 Federatie-testomgeving'}
         </div>
       )}
       {ander && (

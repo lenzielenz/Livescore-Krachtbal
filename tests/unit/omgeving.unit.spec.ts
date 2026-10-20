@@ -36,3 +36,29 @@ describe('federatie-testomgeving', () => {
     expect(andereOmgeving()).toEqual({ label: 'Terug naar live', url: 'https://livescore.roodgries.be' })
   })
 })
+
+describe('demoruimte', () => {
+  it('demo: altijd federatiemodus, en enkel daar de demoruimte', async () => {
+    const { isDemoOmgeving, isFederatieOmgeving } = await import('@/lib/omgeving')
+    const { demoToegang } = await import('@/lib/demoruimte/toegang')
+    process.env.PLATFORM_OMGEVING = 'demo'
+    expect(isDemoOmgeving()).toBe(true)
+    expect(isTestOmgeving()).toBe(false)
+    expect(isFederatieOmgeving()).toBe(true)
+    expect(await getScoreMode(payloadMetSupporters)).toBe('federatie')
+    expect(demoToegang(null)).toBe(true)
+    process.env.PLATFORM_OMGEVING = 'federatie-test'
+    expect(demoToegang(null)).toBe(false)
+    delete process.env.PLATFORM_OMGEVING
+    expect(demoToegang(null)).toBe(false)
+  })
+  it('met een toegangscode: enkel met de juiste cookie', async () => {
+    const { codeHash, demoToegang } = await import('@/lib/demoruimte/toegang')
+    process.env.PLATFORM_OMGEVING = 'demo'
+    process.env.DEMO_TOEGANGSCODE = 'krachtbal'
+    expect(demoToegang(null)).toBe(false)
+    expect(demoToegang(codeHash('fout'))).toBe(false)
+    expect(demoToegang(codeHash('krachtbal'))).toBe(true)
+    delete process.env.DEMO_TOEGANGSCODE
+  })
+})
