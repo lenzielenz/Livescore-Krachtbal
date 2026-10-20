@@ -1,6 +1,7 @@
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 
+import { hasRole, isFederationLevel, userClubId } from '@/lib/access'
 import { getPayloadClient } from '@/lib/payload-client'
 import { LOGO_OFFSET_RANGE, LOGO_ZOOM_MAX, LOGO_ZOOM_MIN } from '@/lib/logo-fit'
 import { POSITION_VALUES } from '@/lib/positions'
@@ -30,6 +31,12 @@ export async function POST(req: Request) {
     data.name = name || null
   }
 
+  // Wie een clubrol draagt, wisselt niet zelf van club (zie Users.club): anders verhuist een
+  // club-beheerder zich naar een andere club en krijgt hij daar de rechten.
+  const clubStaf = hasRole(user, 'club-beheerder', 'club-medewerker') && !isFederationLevel(user)
+  if ('clubId' in body && clubStaf && String(body.clubId ?? '') !== String(userClubId(user) ?? '')) {
+    return NextResponse.json({ error: 'Je hebt een functie in je club; een andere club kiezen kan enkel via de federatie.' }, { status: 403 })
+  }
   if ('clubId' in body) {
     const raw = body.clubId
     if (raw === null || raw === '' || raw === undefined) {

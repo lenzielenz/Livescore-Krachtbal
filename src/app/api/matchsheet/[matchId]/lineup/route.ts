@@ -6,12 +6,40 @@ import { getPayloadClient } from '@/lib/payload-client'
 
 const sideOf = (v: string | null): Side => (v === 'away' ? 'away' : 'home')
 
+type Payload = Awaited<ReturnType<typeof getPayloadClient>>
+type User = Awaited<ReturnType<typeof authUser>>
+
+/**
+ * Wie mag de opstelling van deze kant zien of bewerken? Federatie/admin en scheidsrechter altijd;
+ * clubstaf enkel voor de kant van de eigen club. Geeft een foutantwoord terug, of null als het mag.
+ *
+ * Ook het LEZEN is afgeschermd: de roster bevat per speler de reden waarom hij niet mag spelen
+ * (medisch attest, doktersverbod, knipjes). Dat is niet voor iedereen bestemd.
+ */
+async function geenToegang(payload: Payload, user: User, matchId: string, side: Side): Promise<Response | null> {
+  if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
+  if (isFederationLevel(user) || hasRole(user, 'scheidsrechter')) return null
+  if (!hasRole(user, 'club-beheerder', 'club-medewerker')) {
+    return Response.json({ error: 'Geen rechten voor de opstelling.' }, { status: 403 })
+  }
+  const clubs = await matchSideClubs(payload, matchId)
+  const need = side === 'home' ? clubs.home : clubs.away
+  const own = userClubId(user)
+  if (need == null || own == null || String(need) !== String(own)) {
+    return Response.json({ error: 'Je kan enkel de opstelling van je eigen ploeg bewerken.' }, { status: 403 })
+  }
+  return null
+}
+
 // GET: selecteerbare roster voor één kant + de huidige opstelling op het blad.
 export async function GET(req: Request, { params }: { params: Promise<{ matchId: string }> }) {
   const { matchId } = await params
   const side = sideOf(new URL(req.url).searchParams.get('side'))
   try {
     const payload = await getPayloadClient()
+    const user = await authUser(payload, req)
+    const fout = await geenToegang(payload, user, matchId, side)
+    if (fout) return fout
     const roster = await buildRoster(payload, matchId, side)
     if (!roster) return Response.json({ error: 'Wedstrijd of ploeg niet gevonden.' }, { status: 404 })
     const sheet = await getOrCreateMatchSheet(payload, matchId)
@@ -43,22 +71,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
   try {
     const payload = await getPayloadClient()
     const user = await authUser(payload, req)
-    if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
-
-    const roles = userRoles(user)
-    const mayEdit =
-      isFederationLevel(user) || hasRole(user, 'scheidsrechter', 'club-beheerder', 'club-medewerker')
-    if (!mayEdit) return Response.json({ error: 'Geen rechten voor de opstelling.' }, { status: 403 })
-
     // Een club-beheerder/-medewerker mag enkel de opstelling van de EIGEN club bewerken (multi-tenant isolatie).
-    if (!isFederationLevel(user) && hasRole(user, 'club-beheerder', 'club-medewerker') && !hasRole(user, 'scheidsrechter')) {
-      const clubs = await matchSideClubs(payload, matchId)
-      const need = side === 'home' ? clubs.home : clubs.away
-      const own = userClubId(user)
-      if (need == null || own == null || String(need) !== String(own)) {
-        return Response.json({ error: 'Je kan enkel de opstelling van je eigen ploeg bewerken.' }, { status: 403 })
-      }
-    }
+    const fout = await geenToegang(payload, user, matchId, side)
+    if (fout) return fout
+    const roles = userRoles(user)
 
     const sheet = await getOrCreateMatchSheet(payload, matchId)
     const status = sheet.status as MatchSheetStatus
@@ -81,6 +97,27 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
     const nummers = rows.map((r) => r.rugnummer).filter((n): n is number => typeof n === 'number')
     if (new Set(nummers).size !== nummers.length) {
       return Response.json({ error: 'Twee spelers hebben hetzelfde rugnummer.' }, { status: 400 })
+    }
+
+    // Dezelfde controle als het scherm, maar nu op de server: anders kon een club met een eigen
+    // verzoek een speler van een andere ploeg, of een niet-speelgerechtigde speler, opstellen.
+    // Iemand van een andere ploeg kan niemand opstellen; een geblokkeerde speler (geen vergunning,
+    // knipjes, te hoge categorie) enkel de scheidsrechter of de federatie (override, zie lib/lineup.ts).
+    const roster = await buildRoster(payload, matchId, side)
+    if (!roster) return Response.json({ error: 'Wedstrijd of ploeg niet gevonden.' }, { status: 404 })
+    const perSpeler = new Map(roster.players.map((p) => [p.id, p]))
+    if (new Set(rows.map((r) => r.player)).size !== rows.length) {
+      return Response.json({ error: 'Een speler staat twee keer in de opstelling.' }, { status: 400 })
+    }
+    for (const r of rows) {
+      const p = perSpeler.get(r.player)
+      if (!p) return Response.json({ error: 'Een gekozen speler hoort niet bij deze ploeg.' }, { status: 400 })
+      if (p.selectability.level === 'block' && !referee) {
+        return Response.json(
+          { error: `${p.name} mag niet spelen: ${p.selectability.reasons.join(' ')}` },
+          { status: 400 },
+        )
+      }
     }
 
     const lineupKey = side === 'home' ? 'homeLineup' : 'awayLineup'

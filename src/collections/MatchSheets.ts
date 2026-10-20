@@ -1,6 +1,6 @@
-import type { CollectionBeforeChangeHook, CollectionConfig, Field } from 'payload'
+import type { CollectionBeforeChangeHook, CollectionConfig, Field, Where } from 'payload'
 
-import { hasRole, isFederationLevel, userRoles } from '../lib/access'
+import { fieldIsFederation, hasRole, isFederationLevel, userClubId, userRoles } from '../lib/access'
 import { KEURING_ITEMS, KEURING_OPTIONS } from '../lib/keuring'
 import {
   MATCHSHEET_STATUS_OPTIONS,
@@ -65,6 +65,13 @@ const enforceWorkflow: CollectionBeforeChangeHook = async ({ data, originalDoc, 
   return data
 }
 
+/** Bladen van wedstrijden waarin een ploeg van de club van deze gebruiker speelt. */
+const eigenClubBladen = (user: unknown): Where | false => {
+  const club = userClubId(user)
+  if (club == null) return false
+  return { or: [{ 'match.homeTeam.club': { equals: club } }, { 'match.awayTeam.club': { equals: club } }] }
+}
+
 export const MatchSheets: CollectionConfig = {
   slug: 'matchsheets',
   labels: { singular: 'Wedstrijdblad', plural: 'Wedstrijdbladen' },
@@ -74,12 +81,23 @@ export const MatchSheets: CollectionConfig = {
     group: 'Wedstrijden',
   },
   access: {
-    // Intern document — enkel ingelogde rollen lezen het.
-    read: ({ req }) => Boolean(req.user),
+    // Intern document: federatie en scheidsrechters zien alles, een club enkel de bladen van haar
+    // eigen wedstrijden. Vroeger las élke ingelogde gebruiker (ook een supporter) elk blad, met de
+    // opstellingen en de officials erop.
+    read: ({ req }) => {
+      if (isFederationLevel(req.user) || hasRole(req.user, 'scheidsrechter')) return true
+      if (!hasRole(req.user, 'club-beheerder', 'club-medewerker', 'kapitein')) return false
+      return eigenClubBladen(req.user)
+    },
     create: ({ req }) =>
       isFederationLevel(req.user) || hasRole(req.user, 'scheidsrechter', 'club-beheerder', 'club-medewerker'),
-    update: ({ req }) =>
-      isFederationLevel(req.user) || hasRole(req.user, 'scheidsrechter', 'club-beheerder', 'club-medewerker'),
+    // Zelfde afbakening bij bewerken: een club kon anders de opstelling van een andere club
+    // aanpassen via de REST-API of de admin.
+    update: ({ req }) => {
+      if (isFederationLevel(req.user) || hasRole(req.user, 'scheidsrechter')) return true
+      if (!hasRole(req.user, 'club-beheerder', 'club-medewerker')) return false
+      return eigenClubBladen(req.user)
+    },
     delete: ({ req }) => isFederationLevel(req.user),
   },
   hooks: {
@@ -147,6 +165,8 @@ export const MatchSheets: CollectionConfig = {
       name: 'vrijgaveCode',
       label: 'Vrijgavecode (geef door aan de scheidsrechter)',
       type: 'text',
+      // Wie de code kent, kan de wedstrijd vrijgeven: enkel de federatie ziet ze (en geeft ze door).
+      access: { read: fieldIsFederation, update: () => false },
       admin: {
         description: 'Geheime per-wedstrijd code. De federatie bezorgt die aan de (backup-)scheidsrechter; enkel met deze code kan de SR groen licht geven.',
         readOnly: true,

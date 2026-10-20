@@ -1,4 +1,4 @@
-import { canAnalyse } from '@/lib/access'
+import { canAnalyse, hasRole, isClubStaff, isFederationLevel, userClubId } from '@/lib/access'
 import { authUser, mayScoreMatch } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { POSITION_OPTIONS } from '@/collections/Players'
@@ -66,6 +66,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const owner = isAnalyse
       ? (rel((match as { analyseOwner?: unknown }).analyseOwner) ?? (canAnalyse(user) ? Number(user!.id) : null))
       : null
+    // Een speler toevoegen aan een COMPETITIEploeg wijzigt die ploeg voor heel het seizoen. In
+    // supportersmodus mag elke ingelogde bezoeker aantekenen, maar daarom nog geen leden aanmaken:
+    // dat blijft bij de federatie, de scheidsrechter of de staf van de club van die ploeg.
+    if (!isAnalyse && !isFederationLevel(user) && !hasRole(user, 'scheidsrechter')) {
+      const team = await payload.findByID({ collection: 'teams', id: teamId, depth: 0 }).catch(() => null)
+      const eigen = userClubId(user)
+      const vanEigenClub = eigen != null && String(rel(team?.club)) === String(eigen)
+      if (!vanEigenClub || !isClubStaff(user)) {
+        return Response.json(
+          { error: 'Een speler toevoegen aan deze ploeg kan enkel de club zelf, de scheidsrechter of de federatie.' },
+          { status: 403 },
+        )
+      }
+    }
     if (isAnalyse && owner == null) {
       return Response.json({ error: 'Analysewedstrijd zonder eigenaar.' }, { status: 400 })
     }

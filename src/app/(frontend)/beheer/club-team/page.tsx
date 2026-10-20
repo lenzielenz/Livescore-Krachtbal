@@ -11,7 +11,8 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Clubteam — Krachtbal Live' }
 
 // De federatie beheert staf/admins; die accounts raakt een club-beheerder hier niet aan.
-const PROTECTED = ['admin', 'federatie', 'scheidsrechter', 'club-beheerder']
+// Een scheidsrechter mag ook clublid zijn: de club zet dan enkel zijn club-subrol, zijn scheidsrechterrol blijft.
+const PROTECTED = ['admin', 'federatie', 'club-beheerder']
 
 const relId = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null

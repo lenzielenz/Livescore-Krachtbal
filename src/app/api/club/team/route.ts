@@ -7,11 +7,12 @@ import { getPayloadClient } from '@/lib/payload-client'
 // Strikt afgeschermd tegen escalatie:
 //  - enkel een club-beheerder (admins gebruiken /beheer/accounts);
 //  - enkel accounts in/van de EIGEN club — nooit een account met een hogere rol (admin/federatie/
-//    scheidsrechter/club-beheerder) of een account dat al bij een andere club zit;
+//    club-beheerder) of een account dat al bij een andere club zit;
 //  - enkel de twee club-subrollen; de overige rollen van het account blijven ongemoeid.
 const CLUB_SUBROLES = ['club-medewerker', 'club-lid'] as const
 type ClubSubRole = (typeof CLUB_SUBROLES)[number]
-const PROTECTED = ['admin', 'federatie', 'scheidsrechter', 'club-beheerder']
+// Een scheidsrechter mag ook clublid zijn: de club zet dan enkel zijn club-subrol, zijn scheidsrechterrol blijft.
+const PROTECTED = ['admin', 'federatie', 'club-beheerder']
 
 const relId = (v: unknown): number | string | null =>
   v && typeof v === 'object' ? ((v as { id?: number | string }).id ?? null) : (v as number | string | null)
@@ -58,20 +59,20 @@ export async function POST(req: Request) {
       .find({ collection: 'users', where: { email: { equals: email } }, limit: 1, depth: 0 })
       .catch(() => ({ docs: [] as Record<string, unknown>[] }))
     const target = found.docs[0]
-    if (!target) {
-      return Response.json(
-        { error: 'Geen account met dit e-mailadres. Vraag de persoon eerst een gratis account aan te maken.' },
-        { status: 404 },
-      )
-    }
+    // Eén neutrale melding voor elke reden waarom het niet lukt: anders kon je met dit formulier
+    // uitzoeken welke e-mailadressen een account hebben, en welk soort (hogere rol, andere club).
+    const nietToevoegbaar = Response.json(
+      {
+        error:
+          'Dit e-mailadres kan je niet toevoegen. Heeft de persoon nog geen account, vraag dan eerst er gratis een aan te maken; hoort het al bij een andere club of heeft het een andere functie, dan regelt de federatie dat.',
+      },
+      { status: 400 },
+    )
+    if (!target) return nietToevoegbaar
     const current = roleArr(target)
-    if (current.some((r) => PROTECTED.includes(r))) {
-      return Response.json({ error: 'Dit account heeft een hogere rol — vraag de federatie.' }, { status: 403 })
-    }
+    if (current.some((r) => PROTECTED.includes(r))) return nietToevoegbaar
     const tClub = relId((target as { club?: unknown }).club)
-    if (tClub != null && String(tClub) !== String(myClub)) {
-      return Response.json({ error: 'Dit account hoort al bij een andere club.' }, { status: 403 })
-    }
+    if (tClub != null && String(tClub) !== String(myClub)) return nietToevoegbaar
     try {
       await payload.update({
         collection: 'users',

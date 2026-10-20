@@ -1,4 +1,4 @@
-import type { Access, CollectionConfig, FieldAccess } from 'payload'
+import { APIError, type Access, type CollectionConfig, type FieldAccess } from 'payload'
 
 import { fieldIsFederation, hasRole, isFederationLevel, userClubId } from '../lib/access'
 import { analyseEntityFields } from '../lib/analyse-fields'
@@ -24,9 +24,24 @@ const canWritePlayers: Access = ({ req }) => {
   return clubId != null ? { 'team.club': { equals: clubId } } : false
 }
 
-// Gevoelige ledenvelden (geboortedatum, medisch) niet wereld-leesbaar: enkel interne rollen.
-const sensitiveFieldRead: FieldAccess = ({ req }) =>
-  isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder', 'scheidsrechter')
+// Gevoelige ledenvelden (geboortedatum, medisch) niet wereld-leesbaar: enkel interne rollen. Een
+// club-beheerder ziet ze enkel van de EIGEN leden — vroeger las hij die van elke club.
+const sensitiveFieldRead: FieldAccess = ({ req, doc }) => {
+  if (isFederationLevel(req.user) || hasRole(req.user, 'scheidsrechter')) return true
+  if (!hasRole(req.user, 'club-beheerder')) return false
+  const eigen = userClubId(req.user)
+  return eigen != null && relId((doc as { club?: unknown } | undefined)?.club) === String(eigen)
+}
+
+const relId = (v: unknown): string | null => {
+  const id = v && typeof v === 'object' ? (v as { id?: unknown }).id : v
+  return id == null ? null : String(id)
+}
+
+// Medisch attest en doktersverbod bepalen of iemand mag spelen: enkel de federatie zet ze (via
+// /beheer/leden, dat met overrideAccess schrijft). Een club kon zijn eigen spelers anders zelf
+// speelgerechtigd maken.
+const federatieVeld = { update: fieldIsFederation, create: fieldIsFederation }
 
 export const Players: CollectionConfig = {
   slug: 'players',
@@ -67,6 +82,20 @@ export const Players: CollectionConfig = {
         const rawClub = team?.club
         const clubId = rawClub && typeof rawClub === 'object' ? (rawClub as { id?: unknown }).id : rawClub
         if (clubId != null && Number.isFinite(Number(clubId))) data.club = Number(clubId)
+        return data
+      },
+    ],
+    // Clubstaf schrijft enkel in ploegen van de eigen club. De update-access filtert al op de
+    // BESTAANDE ploeg, maar niet op de nieuwe: zonder dit kon een club een speler aanmaken in (of
+    // verhuizen naar) een ploeg van een andere club. Federatie/admin en overrideAccess vallen erbuiten.
+    beforeChange: [
+      ({ data, originalDoc, req }) => {
+        if (!req.user || isFederationLevel(req.user)) return data
+        if (!hasRole(req.user, 'club-beheerder', 'club-medewerker')) return data
+        const eigen = userClubId(req.user)
+        if (eigen == null || relId(data?.club ?? (originalDoc as { club?: unknown } | undefined)?.club) !== String(eigen)) {
+          throw new APIError('Je kan enkel spelers in een ploeg van je eigen club zetten.', 403)
+        }
         return data
       },
     ],
@@ -187,7 +216,7 @@ export const Players: CollectionConfig = {
           label: 'Medisch attest aanwezig',
           type: 'checkbox',
           defaultValue: false,
-          access: { read: sensitiveFieldRead },
+          access: { read: sensitiveFieldRead, ...federatieVeld },
         },
       ],
     },
@@ -201,7 +230,7 @@ export const Players: CollectionConfig = {
           label: 'Doktersverbod hoger spelen',
           type: 'checkbox',
           defaultValue: false,
-          access: { read: sensitiveFieldRead },
+          access: { read: sensitiveFieldRead, ...federatieVeld },
           admin: {
             description: 'Speler mag dan niet één categorie hoger spelen.',
           },
