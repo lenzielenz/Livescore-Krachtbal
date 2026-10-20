@@ -24,6 +24,31 @@ export function BoetesBeheer({ lijst, soorten, clubs }: { lijst: BoeteRij[]; soo
   const [opm, setOpm] = useState<Record<number, string>>({})
   const [bedrag, setBedrag] = useState<Record<number, string>>({})
   const [nieuw, setNieuw] = useState({ club: '', soort: '', omschrijving: '', bedrag: '' })
+  // Bulk: vinkjes per boete, één actie voor alle gekozen boetes van een groep.
+  const [gekozen, setGekozen] = useState<Set<number>>(new Set())
+  const [bulkOpm, setBulkOpm] = useState('')
+  const kies = (id: number) =>
+    setGekozen((s) => {
+      const n = new Set(s)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+  const bulk = async (ids: number[], actie: string, label: string) => {
+    if (!ids.length || !window.confirm(`${label}: ${ids.length} ${ids.length === 1 ? 'boete' : 'boetes'}?`)) return
+    setBezig('nieuw')
+    try {
+      const res = await fetch('/api/federatie/boetes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ actie, ids, opmerking: bulkOpm || undefined }) })
+      const d = (await res.json().catch(() => ({}))) as { error?: string; gelukt?: number; mislukt?: { id: number; fout: string }[] }
+      if (!res.ok) return toast('error', d.error ?? 'Mislukt.')
+      toast(d.mislukt?.length ? 'info' : 'success', `${label}: ${d.gelukt} gelukt${d.mislukt?.length ? `, ${d.mislukt.length} niet (${d.mislukt[0].fout})` : ''}. De clubs zijn verwittigd.`)
+      setGekozen(new Set())
+      setBulkOpm('')
+      router.refresh()
+    } finally {
+      setBezig(null)
+    }
+  }
 
   const post = async (key: number | 'nieuw', body: Record<string, unknown>, ok: string) => {
     setBezig(key)
@@ -97,15 +122,65 @@ export function BoetesBeheer({ lijst, soorten, clubs }: { lijst: BoeteRij[]; soo
       </section>
 
       {groepen.length === 0 && <p className="empty">Geen openstaande boetes of voorstellen. ✅</p>}
-      {groepen.map((g) => (
+      {groepen.map((g) => {
+        const actief = ['voorstel', 'opgelegd', 'betaling_gemeld', 'betwist'].includes(g.s)
+        const kiesIds = g.rijen.map((b) => b.id).filter((id) => gekozen.has(id))
+        const alles = actief && kiesIds.length === g.rijen.length
+        return (
         <section key={g.s} className="ft-dag">
-          <h2 style={{ margin: '8px 0 0', fontSize: '1rem' }}>
-            {BOETE_STATUS_TEKST[g.s]} ({g.rijen.length})
-          </h2>
+          <div className="bt-groepkop">
+            <h2 style={{ margin: '8px 0 0', fontSize: '1rem' }}>
+              {BOETE_STATUS_TEKST[g.s]} ({g.rijen.length})
+            </h2>
+            {actief && (
+              <label className="bt-alles">
+                <input
+                  type="checkbox"
+                  checked={alles}
+                  onChange={() =>
+                    setGekozen((s) => {
+                      const n = new Set(s)
+                      for (const b of g.rijen) {
+                        if (alles) n.delete(b.id)
+                        else n.add(b.id)
+                      }
+                      return n
+                    })
+                  }
+                />
+                Alles kiezen
+              </label>
+            )}
+          </div>
+          {kiesIds.length > 0 && (
+            <div className="bt-bulk" role="toolbar" aria-label={`Acties voor ${kiesIds.length} gekozen boetes`}>
+              <strong>{kiesIds.length} gekozen</strong>
+              <input className="ft-zoek" placeholder="Opmerking voor de clubs (optioneel)" value={bulkOpm} onChange={(e) => setBulkOpm(e.target.value)} />
+              {g.s === 'voorstel' && (
+                <button type="button" className="ft-btn ft-primair" disabled={bezig != null} onClick={() => void bulk(kiesIds, 'opleggen', 'Opleggen')}>
+                  Opleggen ({kiesIds.length})
+                </button>
+              )}
+              {(g.s === 'opgelegd' || g.s === 'betaling_gemeld') && (
+                <button type="button" className="ft-btn ft-primair" disabled={bezig != null} onClick={() => void bulk(kiesIds, 'betaald', 'Betaald')}>
+                  Betaald ✓ ({kiesIds.length})
+                </button>
+              )}
+              {g.s === 'betwist' && (
+                <button type="button" className="ft-btn" disabled={bezig != null} onClick={() => void bulk(kiesIds, 'handhaven', 'Handhaven')}>
+                  Handhaven ({kiesIds.length})
+                </button>
+              )}
+              <button type="button" className="ft-btn" disabled={bezig != null} onClick={() => void bulk(kiesIds, 'vernietigen', g.s === 'voorstel' ? 'Schrappen' : 'Vernietigen')}>
+                {g.s === 'voorstel' ? 'Schrappen' : 'Vernietigen'} ({kiesIds.length})
+              </button>
+            </div>
+          )}
           <div className="od-lijst" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}>
             {g.rijen.map((b) => (
-              <article key={b.id} className="od-kaart" style={{ borderColor: KLEUR[b.status] }}>
+              <article key={b.id} className={`od-kaart${gekozen.has(b.id) ? ' bt-gekozen' : ''}`} style={{ borderColor: KLEUR[b.status] }}>
                 <header className="od-kop">
+                  {actief && <input type="checkbox" className="bt-vink" checked={gekozen.has(b.id)} onChange={() => kies(b.id)} aria-label={`Kies boete ${b.clubNaam} ${b.omschrijving}`} />}
                   <strong>{b.clubNaam}</strong>
                   <span className="od-status">{formatEuro(b.bedrag)}</span>
                 </header>
@@ -165,7 +240,8 @@ export function BoetesBeheer({ lijst, soorten, clubs }: { lijst: BoeteRij[]; soo
             ))}
           </div>
         </section>
-      ))}
+        )
+      })}
     </div>
   )
 }

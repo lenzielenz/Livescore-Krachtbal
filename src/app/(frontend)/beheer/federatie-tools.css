@@ -98,3 +98,11 @@
 .kl-beslis { display: grid; gap: 8px; }
 .kl-beslis textarea { width: 100%; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--txt); padding: 8px 10px; font: inherit; }
 .kl-knoppen { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+
+/* ── Bulkacties (boetes en andere lijsten) ── */
+.bt-groepkop { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.bt-alles { display: inline-flex; align-items: center; gap: 6px; font-size: 0.84rem; color: var(--dim); font-weight: 600; cursor: pointer; }
+.bt-bulk { position: sticky; top: 64px; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; margin: 8px 0; border-radius: 12px; border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--panel)); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
+.bt-bulk .ft-zoek { flex: 1 1 200px; margin: 0; }
+.bt-vink { width: 18px; height: 18px; margin-right: 8px; accent-color: var(--accent); flex: 0 0 auto; }
+.od-kaart.bt-gekozen { box-shadow: 0 0 0 2px var(--accent); }

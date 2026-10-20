@@ -100,7 +100,7 @@ export default async function WedstrijdbladenPage() {
           en bij beide clubs — met de PDF om te printen.
           {isFederationLevel(me) ? ' Je ziet de bladen van alle clubs.' : ' Je ziet de bladen van de wedstrijden waar jij of je club bij betrokken was.'}
         </p>
-        <BladenLijst rijen={rijen} />
+        <BladenLijst rijen={rijen} federatie={isFederationLevel(me)} />
       </div>
     </>
   )

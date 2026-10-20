@@ -55,6 +55,13 @@ klaarzetten, toegang), `src/app/(frontend)/demoruimte/`, `src/app/api/demoruimte
   (Jens Aerts) mag nog stemmen. De federatie ziet de tussenstand, sluit en maakt bekend (erelijst).
   **↻ Referendum resetten** (in dat hoofdstuk van het draaiboek) wist enkel de stemmen en de uitslag
   van dit seizoen en zet de ronde opnieuw open — de rest van de demo blijft staan.
+- **Wedstrijdbladen en klachten**: na de laatste handtekening gaat een blad vanzelf naar de federatie
+  en beide clubs (melding met link) en staat het in `/wedstrijdbladen` met de PDF. Baasrode diende al
+  een **klacht** in over een rugworp die als nekworp genoteerd staat; de federatie heropent het blad
+  (opnieuw ondertekenen) of wijst af op `/beheer/klachten`. Een club kan zelf een klacht indienen
+  onder een ingediend blad.
+- **Bulk voor de federatie**: boetes per groep aanvinken en samen opleggen/betaald/schrappen,
+  verplaatsingsaanvragen samen beslissen, iedereen met een nog af te tekenen blad in één keer herinneren.
 - De **seizoensstatistieken** van de club (`/club/seizoen`): per ploeg plaats, punten, W–G–V, saldo en
   vorm; topscorers en meeste wedstrijden over de hele club.
 
