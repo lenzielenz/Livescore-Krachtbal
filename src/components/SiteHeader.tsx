@@ -7,6 +7,7 @@ import { WeatherWidget } from '@/components/WeatherWidget'
 import { canAnalyse as canAnalyseUser } from '@/lib/access'
 import { KIJKMODUS_COOKIE } from '@/lib/kijkmodus'
 import { clearNavAuth, readNavAuth, writeNavAuth } from '@/lib/nav-auth-cache'
+import { verborgenInDemo } from '@/lib/omgeving'
 import { PROFILES } from '@/lib/profiles'
 import './site-header.css'
 
@@ -156,7 +157,7 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
   // (De echte vlaggen blijven bewaard voor het menu-item en de exit-banner.)
   const zichtFlags = kijkmodus ? { isClub: false, isReferee: false, isFed: false } : roleFlags
   const zichtAnalyse = kijkmodus ? false : canAnalyse
-  const zichtTraining = kijkmodus ? false : canTraining
+  const zichtTraining = kijkmodus || verborgenInDemo('/beheer/training') ? false : canTraining
   // Toon enkel de profiel-ingangen die bij je rol horen (supporter ziet er geen).
   const visibleProfiles = PROFILES.filter((p) => PROFILE_VISIBLE[p.key]?.(zichtFlags))
 
@@ -218,7 +219,7 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                   </div>
                   <div className="sh-more-group">
                     <div className="sh-more-grouphead">Ontdekken</div>
-                    {ONTDEKKEN.map((l) => (
+                    {ONTDEKKEN.filter((l) => !verborgenInDemo(l.href)).map((l) => (
                       <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
                         {l.label}
                       </Link>

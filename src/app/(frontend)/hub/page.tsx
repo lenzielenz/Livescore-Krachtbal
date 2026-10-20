@@ -9,6 +9,7 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { getProfile } from '@/lib/profiles'
 import { reeksNaam, type Reeks } from '@/lib/reeksen'
 import { TeamLogo } from '@/components/TeamLogo'
+import { verborgenInDemo } from '@/lib/omgeving'
 import { HubWedstrijd, type HubWedstrijdInfo } from './HubWedstrijd'
 import './hub.css'
 
@@ -249,7 +250,9 @@ export default async function HubPage() {
             <h2 className="hub-h2">Mijn ontwikkeling</h2>
             <div className="hub-tiles">
               <Link href="/ontwikkeling" className="hub-tile">📈<span>Skill &amp; Fame</span></Link>
-              <Link href="/beheer/training/progressie" className="hub-tile">🏋️<span>Mijn training</span></Link>
+              {!verborgenInDemo('/beheer/training') && (
+                <Link href="/beheer/training/progressie" className="hub-tile">🏋️<span>Mijn training</span></Link>
+              )}
             </div>
           </section>
         )}

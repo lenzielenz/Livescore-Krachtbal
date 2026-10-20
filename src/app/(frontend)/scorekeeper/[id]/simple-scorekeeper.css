@@ -47,10 +47,12 @@
   white-space: nowrap;
 }
 .ssk-toplink:hover { opacity: 1; }
-/* Vangnet voor smalle gsm's (360px): links als geheel naar een tweede regel i.p.v. buiten beeld. */
-@media (max-width: 380px) {
-  .ssk-top { flex-wrap: wrap; row-gap: 4px; }
-  .ssk-toplinks { margin-left: auto; }
+/* Gsm en kleine tablet: de links (volledig scherm, veldscherm, blessure, noodblad) passen niet
+   naast de merknaam. Ze krijgen een eigen regel en lopen daar verder op een volgende regel,
+   i.p.v. de pagina breder te maken dan het scherm (dan zoomt de gsm uit en staat alles scheef). */
+@media (max-width: 720px) {
+  .ssk-top { flex-wrap: wrap; row-gap: 6px; }
+  .ssk-toplinks { flex: 1 1 100%; flex-wrap: wrap; gap: 6px 16px; }
 }
 
 .ssk-meta {
@@ -251,6 +253,12 @@
      clubkleuren; de grote score blijft volledig in de clubkleur. */
   color: color-mix(in srgb, var(--team-ink, #fff) 55%, #ffffff);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  /* Vrij van de ondoen-pijl linksboven (8px + 40px), anders schuift die over de naam. */
+  padding-inline: 46px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 720px) {
+  .ssk-team-name { padding-inline: 46px 0; font-size: 15px; }
 }
 .ssk-score {
   font-size: 56px;

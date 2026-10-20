@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
+import { verborgenInDemo } from './lib/omgeving'
 import { normaliseerPad } from './lib/pad-normaliseren'
 import { PRIVE_HEADER, heeftSessie, isSchermPagina } from './lib/prive-pagina'
 
@@ -44,6 +45,10 @@ export function middleware(req: NextRequest) {
   // naar de uitleg die wél klopt.
   if (pad === '/admin/forgot') {
     return NextResponse.redirect(new URL('/wachtwoord-vergeten', req.url))
+  }
+  // Demoruimte: het virtuele stadion en het trainingsluik horen niet bij de voorstelling.
+  if (verborgenInDemo(pad)) {
+    return NextResponse.redirect(new URL('/demoruimte', req.url))
   }
   const res = NextResponse.next()
   // Een kantine- of tornooischerm blijft openbaar, ook wanneer de tv een sessiecookie draagt:

@@ -35,9 +35,10 @@ export function draaiboek(ids: DemoIds): Hoofdstuk[] {
       icoon: '🏟️',
       titel: 'De wedstrijddag',
       verhaal:
-        'Sint-Michiels – Baasrode. Baasrode stond in de file: de coach schoof de aftrap zelf 15 minuten op en iedereen kreeg een melding. De selecties staan; nu controleert de scheidsrechter elke speler en geeft hij vrij. Dan tekent de tafel aan.',
+        'Sint-Michiels – Baasrode. Baasrode stond in de file: de coach schoof de aftrap zelf 15 minuten op en iedereen kreeg een melding. De selectie van de heren staat; nu controleert de scheidsrechter elke speler en geeft hij vrij. Dan tekent de tafel aan.',
       stappen: [
-        { rol: 'coach', href: m(ids.dames, (id) => `/opstelling/${id}`) ?? '/club', tekst: 'Coach: selectie, rugnummers en kapitein (dameswedstrijd van straks)' },
+        // De damesselectie maakt de clubbeheerder (de demo-coach traint de heren en mag die niet).
+        { rol: 'clubbeheer', href: m(ids.dames, (id) => `/opstelling/${id}`) ?? '/club', tekst: 'Club: selectie, rugnummers en kapitein (dameswedstrijd van straks)' },
         { rol: 'scheidsrechter', href: m(ids.hoofd, (id) => `/scheidsrechter/${id}`), tekst: 'Scheidsrechter: spelers controleren, keuring, vrijgeven' },
         { rol: 'tafel', href: m(ids.hoofd, (id) => `/scorekeeper/${id}`), tekst: 'Tafel: aantekenen — doelpunt, scorer, wissel' },
         { rol: 'supporter', href: m(ids.hoofd, (id) => `/match/${id}`), tekst: 'Supporter: live meevolgen' },
