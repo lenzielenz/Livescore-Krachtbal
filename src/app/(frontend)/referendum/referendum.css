@@ -1,0 +1,53 @@
+/* Referendum: stemmen (/referendum) en beheer (/federatie/referendum). */
+.rf-kaart { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); max-width: 640px; }
+.rf-seizoen { margin: 0; font-size: 0.82rem; color: var(--dim); }
+.rf-ok { margin: 0; color: #0fe0a6; font-size: 0.86rem; font-weight: 600; }
+.rf-lijst { display: flex; flex-direction: column; gap: 8px; }
+.rf-rij { display: flex; align-items: center; gap: 10px; }
+.rf-punten {
+  flex: 0 0 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  background: color-mix(in srgb, #f6c544 22%, transparent);
+  color: #f6c544;
+}
+.rf-rij select,
+.rf-veld input,
+.rf-veld select {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.rf-knop {
+  align-self: flex-start;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #06140d;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+}
+.rf-knop:disabled { opacity: 0.5; cursor: not-allowed; }
+.rf-knop.rf-sec { background: transparent; color: var(--txt); border: 1px solid var(--line); font-weight: 600; }
+.rf-velden { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.rf-veld { display: flex; flex-direction: column; gap: 4px; font-size: 0.76rem; color: var(--dim); }
+.rf-uitslag { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.rf-uitslag h3 { margin: 0 0 6px; font-size: 0.95rem; }
+.rf-tabel { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.rf-tabel td { padding: 5px 6px; border-bottom: 1px solid var(--line); }
+.rf-tabel td.rf-num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+.rf-tabel tr:first-child td { color: #f6c544; font-weight: 800; }
+.rf-acties { display: flex; gap: 8px; flex-wrap: wrap; }

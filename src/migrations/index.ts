@@ -139,6 +139,7 @@ import * as migration_20261017_090000_analyse_notities_tekening from './20261017
 import * as migration_20261017_120000_virtuele_metingen from './20261017_120000_virtuele_metingen'
 import * as migration_20261020_060000_spelersregistratie from './20261020_060000_spelersregistratie'
 import * as migration_20261020_080000_club_functies from './20261020_080000_club_functies'
+import * as migration_20261020_100000_referendum from './20261020_100000_referendum'
 
 export const migrations = [
   {
@@ -840,5 +841,10 @@ export const migrations = [
     up: migration_20261020_080000_club_functies.up,
     down: migration_20261020_080000_club_functies.down,
     name: '20261020_080000_club_functies',
+  },
+  {
+    up: migration_20261020_100000_referendum.up,
+    down: migration_20261020_100000_referendum.down,
+    name: '20261020_100000_referendum',
   },
 ];

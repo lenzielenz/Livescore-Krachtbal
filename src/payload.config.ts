@@ -26,6 +26,7 @@ import { CupFinals } from './collections/CupFinals'
 import { Kampioenen } from './collections/Kampioenen'
 import { Bekerwinnaars } from './collections/Bekerwinnaars'
 import { ReferendumAwards } from './collections/ReferendumAwards'
+import { ReferendumRondes, ReferendumStemmen } from './collections/Referendum'
 import { Sanctions } from './collections/Sanctions'
 import { Tournaments } from './collections/Tournaments'
 import { TournamentMatches } from './collections/TournamentMatches'
@@ -124,6 +125,8 @@ export default buildConfig({
     Kampioenen,
     Bekerwinnaars,
     ReferendumAwards,
+    ReferendumRondes,
+    ReferendumStemmen,
     Sanctions,
     Tournaments,
     TournamentMatches,

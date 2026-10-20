@@ -80,6 +80,8 @@ export interface Config {
     kampioenen: Kampioenen;
     bekerwinnaars: Bekerwinnaar;
     'referendum-awards': ReferendumAward;
+    'referendum-rondes': ReferendumRonde;
+    'referendum-stemmen': ReferendumStemman;
     sanctions: Sanction;
     tournaments: Tournament;
     'tournament-matches': TournamentMatch;
@@ -130,6 +132,8 @@ export interface Config {
     kampioenen: KampioenenSelect<false> | KampioenenSelect<true>;
     bekerwinnaars: BekerwinnaarsSelect<false> | BekerwinnaarsSelect<true>;
     'referendum-awards': ReferendumAwardsSelect<false> | ReferendumAwardsSelect<true>;
+    'referendum-rondes': ReferendumRondesSelect<false> | ReferendumRondesSelect<true>;
+    'referendum-stemmen': ReferendumStemmenSelect<false> | ReferendumStemmenSelect<true>;
     sanctions: SanctionsSelect<false> | SanctionsSelect<true>;
     tournaments: TournamentsSelect<false> | TournamentsSelect<true>;
     'tournament-matches': TournamentMatchesSelect<false> | TournamentMatchesSelect<true>;
@@ -1316,6 +1320,46 @@ export interface ReferendumAward {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referendum-rondes".
+ */
+export interface ReferendumRonde {
+  id: number;
+  /**
+   * Bv. 2026-2027.
+   */
+  seizoen: string;
+  status: 'voorbereiding' | 'open' | 'gesloten' | 'gepubliceerd';
+  reeksHeren?: string | null;
+  reeksDames?: string | null;
+  minWedstrijden?: number | null;
+  maxLeeftijdBelofte?: number | null;
+  /**
+   * Leeg = de dag dat de ronde sluit.
+   */
+  peildatum?: string | null;
+  gepubliceerdOp?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referendum-stemmen".
+ */
+export interface ReferendumStemman {
+  id: number;
+  ronde: number | ReferendumRonde;
+  stemmer: number | Player;
+  competitie: 'heren' | 'dames';
+  regels: {
+    speler: number | Player;
+    punten: number;
+    id?: string | null;
+  }[];
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "sanctions".
  */
 export interface Sanction {
@@ -2315,6 +2359,14 @@ export interface PayloadLockedDocument {
         value: number | ReferendumAward;
       } | null)
     | ({
+        relationTo: 'referendum-rondes';
+        value: number | ReferendumRonde;
+      } | null)
+    | ({
+        relationTo: 'referendum-stemmen';
+        value: number | ReferendumStemman;
+      } | null)
+    | ({
         relationTo: 'sanctions';
         value: number | Sanction;
       } | null)
@@ -2899,6 +2951,40 @@ export interface ReferendumAwardsSelect<T extends boolean = true> {
         jaar?: T;
         naam?: T;
         club?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referendum-rondes_select".
+ */
+export interface ReferendumRondesSelect<T extends boolean = true> {
+  seizoen?: T;
+  status?: T;
+  reeksHeren?: T;
+  reeksDames?: T;
+  minWedstrijden?: T;
+  maxLeeftijdBelofte?: T;
+  peildatum?: T;
+  gepubliceerdOp?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referendum-stemmen_select".
+ */
+export interface ReferendumStemmenSelect<T extends boolean = true> {
+  ronde?: T;
+  stemmer?: T;
+  competitie?: T;
+  regels?:
+    | T
+    | {
+        speler?: T;
+        punten?: T;
         id?: T;
       };
   updatedAt?: T;
