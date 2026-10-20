@@ -49,7 +49,7 @@ export function DeelnameBevestigen({ matchId, kanten, vergrendeld }: { matchId: 
   }
 
   return (
-    <section className="wb-card">
+    <section className="wb-card" id="deelname">
       <h2>Wie speelde?</h2>
       <p className="wb-sub">
         Vink aan wie effectief deelnam. Voorgevuld met de selectie van de coach.

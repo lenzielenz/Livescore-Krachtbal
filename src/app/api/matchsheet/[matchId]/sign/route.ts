@@ -1,4 +1,5 @@
 import { hasRole, isClubStaff, isFederationLevel, userClubId } from '@/lib/access'
+import { submitMatchSheet } from '@/lib/submit'
 import { authUser, refereeMayHandleMatch } from '@/lib/api-auth'
 import { magOpstellingVoor } from '@/lib/club-functies'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
@@ -117,7 +118,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
       },
       overrideAccess: true,
     })
-    return Response.json({ ok: true, naam })
+    // Staat hiermee de laatste nodige handtekening? Dan dient het systeem meteen in: het blad gaat
+    // naar de federatie en beide clubs (lib/submit). Lukt dat nog niet (bv. wie speelde is nog niet
+    // bevestigd), dan blijft het blad af te tekenen en zegt het antwoord wat er nog moet gebeuren.
+    let ingediend = false
+    let nogTeDoen: string | null = null
+    if (body.akkoord) {
+      const vers = await payload.findByID({ collection: 'matchsheets', id: sheet.id, depth: 0, overrideAccess: true })
+      const ff = String((vers.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen')
+      const getekend = (g: unknown) => Boolean((g as { akkoord?: boolean } | null)?.akkoord)
+      const allesGetekend =
+        (ff === 'thuis' || ff === 'dubbel' || getekend(vers.kapiteinThuis)) && (ff === 'uit' || ff === 'dubbel' || getekend(vers.kapiteinUit)) && getekend(vers.scheidsrechter)
+      if (allesGetekend && vers.status !== 'ingediend') {
+        const r = await submitMatchSheet(payload, matchId, user as never, { automatisch: true })
+        ingediend = r.ok
+        nogTeDoen = r.ok ? null : (r.error ?? null)
+      }
+    }
+    return Response.json({ ok: true, naam, ingediend, nogTeDoen })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }

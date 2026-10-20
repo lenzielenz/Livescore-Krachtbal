@@ -6,6 +6,8 @@ import { useMemo, useState } from 'react'
 import { Herstellink } from '@/components/Herstellink'
 import { toast } from '@/components/Toaster'
 import { KaartAanvragen } from '../../profiel/KaartAanvragen'
+import { ledenCsv } from '@/lib/club-overzicht'
+import { dateStrBE } from '@/lib/datetime'
 import {
   clubMagBewerken,
   ontbreektVoorIndienen,
@@ -332,6 +334,33 @@ export function ClubLeden({
     }
   }
 
+  // Het volledige ledenbestand als CSV (Excel), zonder medische gegevens — zie lib/club-overzicht.ts.
+  const exporteer = () => {
+    const ploegNaam = new Map(teams.map((t) => [t.id, t.naam]))
+    const csv = ledenCsv(
+      leden.map((l) => ({
+        naam: l.naam,
+        voornaam: l.voornaam,
+        achternaam: l.achternaam,
+        ploeg: ploegNaam.get(l.teamId) ?? '',
+        rugnummer: l.shirtNumber || null,
+        geboortedatum: l.birthDate,
+        geslacht: l.geslacht,
+        soortLid: l.soortLid,
+        status: registratieIcoon(input(l), undefined, emailVanaf).label,
+        email: l.email,
+        ouderEmail: l.ouderEmail,
+        login: Boolean(l.login),
+      })),
+    )
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ledenbestand-${dateStrBE()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const toggle = (id: number) =>
     setGekozen((s) => {
       const n = new Set(s)
@@ -386,6 +415,9 @@ export function ClubLeden({
           title={gekozen.size ? 'Dien de aangevinkte leden in' : 'Dien alle volledige leden in'}
         >
           📤 Indienen bij federatie ({gekozen.size || klaarVoorIndienen.length})
+        </button>
+        <button type="button" className="cl-btn" onClick={exporteer} disabled={leden.length === 0} title="Download het ledenbestand voor Excel">
+          ⬇ Exporteer ({leden.length})
         </button>
       </div>
 

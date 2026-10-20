@@ -80,3 +80,29 @@
   .rb-kolommen { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: start; gap: 20px; }
   .rb-kolommen > .ft-kaart { position: sticky; top: 70px; }
 }
+
+/* ── Klachten (beheer/klachten) ── */
+.kl-lijst { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.kl-kaart { border: 1px solid var(--line); border-left: 4px solid #f0b04a; border-radius: 14px; background: var(--panel); padding: 14px; display: grid; gap: 10px; }
+.kl-kaart.heropend { border-left-color: #4cc9f0; }
+.kl-kaart.afgewezen { border-left-color: var(--line); opacity: 0.85; }
+.kl-kop { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.kl-kop > div { display: grid; gap: 3px; }
+.kl-sub { font-size: 0.8rem; color: var(--dim); }
+.kl-status { font-size: 0.72rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; background: color-mix(in srgb, #f0b04a 18%, transparent); color: #f0b04a; white-space: nowrap; }
+.kl-status.heropend { background: color-mix(in srgb, #4cc9f0 18%, transparent); color: #4cc9f0; }
+.kl-status.afgewezen { background: color-mix(in srgb, var(--txt) 8%, transparent); color: var(--dim); }
+.kl-reden { margin: 0; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--txt) 4%, transparent); white-space: pre-line; }
+.kl-links { display: flex; gap: 14px; font-size: 0.86rem; }
+.kl-links a { color: var(--accent); font-weight: 700; text-decoration: none; }
+.kl-beslis { display: grid; gap: 8px; }
+.kl-beslis textarea { width: 100%; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--txt); padding: 8px 10px; font: inherit; }
+.kl-knoppen { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+
+/* ── Bulkacties (boetes en andere lijsten) ── */
+.bt-groepkop { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.bt-alles { display: inline-flex; align-items: center; gap: 6px; font-size: 0.84rem; color: var(--dim); font-weight: 600; cursor: pointer; }
+.bt-bulk { position: sticky; top: 64px; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; margin: 8px 0; border-radius: 12px; border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--panel)); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
+.bt-bulk .ft-zoek { flex: 1 1 200px; margin: 0; }
+.bt-vink { width: 18px; height: 18px; margin-right: 8px; accent-color: var(--accent); flex: 0 0 auto; }
+.od-kaart.bt-gekozen { box-shadow: 0 0 0 2px var(--accent); }

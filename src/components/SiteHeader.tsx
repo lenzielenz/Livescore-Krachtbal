@@ -4,9 +4,10 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 import { WeatherWidget } from '@/components/WeatherWidget'
-import { canAnalyse as canAnalyseUser } from '@/lib/access'
 import { KIJKMODUS_COOKIE } from '@/lib/kijkmodus'
+import { menuRechten } from '@/lib/menu-rechten'
 import { clearNavAuth, readNavAuth, writeNavAuth } from '@/lib/nav-auth-cache'
+import { verborgenInDemo } from '@/lib/omgeving'
 import { PROFILES } from '@/lib/profiles'
 import './site-header.css'
 
@@ -54,8 +55,9 @@ const ONTDEKKEN: { href: string; label: string }[] = [
 ]
 
 // Welke rol een profiel-ingang mag zien. Federatie/admin zien alles.
-const PROFILE_VISIBLE: Record<string, (a: { isClub: boolean; isReferee: boolean; isFed: boolean }) => boolean> = {
-  clubs: (a) => a.isClub || a.isFed,
+// "Mijn club" ook voor een coach/trainer: daar zet hij de opstelling van zijn ploegen.
+const PROFILE_VISIBLE: Record<string, (a: { isClub: boolean; isCoach: boolean; isReferee: boolean; isFed: boolean }) => boolean> = {
+  clubs: (a) => a.isClub || a.isCoach || a.isFed,
   scheidsrechters: (a) => a.isReferee || a.isFed,
   federatie: (a) => a.isFed,
 }
@@ -71,7 +73,7 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
   const [canAnalyse, setCanAnalyse] = useState(false)
   const [canTraining, setCanTraining] = useState(false)
   const [loggedIn, setLoggedIn] = useState(false)
-  const [roleFlags, setRoleFlags] = useState({ isClub: false, isReferee: false, isFed: false })
+  const [roleFlags, setRoleFlags] = useState({ isClub: false, isCoach: false, isReferee: false, isFed: false })
   // Kijkmodus pas ná het mounten lezen (cookie bestaat niet op de server → geen hydration-mismatch).
   const [kijkmodus, setKijkmodus] = useState(false)
   useEffect(() => {
@@ -85,32 +87,18 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
       setLoggedIn(cached.state.loggedIn)
       setCanAnalyse(cached.state.canAnalyse)
       setCanTraining(cached.state.canTraining)
-      setRoleFlags({ isClub: Boolean(cached.state.isClub), isReferee: Boolean(cached.state.isReferee), isFed: Boolean(cached.state.isFed) })
+      setRoleFlags({ isClub: Boolean(cached.state.isClub), isCoach: Boolean(cached.state.isCoach), isReferee: Boolean(cached.state.isReferee), isFed: Boolean(cached.state.isFed) })
     }
     if (cached?.fresh) return
     fetch('/api/users/me', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        const u = (d as { user?: { roles?: unknown; analyseAccess?: unknown; trainingAccess?: unknown } } | null)?.user
-        const roles = u?.roles
-        const has = (r: string) => Array.isArray(roles) && roles.includes(r)
-        const fed = has('admin') || has('federatie')
-        const club = has('club-beheerder') || has('club-medewerker')
-        const referee = has('scheidsrechter')
-        // Dezelfde regel als canAnalyse in lib/access: admin, eigen analyse-toegang, of iemand
-        // die zijn analyses met dit account deelt (anders vindt de gedeelde persoon het menu niet).
-        const state = {
-          loggedIn: Boolean(u),
-          canAnalyse: canAnalyseUser(u),
-          canTraining: fed || club || has('club-lid') || Boolean(u?.trainingAccess),
-          isClub: club,
-          isReferee: referee,
-          isFed: fed,
-        }
+        // Wie wat ziet per rol: lib/menu-rechten.ts.
+        const state = menuRechten((d as { user?: unknown } | null)?.user ?? null)
         setLoggedIn(state.loggedIn)
         setCanAnalyse(state.canAnalyse)
         setCanTraining(state.canTraining)
-        setRoleFlags({ isClub: state.isClub, isReferee: state.isReferee, isFed: state.isFed })
+        setRoleFlags({ isClub: state.isClub, isCoach: state.isCoach, isReferee: state.isReferee, isFed: state.isFed })
         writeNavAuth(state)
       })
       .catch(() => {})
@@ -154,9 +142,9 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
   const menuActive = active !== null && MENU_SECTIONS.includes(active)
   // Kijkmodus: de navigatie toont wat een VERS lid ziet — alle rol-gebonden ingangen weg.
   // (De echte vlaggen blijven bewaard voor het menu-item en de exit-banner.)
-  const zichtFlags = kijkmodus ? { isClub: false, isReferee: false, isFed: false } : roleFlags
+  const zichtFlags = kijkmodus ? { isClub: false, isCoach: false, isReferee: false, isFed: false } : roleFlags
   const zichtAnalyse = kijkmodus ? false : canAnalyse
-  const zichtTraining = kijkmodus ? false : canTraining
+  const zichtTraining = kijkmodus || verborgenInDemo('/beheer/training') ? false : canTraining
   // Toon enkel de profiel-ingangen die bij je rol horen (supporter ziet er geen).
   const visibleProfiles = PROFILES.filter((p) => PROFILE_VISIBLE[p.key]?.(zichtFlags))
 
@@ -218,7 +206,7 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                   </div>
                   <div className="sh-more-group">
                     <div className="sh-more-grouphead">Ontdekken</div>
-                    {ONTDEKKEN.map((l) => (
+                    {ONTDEKKEN.filter((l) => !verborgenInDemo(l.href)).map((l) => (
                       <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
                         {l.label}
                       </Link>
@@ -242,20 +230,8 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                   )}
                   {/* "Aan de slag" (profiel-instappunten) enkel voor wie de bijhorende rol heeft —
                       een supporter (of uitgelogde bezoeker) krijgt deze tools niet te zien. */}
-                  {/* De schermen staan open voor elke ingelogde supporter: je eigen kantinescherm
-                      samenstellen en het veldscherm van je club op een tv zetten. Clubstaf en
-                      federatie vinden ze al via "Mijn club", dus daar niet dubbel. */}
-                  {loggedIn && !zichtFlags.isClub && !zichtFlags.isFed && (
-                    <div className="sh-more-group">
-                      <div className="sh-more-grouphead">Schermen</div>
-                      <Link href="/kantine" className="sh-more-item" onClick={() => setOpen(false)}>
-                        🍻 Kantinescherm
-                      </Link>
-                      <Link href="/club/veldscherm" className="sh-more-item" onClick={() => setOpen(false)}>
-                        🏟️ Veldscherm
-                      </Link>
-                    </div>
-                  )}
+                  {/* Kantine- en veldscherm horen bij de club: ze staan in "Mijn club", niet hier. Een
+                      speler of supporter is met zijn wedstrijden bezig. */}
                   {loggedIn && visibleProfiles.length > 0 && (
                     <div className="sh-more-group">
                       <div className="sh-more-grouphead">Aan de slag</div>

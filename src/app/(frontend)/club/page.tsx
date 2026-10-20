@@ -18,8 +18,15 @@ import { claimHeld, sanitizeTrust } from '@/lib/score-trust'
 import { clubActies, primaireActie } from '@/lib/wedstrijddag-acties'
 import { ClaimButton } from './ClaimButton'
 import { MyTeamsPicker } from './MyTeamsPicker'
+import { ClubDashboard } from './ClubDashboard'
+import { ClubMenu } from './ClubMenu'
 import { InstagramWeekendCard } from './InstagramWeekendCard'
 import { formatDateBE } from '@/lib/datetime'
+import { OPEN_STATUSSEN } from '@/lib/boetes'
+import { clubOverzicht, type LidToon } from '@/lib/club-overzicht'
+import { clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
+import { registratieIcoon } from '@/lib/registratie'
+import { emailVanaf } from '@/lib/registratie-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -72,13 +79,15 @@ type Row = {
   claimedByName: string | null
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+// `menu` vervangt de gewone snelkoppelingen door het tegelmenu van de club (enkel als we weten
+// wie er kijkt); zonder geldt de oude strook knoppen.
+function Shell({ children, menu }: { children: React.ReactNode; menu?: React.ReactNode }) {
   return (
     <>
       <SiteHeader active="clubs" />
       <div className="site">
         <h1 className="page-title"><span className="brand">Mijn club</span></h1>
-        <ProfileTools profile={getProfile('clubs')} currentHref="/club" />
+        {menu ?? <ProfileTools profile={getProfile('clubs')} currentHref="/club" />}
         {children}
       </div>
     </>
@@ -279,23 +288,80 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
   }
   champs.sort((a, b) => Number(b.clinched) - Number(a.clinched))
 
-  return (
-    <Shell>
-      <MyTeamsPicker teams={allTeams} initial={myTeams} />
-      <InstagramWeekendCard />
+  // Clubdashboard (enkel voor de clubstaf): ledenbestand per ploeg, blessures, boetes en de
+  // opstellingen die nog moeten gebeuren. Alles afgeleid, niets apart bijgehouden.
+  let dashboard: React.ReactNode = null
+  if (clubStaf) {
+    const tweeWeken = Date.now() + 14 * 86_400_000
+    const [spelers, blessures, boetes, vanaf, seizoen] = await Promise.all([
+      payload.find({ collection: 'players', where: { team: { in: teamIds } }, depth: 0, limit: 3000, pagination: false, overrideAccess: true }),
+      payload.find({ collection: 'accidents', where: { and: [{ club: { equals: clubId } }, { status: { in: ['gemeld', 'ingediend'] } }] }, depth: 0, limit: 500, pagination: false, overrideAccess: true }).catch(() => ({ docs: [] as { status?: unknown }[] })),
+      payload.find({ collection: 'boetes', where: { and: [{ club: { equals: clubId } }, { status: { in: [...OPEN_STATUSSEN] } }] }, depth: 0, limit: 500, pagination: false, overrideAccess: true }).catch(() => ({ docs: [] as { status?: unknown; bedrag?: unknown }[] })),
+      emailVanaf(payload),
+      payload.findGlobal({ slug: 'season' }).catch(() => null),
+    ])
+    const toonPerPloeg = new Map<number, LidToon[]>()
+    for (const p of spelers.docs) {
+      const tid = Number(typeof p.team === 'object' && p.team ? (p.team as { id?: unknown }).id : p.team)
+      const toon = registratieIcoon(
+        {
+          voornaam: String(p.voornaam ?? ''),
+          achternaam: String(p.achternaam ?? ''),
+          birthDate: p.birthDate ? String(p.birthDate).slice(0, 10) : '',
+          geslacht: String(p.geslacht ?? ''),
+          soortLid: String(p.soortLid ?? 'speler'),
+          medischeKeuringOp: p.medischeKeuringOp ? String(p.medischeKeuringOp).slice(0, 10) : '',
+          email: String(p.email ?? ''),
+          heeftAttest: Boolean(p.medischAttestBestand),
+          registratieStatus: String(p.registratieStatus ?? ''),
+          vergunningsstatus: String(p.vergunningsstatus ?? 'geen'),
+          medischAttest: Boolean(p.medischAttest),
+          actief: p.actief !== false,
+        },
+        undefined,
+        vanaf,
+      ).toon as LidToon
+      const arr = toonPerPloeg.get(tid) ?? []
+      arr.push(toon)
+      toonPerPloeg.set(tid, arr)
+    }
+    const ov = clubOverzicht({
+      ploegen: teams.docs.map((t) => ({
+        id: Number(t.id),
+        naam: String((t as { name?: unknown }).name ?? '—'),
+        reeks: (t as { reeks?: unknown }).reeks ? reeksNaam((t as { reeks: string }).reeks as Parameters<typeof reeksNaam>[0]) : String((t as { category?: unknown }).category ?? ''),
+        toon: toonPerPloeg.get(Number(t.id)) ?? [],
+      })),
+      blessures: {
+        teBezorgen: blessures.docs.filter((b) => b.status === 'gemeld').length,
+        bijFederatie: blessures.docs.filter((b) => b.status === 'ingediend').length,
+      },
+      boetes: {
+        aantal: boetes.docs.length,
+        bedrag: boetes.docs.reduce((som, b) => som + (Number(b.bedrag) || 0), 0),
+        teBetalen: boetes.docs.filter((b) => b.status === 'opgelegd').length,
+      },
+      opstellingenTeDoen: supportersMode
+        ? 0
+        : rows.filter((r) => !r.ownReady && !r.afgelast && r.status === 'scheduled' && new Date(String(r.date)).getTime() <= tweeWeken).length,
+    })
+    const start = Number((seizoen as { startYear?: unknown } | null)?.startYear)
+    dashboard = (
+      <ClubDashboard
+        club={{ naam: String(club?.name ?? ''), logoUrl: clubLogoUrl({ club }), logoFit: clubLogoFit({ club }) }}
+        seizoen={Number.isFinite(start) && start > 0 ? `${start}–${start + 1}` : null}
+        kerncijfers={ov.kerncijfers}
+        teDoen={ov.teDoen}
+        ploegen={ov.ploegen}
+      />
+    )
+  }
 
-      {hasRole(user, 'club-beheerder', 'club-medewerker') && (
-        <p className="myteams-focusbar">
-          <Link href="/club/leden" className="myteams-link">🪪 Leden &amp; registratie — wie mag spelen →</Link>
-          <Link href="/club/boetes" className="myteams-link">💶 Boetes &amp; scheidsrechterskosten →</Link>
-          <Link href="/club/inschrijving" className="myteams-link">📝 Inschrijving ploegen nieuw seizoen →</Link>
-        </p>
-      )}
-      {isBeheerder && (
-        <p className="myteams-focusbar">
-          <Link href="/beheer/club-team" className="myteams-link">👥 Clubteam beheren — leden een rol geven →</Link>
-        </p>
-      )}
+  return (
+    <Shell menu={<>{dashboard}<ClubMenu staf={clubStaf} beheerder={isBeheerder || isFederationLevel(user)} /></>}>
+      <span id="wedstrijden" />
+      <h2 className="cmenu-titel cmenu-titel-wedstrijden">Wedstrijden</h2>
+      <MyTeamsPicker teams={allTeams} initial={myTeams} />
 
       {mySet.size > 0 && (
         <p className="myteams-focusbar">
@@ -305,32 +371,6 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
             <>Je ziet alle ploegen van de club. <Link href="/club" className="myteams-link">← Focus op mijn ploeg(en)</Link></>
           )}
         </p>
-      )}
-
-      {champs.length > 0 && (
-        <div className="club-champ-wrap">
-          {champs.map((c, i) => {
-            const almost = c.winsToClinch != null && c.winsToClinch <= 2
-            const cls = c.clinched ? 'champion' : almost ? 'almost' : 'leading'
-            return (
-              <div key={i} className={`club-champ ${cls}`}>
-                <span className="club-champ-ico" aria-hidden>{c.clinched ? '🏆' : almost ? '🔥' : '📈'}</span>
-                <span className="club-champ-text">
-                  {c.clinched ? (
-                    <><strong>{c.teamName}</strong> is wiskundig <strong>KAMPIOEN</strong> in {c.reeks}! 🎉</>
-                  ) : c.pointsToClinch != null ? (
-                    <>
-                      <strong>{c.teamName}</strong> leidt in {c.reeks} — nog <strong>{c.pointsToClinch} {c.pointsToClinch === 1 ? 'punt' : 'punten'}</strong>
-                      {c.winsToClinch != null && <> ({c.winsToClinch} {c.winsToClinch === 1 ? 'overwinning' : 'overwinningen'})</>} voor de titel.{almost ? ' Bijna zover!' : ''}
-                    </>
-                  ) : (
-                    <><strong>{c.teamName}</strong> staat aan de leiding in {c.reeks}.</>
-                  )}
-                </span>
-              </div>
-            )
-          })}
-        </div>
       )}
 
       {visibleRows.length === 0 ? (
@@ -417,6 +457,39 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
         </section>
         ))
       )}
+
+      {champs.length > 0 && (
+        <div className="club-champ-wrap">
+          {champs.map((c, i) => {
+            const almost = c.winsToClinch != null && c.winsToClinch <= 2
+            const cls = c.clinched ? 'champion' : almost ? 'almost' : 'leading'
+            return (
+              <div key={i} className={`club-champ ${cls}`}>
+                <span className="club-champ-ico" aria-hidden>{c.clinched ? '🏆' : almost ? '🔥' : '📈'}</span>
+                <span className="club-champ-text">
+                  {c.clinched ? (
+                    <><strong>{c.teamName}</strong> is wiskundig <strong>KAMPIOEN</strong> in {c.reeks}! 🎉</>
+                  ) : c.pointsToClinch != null ? (
+                    <>
+                      <strong>{c.teamName}</strong> leidt in {c.reeks} — nog <strong>{c.pointsToClinch} {c.pointsToClinch === 1 ? 'punt' : 'punten'}</strong>
+                      {c.winsToClinch != null && <> ({c.winsToClinch} {c.winsToClinch === 1 ? 'overwinning' : 'overwinningen'})</>} voor de titel.{almost ? ' Bijna zover!' : ''}
+                    </>
+                  ) : (
+                    <><strong>{c.teamName}</strong> staat aan de leiding in {c.reeks}.</>
+                  )}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* De weekend-Story is leuk, maar geen dagelijks werk: ingeklapt onderaan i.p.v. een grote
+          kaart bovenaan die het menu en de wedstrijden naar beneden duwt. */}
+      <details className="cmenu-extra">
+        <summary>📸 Weekendplan als Instagram-Story</summary>
+        <InstagramWeekendCard />
+      </details>
     </Shell>
   )
 }

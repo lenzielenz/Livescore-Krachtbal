@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { formatDateTimeBE } from '@/lib/datetime'
 
@@ -13,6 +14,9 @@ export type SignatureData = {
   tijdstip?: string | null
 }
 
+const ORDER: Who[] = ['kapiteinThuis', 'kapiteinUit', 'scheidsrechter']
+const LABEL: Record<Who, string> = { kapiteinThuis: 'Kapitein thuis', kapiteinUit: 'Kapitein uit', scheidsrechter: 'Scheidsrechter' }
+
 function formatTijdstip(value?: string | null): string | null {
   if (!value) return null
   const d = new Date(value)
@@ -23,22 +27,27 @@ function formatTijdstip(value?: string | null): string | null {
 function SignaturePad({
   matchId,
   who,
-  label,
+  nr,
   side,
   teamName,
+  uitslag,
   initial,
   defaultNaam,
+  aanDeBeurt,
   onSigned,
 }: {
   matchId: string
   who: Who
-  label: string
+  nr: number
   side: Side
   teamName?: string
+  /** De uitslag waarvoor getekend wordt, bv. "Zandberg Heren 4 – 4 Baasrode Heren". */
+  uitslag: string
   initial?: SignatureData
   /** Vooraf gekende naam (kapitein/scheidsrechter uit de wedstrijd) — niemand hoeft te typen. */
   defaultNaam?: string
-  onSigned?: () => void
+  aanDeBeurt: boolean
+  onSigned?: (s: SignatureData, r: { ingediend?: boolean; nogTeDoen?: string | null }) => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawing = useRef(false)
@@ -50,33 +59,40 @@ function SignaturePad({
   const naam = vooraf || getypt.trim()
   const [msg, setMsg] = useState<string | null>(null)
   const [hasInk, setHasInk] = useState(false)
+  const [bezig, setBezig] = useState(false)
 
   // Een afgetekende handtekening is definitief: ze kan niet meer gewist of overschreven
   // worden (reglement Item 37). We tonen dan een vergrendelde weergave i.p.v. het canvas.
   const alreadySigned = Boolean(initial?.akkoord && initial?.handtekening)
   const [locked, setLocked] = useState(alreadySigned)
-  const [signedImg, setSignedImg] = useState<string | null>(
-    alreadySigned ? (initial?.handtekening ?? null) : null,
-  )
+  const [signedImg, setSignedImg] = useState<string | null>(alreadySigned ? (initial?.handtekening ?? null) : null)
   const [signedAt, setSignedAt] = useState<string | null>(initial?.tijdstip ?? null)
 
+  // Het tekenvak volgt de echte breedte en de pixeldichtheid van het scherm: scherpe lijnen, en de
+  // lijn ligt exact onder de vinger (anders verschuift ze als het vak breder getoond wordt).
   useEffect(() => {
     if (locked) return
     const c = canvasRef.current
     if (!c) return
+    const dpr = Math.min(3, window.devicePixelRatio || 1)
+    const r = c.getBoundingClientRect()
+    c.width = Math.round(r.width * dpr)
+    c.height = Math.round(r.height * dpr)
     const ctx = c.getContext('2d')
     if (!ctx) return
-    ctx.lineWidth = 2
+    ctx.scale(dpr, dpr)
+    ctx.lineWidth = 2.4
     ctx.lineCap = 'round'
-    ctx.strokeStyle = '#111'
+    ctx.lineJoin = 'round'
+    ctx.strokeStyle = '#14213d'
   }, [locked])
 
   const pos = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const c = canvasRef.current!
-    const r = c.getBoundingClientRect()
+    const r = canvasRef.current!.getBoundingClientRect()
     return { x: e.clientX - r.left, y: e.clientY - r.top }
   }
   const down = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId)
     drawing.current = true
     const ctx = canvasRef.current!.getContext('2d')!
     const p = pos(e)
@@ -101,80 +117,87 @@ function SignaturePad({
   }
 
   const save = async () => {
-    if (!hasInk) return setMsg('Plaats eerst een handtekening.')
+    if (!hasInk) return setMsg('Teken eerst je handtekening in het vak.')
     if (!naam && who !== 'scheidsrechter') return setMsg('Vul de naam van de kapitein in.')
+    setBezig(true)
     const dataUrl = canvasRef.current!.toDataURL('image/png')
-    const res = await fetch(`/api/matchsheet/${matchId}/sign`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ who, naam, handtekening: dataUrl, akkoord: true }),
-    })
-    const json = await res.json()
-    if (res.ok) {
-      // Direct vergrendelen: na opslaan kan deze handtekening niet meer gewist worden.
-      setSignedImg(dataUrl)
-      setSignedAt(new Date().toISOString())
-      setLocked(true)
-      setMsg(null)
-      // Vlot doorgaan: spring naar de volgende open handtekening i.p.v. handmatig scrollen.
-      onSigned?.()
-    } else {
-      setMsg(json.error || 'Mislukt.')
+    try {
+      const res = await fetch(`/api/matchsheet/${matchId}/sign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ who, naam, handtekening: dataUrl, akkoord: true }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (res.ok) {
+        // Direct vergrendelen: na opslaan kan deze handtekening niet meer gewist worden.
+        const nu = new Date().toISOString()
+        setSignedImg(dataUrl)
+        setSignedAt(nu)
+        setLocked(true)
+        setMsg(null)
+        onSigned?.({ naam, handtekening: dataUrl, akkoord: true, tijdstip: nu }, { ingediend: Boolean(json.ingediend), nogTeDoen: json.nogTeDoen ?? null })
+      } else {
+        setMsg(json.error || 'Aftekenen mislukt.')
+      }
+    } catch {
+      setMsg('Geen verbinding — probeer opnieuw.')
+    } finally {
+      setBezig(false)
     }
   }
 
-  const sideClass = side === 'home' ? 'side-home' : side === 'away' ? 'side-away' : ''
-
   return (
-    <section className={`wb-card ${sideClass}`.trim()}>
-      <div className="wb-sign-head">
-        <h3>{label}</h3>
-        {side && (
-          <span className={`wb-side-badge ${side}`}>{side === 'home' ? 'THUIS' : 'UIT'}</span>
-        )}
-      </div>
-      {teamName && <p className="wb-sub">{teamName}</p>}
+    <section className={`aft-kaart${locked ? ' getekend' : ''}${aanDeBeurt && !locked ? ' beurt' : ''}`}>
+      <header className="aft-kaart-kop">
+        <span className="aft-nr" aria-hidden>{locked ? '✓' : nr}</span>
+        <div className="aft-kaart-titel">
+          <h3>{LABEL[who]}</h3>
+          {teamName && <span className="aft-ploeg">{teamName}</span>}
+        </div>
+        {side && <span className={`aft-kant ${side}`}>{side === 'home' ? 'THUIS' : 'UIT'}</span>}
+      </header>
 
       {locked ? (
-        <>
-          {naam && <p className="wb-sign-naam">{naam}</p>}
-          <div className="wb-sign wb-sign-locked">
-            {signedImg && <img src={signedImg} alt={`Handtekening ${label}`} className="wb-sign-img" />}
-          </div>
-          <p className="wb-lock-note">
-            🔒 Afgetekend{signedAt && ` op ${formatTijdstip(signedAt)}`} — definitief, kan niet meer
-            gewist worden.
+        <div className="aft-getekend">
+          <div className="aft-vak aft-vak-vast">{signedImg && <img src={signedImg} alt={`Handtekening ${LABEL[who]}`} />}</div>
+          <p className="aft-wie">
+            <strong>{naam || '—'}</strong>
+            <span>✅ Akkoord{signedAt && ` · ${formatTijdstip(signedAt)}`}</span>
           </p>
-        </>
+        </div>
       ) : (
         <>
           {vooraf ? (
-            <p className="wb-sign-naam">Tekent: {vooraf}</p>
+            <p className="aft-tekent">
+              Tekent: <strong>{vooraf}</strong>
+            </p>
           ) : who !== 'scheidsrechter' ? (
-            <input
-              className="wb-input"
-              placeholder="Naam van de kapitein"
-              value={getypt}
-              onChange={(e) => setGetypt(e.target.value)}
-              style={{ marginBottom: 8 }}
-            />
+            <label className="aft-naam">
+              Naam van de kapitein
+              <input className="wb-input" value={getypt} onChange={(e) => setGetypt(e.target.value)} placeholder="Voornaam en naam" autoComplete="off" />
+            </label>
           ) : null}
-          <canvas
-            ref={canvasRef}
-            width={300}
-            height={120}
-            onPointerDown={down}
-            onPointerMove={move}
-            onPointerUp={up}
-            onPointerLeave={up}
-            className="wb-sign"
-          />
-          <div className="wb-btn-row">
-            <button onClick={clear} className="wb-btn">
+          <p className="aft-verklaring">
+            Ik verklaar dat de uitslag <strong>{uitslag}</strong> en dit wedstrijdblad juist zijn.
+          </p>
+          <div className="aft-vak-wrap">
+            <canvas
+              ref={canvasRef}
+              onPointerDown={down}
+              onPointerMove={move}
+              onPointerUp={up}
+              onPointerCancel={up}
+              className="aft-vak"
+              aria-label={`Tekenvak handtekening ${LABEL[who]}`}
+            />
+            {!hasInk && <span className="aft-vak-hint" aria-hidden>✍️ Teken hier met je vinger</span>}
+          </div>
+          <div className="aft-knoppen">
+            <button type="button" onClick={clear} className="wb-btn" disabled={!hasInk || bezig}>
               Wissen
             </button>
-            <button onClick={save} className="wb-btn wb-btn-primary" style={{ flex: 1 }}>
-              Aftekenen
+            <button type="button" onClick={save} className="wb-btn wb-btn-primary aft-teken" disabled={!hasInk || bezig}>
+              {bezig ? 'Bezig…' : naam ? `Aftekenen als ${naam}` : 'Aftekenen'}
             </button>
           </div>
           {msg && <p className="wb-msg">{msg}</p>}
@@ -191,7 +214,10 @@ export function AftekenenPanel({
   signatures,
   homeTeam,
   awayTeam,
+  uitslag,
   defaultNames,
+  nietNodig = [],
+  voorwaarden = [],
 }: {
   matchId: string
   initialStatus: string
@@ -200,24 +226,41 @@ export function AftekenenPanel({
   signatures?: Partial<Record<Who, SignatureData>>
   homeTeam?: string
   awayTeam?: string
+  uitslag: string
   /** Vooraf gekende namen per ondertekenaar (kapiteins/SR uit de wedstrijd). */
   defaultNames?: Partial<Record<Who, string | undefined>>
+  /** Wie niet hoeft te tekenen (afwezige ploeg bij forfait). */
+  nietNodig?: Who[]
+  /** Wat er vóór het indienen nog moet gebeuren (wie speelde, officials), met een link ernaartoe. */
+  voorwaarden?: { tekst: string; href: string }[]
 }) {
+  const router = useRouter()
   const [status, setStatus] = useState(initialStatus)
-  const [msg, setMsg] = useState<string | null>(null)
+  const [msg, setMsg] = useState<{ ok: boolean; tekst: string } | null>(null)
   const [busy, setBusy] = useState(false)
-
-  // Volgorde van de handtekeningen + verwijzingen naar hun kaart, zodat we na het aftekenen
-  // vlot naar de eerstvolgende open handtekening (of de indien-knop) kunnen scrollen.
-  const order: Who[] = ['kapiteinThuis', 'kapiteinUit', 'scheidsrechter']
+  const nodig = ORDER.filter((w) => !nietNodig.includes(w))
+  const isSigned = (s?: SignatureData) => Boolean(s?.akkoord && s?.handtekening)
+  const [getekend, setGetekend] = useState<Partial<Record<Who, SignatureData>>>(() =>
+    Object.fromEntries(ORDER.filter((w) => isSigned(signatures?.[w])).map((w) => [w, signatures?.[w]])),
+  )
   const wrapRefs = useRef<Partial<Record<Who, HTMLDivElement | null>>>({})
   const submitRef = useRef<HTMLDivElement>(null)
-  const isSigned = (w: Who) => Boolean(signatures?.[w]?.akkoord && signatures?.[w]?.handtekening)
-  const signedNow = useRef<Set<Who>>(new Set(order.filter(isSigned)))
+  const volgende = nodig.find((w) => !getekend[w]) ?? null
+  const klaar = volgende == null
 
-  const goNext = (justSigned: Who) => {
-    signedNow.current.add(justSigned)
-    const next = order.find((w) => !signedNow.current.has(w))
+  const naGetekend = (w: Who, s: SignatureData, r: { ingediend?: boolean; nogTeDoen?: string | null }) => {
+    const nieuw = { ...getekend, [w]: s }
+    setGetekend(nieuw)
+    // De laatste handtekening dient automatisch in (sign-route): dan is het blad meteen bij de
+    // federatie en beide clubs.
+    if (r.ingediend) {
+      setStatus('ingediend')
+      setMsg({ ok: true, tekst: 'Alle handtekeningen staan erop: het blad is automatisch ingediend en is nu bij de federatie en beide clubs.' })
+      router.refresh()
+      return
+    }
+    if (r.nogTeDoen) setMsg({ ok: false, tekst: `Alle handtekeningen staan erop, maar het blad kon nog niet ingediend worden: ${r.nogTeDoen}` })
+    const next = nodig.find((x) => !nieuw[x])
     // Even wachten tot de zojuist vergrendelde kaart opnieuw gerenderd is.
     setTimeout(() => {
       if (next) {
@@ -233,69 +276,104 @@ export function AftekenenPanel({
   const submit = async () => {
     setBusy(true)
     setMsg(null)
-    const res = await fetch(`/api/matchsheet/${matchId}/submit`, { method: 'POST' })
-    const json = await res.json()
-    setBusy(false)
-    if (res.ok && json.ok) {
-      setStatus(json.status)
-      const mail = json.mail?.sent ? 'gemaild' : `niet gemaild (${json.mail?.reason ?? '—'})`
-      const fed = json.federation?.uploaded ? 'geüpload' : `niet geüpload (${json.federation?.reason ?? '—'})`
-      setMsg(`Ingediend. PDF ${mail}; federatie ${fed}.`)
-    } else {
-      setMsg(json.error || 'Indienen mislukt.')
+    try {
+      const res = await fetch(`/api/matchsheet/${matchId}/submit`, { method: 'POST' })
+      const json = await res.json().catch(() => ({}))
+      if (res.ok && json.ok) {
+        setStatus(json.status)
+        // Mail en doorsturen hangen af van de instellingen (mailserver, federatie-koppeling): meld
+        // enkel wat effectief gebeurde. Het blad zelf staat sowieso op het platform, ook als PDF.
+        const extra = [json.mail?.sent ? 'gemaild naar beide clubs' : null, json.federation?.uploaded ? 'doorgestuurd naar de federatie' : null].filter(Boolean)
+        router.refresh()
+        setMsg({ ok: true, tekst: `Ingediend — het blad is definitief${extra.length ? ` en ${extra.join(' en ')}` : ''}. De PDF staat klaar.` })
+      } else {
+        setMsg({ ok: false, tekst: json.error || 'Indienen mislukt.' })
+      }
+    } catch {
+      setMsg({ ok: false, tekst: 'Geen verbinding — probeer opnieuw.' })
+    } finally {
+      setBusy(false)
     }
   }
 
-  if (status === 'ingediend') {
-    return <p className="wb-intro">Dit blad is ingediend en kan niet meer gewijzigd worden (Item 37).</p>
-  }
-  if (!afgelopen) return null
+  const ingediend = status === 'ingediend'
+  const stappen = [
+    ...nodig.map((w) => ({ sleutel: w, label: LABEL[w], klaar: Boolean(getekend[w]) })),
+    { sleutel: 'ingediend', label: 'Ingediend', klaar: ingediend },
+  ]
 
   return (
     <>
-      <div className="wb-grid">
-        <div ref={(el) => { wrapRefs.current.kapiteinThuis = el }}>
-          <SignaturePad
-            matchId={matchId}
-            who="kapiteinThuis"
-            label="Kapitein thuis"
-            side="home"
-            teamName={homeTeam}
-            initial={signatures?.kapiteinThuis}
-            defaultNaam={defaultNames?.kapiteinThuis}
-            onSigned={() => goNext('kapiteinThuis')}
-          />
-        </div>
-        <div ref={(el) => { wrapRefs.current.kapiteinUit = el }}>
-          <SignaturePad
-            matchId={matchId}
-            who="kapiteinUit"
-            label="Kapitein uit"
-            side="away"
-            teamName={awayTeam}
-            initial={signatures?.kapiteinUit}
-            defaultNaam={defaultNames?.kapiteinUit}
-            onSigned={() => goNext('kapiteinUit')}
-          />
-        </div>
-        <div ref={(el) => { wrapRefs.current.scheidsrechter = el }}>
-          <SignaturePad
-            matchId={matchId}
-            who="scheidsrechter"
-            label="Scheidsrechter"
-            side={null}
-            initial={signatures?.scheidsrechter}
-            defaultNaam={defaultNames?.scheidsrechter}
-            onSigned={() => goNext('scheidsrechter')}
-          />
-        </div>
-      </div>
-      <div ref={submitRef} style={{ marginTop: 20 }}>
-        <button onClick={submit} disabled={busy} className="wb-btn wb-btn-primary" style={{ padding: '11px 22px' }}>
-          {busy ? 'Indienen…' : '📤 Indienen (PDF + mail + federatie)'}
-        </button>
-        {msg && <p className="wb-msg">{msg}</p>}
-      </div>
+      <ol className="aft-stappen" aria-label="Voortgang">
+        {stappen.map((s, i) => (
+          <li key={s.sleutel} className={s.klaar ? 'klaar' : s.sleutel === (ingediend ? '' : (volgende ?? 'ingediend')) ? 'nu' : ''}>
+            <span className="aft-stap-bol" aria-hidden>{s.klaar ? '✓' : i + 1}</span>
+            <span className="aft-stap-label">{s.label}</span>
+          </li>
+        ))}
+      </ol>
+
+      {ingediend ? (
+        <section className="aft-klaar-kaart">
+          <h2>✅ Ingediend</h2>
+          <p>Dit wedstrijdblad is definitief en kan niet meer gewijzigd worden (Item 37). Beide clubs en de federatie hebben het.</p>
+          <div className="aft-handtekeningen-vast">
+            {nodig.map((w) => {
+              const s = getekend[w] ?? signatures?.[w]
+              return (
+                <figure key={w}>
+                  <div className="aft-vak aft-vak-vast">{s?.handtekening && <img src={s.handtekening} alt={`Handtekening ${LABEL[w]}`} />}</div>
+                  <figcaption>
+                    <span>{LABEL[w]}</span>
+                    <strong>{s?.naam || '—'}</strong>
+                    {s?.tijdstip && <small>{formatTijdstip(s.tijdstip)}</small>}
+                  </figcaption>
+                </figure>
+              )
+            })}
+          </div>
+        </section>
+      ) : afgelopen ? (
+        <>
+          <div className="aft-kaarten">
+            {nodig.map((w, i) => (
+              <div key={w} ref={(el) => { wrapRefs.current[w] = el }}>
+                <SignaturePad
+                  matchId={matchId}
+                  who={w}
+                  nr={i + 1}
+                  side={w === 'kapiteinThuis' ? 'home' : w === 'kapiteinUit' ? 'away' : null}
+                  teamName={w === 'kapiteinThuis' ? homeTeam : w === 'kapiteinUit' ? awayTeam : undefined}
+                  uitslag={uitslag}
+                  initial={signatures?.[w]}
+                  defaultNaam={defaultNames?.[w]}
+                  aanDeBeurt={volgende === w}
+                  onSigned={(s, r) => naGetekend(w, s, r)}
+                />
+              </div>
+            ))}
+          </div>
+          <div ref={submitRef} className={`aft-indienen${klaar ? ' klaar' : ''}`}>
+            <div>
+              <h3>Indienen</h3>
+              {voorwaarden.map((v) => (
+                <p key={v.href + v.tekst} className="aft-voorwaarde">
+                  ⚠️ {v.tekst} <a href={v.href}>Naar de scheidsrechterspagina →</a>
+                </p>
+              ))}
+              <p>
+                {klaar
+                  ? 'Alle handtekeningen staan erop. Dien in zodra hierboven niets meer openstaat: het blad gaat naar de federatie en beide clubs en is daarna definitief.'
+                  : `Nog ${nodig.filter((w) => !getekend[w]).length} van de ${nodig.length} handtekeningen. Na de laatste handtekening gaat het blad vanzelf naar de federatie en beide clubs.`}
+              </p>
+            </div>
+            <button type="button" onClick={submit} disabled={busy || !klaar || voorwaarden.length > 0} className="wb-btn wb-btn-primary">
+              {busy ? 'Indienen…' : '📤 Wedstrijdblad indienen'}
+            </button>
+          </div>
+        </>
+      ) : null}
+      {msg && <p className={`aft-melding ${msg.ok ? 'ok' : 'fout'}`} role="status">{msg.tekst}</p>}
     </>
   )
 }

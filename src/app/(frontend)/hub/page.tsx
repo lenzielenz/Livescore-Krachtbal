@@ -211,8 +211,9 @@ export default async function HubPage() {
         <section className="hub-sec">
           <h2 className="hub-h2">Krachtbal-tools</h2>
           <div className="hub-tiles hub-tiles-4">
-            <Link href="/kantine" className="hub-tile">📺<span>Kantinescherm</span></Link>
-            <Link href="/club/veldscherm" className="hub-tile">🏟️<span>Veldscherm</span></Link>
+            {/* Kantine- en veldscherm zijn clubwerk: enkel voor de clubstaf en de federatie. */}
+            {(isStaff || isFed) && <Link href="/kantine" className="hub-tile">📺<span>Kantinescherm</span></Link>}
+            {(isStaff || isFed) && <Link href="/club/veldscherm" className="hub-tile">🏟️<span>Veldscherm</span></Link>}
             <Link href="/ideeenbus" className="hub-tile">💡<span>Ideeënbus</span></Link>
             <Link href="/uitleg" className="hub-tile">🎓<span>Zo werkt het</span></Link>
           </div>
@@ -249,7 +250,6 @@ export default async function HubPage() {
             <h2 className="hub-h2">Mijn ontwikkeling</h2>
             <div className="hub-tiles">
               <Link href="/ontwikkeling" className="hub-tile">📈<span>Skill &amp; Fame</span></Link>
-              <Link href="/beheer/training/progressie" className="hub-tile">🏋️<span>Mijn training</span></Link>
             </div>
           </section>
         )}

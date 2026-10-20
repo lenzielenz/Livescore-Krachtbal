@@ -47,3 +47,39 @@
 @media (min-width: 1100px) {
   .led-kolommen { display: grid; grid-template-columns: repeat(auto-fill, minmax(600px, 1fr)); align-items: start; gap: 18px; }
 }
+
+/* ── Leden per club + herinnering (LedenOverzicht.tsx) ── */
+.lo { margin: 0 0 28px; display: grid; gap: 12px; }
+.lo-kop { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lo-titel { margin: 0; font-size: 1.1rem; }
+.lo-cijfers { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.lo-cijfer { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-top: 3px solid var(--line); border-radius: 12px; background: var(--panel); }
+.lo-cijfer strong { font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.lo-cijfer span { font-size: 0.76rem; color: var(--dim); }
+.lo-cijfer.ok { border-top-color: #2ec27e; }
+.lo-cijfer.wacht { border-top-color: #f0b04a; }
+.lo-cijfer.actie { border-top-color: #ff6b6b; }
+.lo-tabel-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.lo-tabel { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.lo-tabel th, .lo-tabel td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.lo-tabel thead th { font-size: 0.72rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; }
+.lo-tabel .getal { text-align: right; font-variant-numeric: tabular-nums; width: 3em; }
+.lo-tabel td.wacht { color: #f0b04a; font-weight: 700; }
+.lo-tabel td.actie { color: #ff8a8a; font-weight: 700; }
+.lo-sub { display: block; font-size: 0.74rem; color: var(--dim); font-weight: 500; }
+.lo-actie { text-align: right; white-space: nowrap; }
+.lo-in-orde { color: #2ec27e; font-weight: 600; font-size: 0.82rem; }
+.lo-gekozen > * { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.lo-voorbeeld { display: grid; gap: 12px; max-width: 620px; padding: 14px; border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); border-radius: 14px; background: var(--panel); scroll-margin: 120px; }
+.lo-voorbeeld-kop { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+@media (max-width: 600px) {
+  .lo-tabel th, .lo-tabel td { padding: 8px 6px; }
+  .lo-tabel .getal { width: 2.2em; }
+  .lo-knop-tekst { display: none; }
+}
+.lo-aan { font-size: 0.88rem; }
+.lo-melding { display: grid; gap: 4px; padding: 12px 14px; border-radius: 14px; background: #f4f5f7; color: #15191f; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); font-size: 0.88rem; }
+.lo-melding-bron { font-size: 0.72rem; color: #5b6472; font-weight: 600; }
+.lo-melding ul { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 2px; }
+.lo-melding-link { font-size: 0.76rem; color: #3060c0; font-weight: 700; margin-top: 4px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

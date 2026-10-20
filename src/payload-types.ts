@@ -80,6 +80,7 @@ export interface Config {
     inschrijvingsrondes: Inschrijvingsronde;
     inschrijvingen: Inschrijvingen;
     verplaatsingsaanvragen: Verplaatsingsaanvragen;
+    klachten: Klachten;
     'medische-kaart-aanvragen': MedischeKaartAanvragen;
     meldingen: Meldingen;
     matches: Match;
@@ -147,6 +148,7 @@ export interface Config {
     inschrijvingsrondes: InschrijvingsrondesSelect<false> | InschrijvingsrondesSelect<true>;
     inschrijvingen: InschrijvingenSelect<false> | InschrijvingenSelect<true>;
     verplaatsingsaanvragen: VerplaatsingsaanvragenSelect<false> | VerplaatsingsaanvragenSelect<true>;
+    klachten: KlachtenSelect<false> | KlachtenSelect<true>;
     'medische-kaart-aanvragen': MedischeKaartAanvragenSelect<false> | MedischeKaartAanvragenSelect<true>;
     meldingen: MeldingenSelect<false> | MeldingenSelect<true>;
     matches: MatchesSelect<false> | MatchesSelect<true>;
@@ -1412,6 +1414,24 @@ export interface Verplaatsingsaanvragen {
   tegenpartijOpmerking?: string | null;
   federatieOpmerking?: string | null;
   behandeldOp?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "klachten".
+ */
+export interface Klachten {
+  id: number;
+  match: number | Match;
+  club: number | Club;
+  ingediendDoor?: (number | null) | User;
+  reden: string;
+  status?: ('open' | 'heropend' | 'afgewezen') | null;
+  beslissing?: string | null;
+  behandeldDoor?: (number | null) | User;
+  behandeldOp?: string | null;
+  pdfVoorHeropenen?: (number | null) | Media;
   updatedAt: string;
   createdAt: string;
 }
@@ -2801,6 +2821,10 @@ export interface PayloadLockedDocument {
         value: number | Verplaatsingsaanvragen;
       } | null)
     | ({
+        relationTo: 'klachten';
+        value: number | Klachten;
+      } | null)
+    | ({
         relationTo: 'medische-kaart-aanvragen';
         value: number | MedischeKaartAanvragen;
       } | null)
@@ -3320,6 +3344,23 @@ export interface VerplaatsingsaanvragenSelect<T extends boolean = true> {
   tegenpartijOpmerking?: T;
   federatieOpmerking?: T;
   behandeldOp?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "klachten_select".
+ */
+export interface KlachtenSelect<T extends boolean = true> {
+  match?: T;
+  club?: T;
+  ingediendDoor?: T;
+  reden?: T;
+  status?: T;
+  beslissing?: T;
+  behandeldDoor?: T;
+  behandeldOp?: T;
+  pdfVoorHeropenen?: T;
   updatedAt?: T;
   createdAt?: T;
 }

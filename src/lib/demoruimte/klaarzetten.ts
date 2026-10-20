@@ -14,6 +14,9 @@ import { kaartAanvragen } from '../medische-kaart'
 import { SYSTEEM_STATUS, volgBladStatus } from '../blad-status'
 import { advanceSimpleHalf, recordSimpleGoal } from '../simple-match-engine'
 import { verplaatsingAanvragen, verplaatsingBeantwoorden } from '../verplaatsing'
+import { klachtIndienen } from '../klacht'
+import { demoHandtekening } from './handtekening'
+import { demoReferendumKlaarzetten } from './referendum'
 import { DEMO_ROLLEN, demoEmail, isDemoAccount } from './rollen'
 
 // De demowereld (zie docs/DEMORUIMTE.md): wist de demodatabank en zet een volledige, geloofwaardige
@@ -228,7 +231,25 @@ export async function demoKlaarzetten(payload: Payload, opties: { forceer?: bool
         overrideAccess: true,
       })
     }
-    stap(`${Object.values(spelers).flat().length} spelers, 2 nieuwe leden wachten op de federatie`)
+    // Niet iedereen is in orde — zodat de federatie per club iets te herinneren heeft. Enkel
+    // reservespelers (de zevende), die in geen enkele klaargezette selectie staan.
+    const zet = (id: number, data: Record<string, unknown>) => payload.update({ collection: 'players', id, data: data as never, overrideAccess: true })
+    const keuringOver = (dagen: number) => new Date(Date.now() - (365 - dagen) * DAG).toISOString()
+    await zet(spelers['SM-D'][6].id, { medischeKeuringOp: keuringOver(12) })
+    await zet(spelers['BA-D'][6].id, { registratieStatus: 'afgekeurd', vergunningsstatus: 'geen', medischAttest: false, afkeurReden: 'doktersattest onleesbaar — laad een nieuw op' })
+    await zet(spelers['OP-H'][6].id, { medischeKeuringOp: keuringOver(5) })
+    await zet(spelers['ZB-D'][6].id, { registratieStatus: 'concept', vergunningsstatus: 'geen', medischAttest: false, medischeKeuringOp: null })
+    await zet(spelers['LE-H'][6].id, { registratieStatus: 'concept', vergunningsstatus: 'geen', medischAttest: false, medischeKeuringOp: null })
+    // Een nieuw lid van Sint-Michiels dat de club nog moet aanvullen (keuring ontbreekt).
+    await payload.create({
+      collection: 'players',
+      data: {
+        name: 'Kobe Hermans', voornaam: 'Kobe', achternaam: 'Hermans', geslacht: 'm', team: ploeg['SM-H'], shirtNumber: 23, soortLid: 'speler', birthDate: '2005-05-19',
+        vergunningsstatus: 'geen', registratieStatus: 'concept', email: 'kobe@voorbeeld.be',
+      } as never,
+      overrideAccess: true,
+    })
+    stap(`${Object.values(spelers).flat().length + 1} spelers, 2 nieuwe leden wachten op de federatie; 6 leden niet in orde (aan te vullen, afgekeurd, keuring verloopt)`)
 
     // ── Officials en demo-accounts ─────────────────────────────────────────────────────────────
     const official: Record<string, number> = {}
@@ -334,13 +355,16 @@ export async function demoKlaarzetten(payload: Payload, opties: { forceer?: bool
         data: {
           status: 'finished',
           currentHalf: 2,
+          // De eerste van elke selectie is kapitein: die tekent af (en staat zo op het blad).
+          homeCaptain: thuisSp[0].id,
+          awayCaptain: forfait ? null : uitSp[0].id,
           clockRunning: false,
           finishedAt: new Date(datum.getTime() + 105 * 60_000).toISOString(),
           simpleScore: { goals: forfait ? Array.from({ length: 30 }, (_, k) => ({ side: 'home', points: 1, half: 1, clock: 0, ts: k })) : goals, crosses: { home: 0, away: 0 } },
         } as never,
         overrideAccess: true,
       })
-      const sig = (n: string) => ({ naam: n, akkoord: true, tijdstip: new Date(datum.getTime() + 110 * 60_000).toISOString(), handtekening: 'data:image/png;base64,iVBORw0KGgo=' })
+      const sig = (n: string) => ({ naam: n, akkoord: true, tijdstip: new Date(datum.getTime() + 110 * 60_000).toISOString(), handtekening: demoHandtekening(n) })
       verleden.push(Number(m.id))
       // Het laatste gespeelde weekend: één blad blijft "af te tekenen" (federatie ziet het, boetevoorstel).
       const nietIngediend = verleden.length === 3
@@ -351,7 +375,7 @@ export async function demoKlaarzetten(payload: Payload, opties: { forceer?: bool
           ? { status: 'af_te_tekenen' }
           : forfait
             ? { status: 'ingediend', forfait: { uitslag: 'uit', km: 24 }, awayLineup: [], kapiteinThuis: sig(thuisSp[0].naam), scheidsrechter: sig('Karel Fluit'), keuringBevestigd: true }
-            : { status: 'ingediend', kapiteinThuis: sig(thuisSp[0].naam), kapiteinUit: sig(uitSp[0].naam), scheidsrechter: sig('Karel Fluit'), keuringBevestigd: true },
+            : { status: 'ingediend', kapiteinThuis: sig(thuisSp[0].naam), kapiteinUit: sig(uitSp[0].naam), scheidsrechter: sig('Karel Fluit'), keuringBevestigd: true, wedstrijdeinde: { akkoord: true, naam: 'Karel Fluit', tijdstip: new Date(datum.getTime() + 106 * 60_000).toISOString() } },
         overrideAccess: true,
         context: { [SYSTEEM_STATUS]: true },
       } as never)
@@ -518,6 +542,31 @@ export async function demoKlaarzetten(payload: Payload, opties: { forceer?: bool
     await kaartAanvragen(payload, gebruiker.ouder, spelers['SM-U14'][1].id).catch(() => null)
     stap('Medische kaart aangevraagd door de ouder van Robbe Peeters')
 
+    // ── Officials op elk blad (het reglement vraagt ze per reeks; zonder kan er niet ingediend worden) ──
+    await payload.update({
+      collection: 'matchsheets',
+      where: { status: { not_equals: 'ingediend' } },
+      data: { officials: { aantekenaar: 'Tina Tafel', tijdopnemer: 'Marc Peeters', grensrechterThuis: 'Jan Claes', grensrechterUit: 'Piet Maes', terreinafgevaardigde: 'Luc Wouters', coachThuis: 'Chris Coeck', coachUit: 'Bart Aerts' } } as never,
+      overrideAccess: true,
+      context: { [SYSTEEM_STATUS]: true },
+    } as never)
+
+    // ── Een klacht van Baasrode over een ingediend blad: de federatie kan heropenen of afwijzen ──
+    {
+      const baH = ploeg['BA-H']
+      const ms = await payload.find({ collection: 'matches', where: { and: [{ status: { equals: 'finished' } }, { or: [{ homeTeam: { equals: baH } }, { awayTeam: { equals: baH } }] }] }, sort: 'date', depth: 0, limit: 20, overrideAccess: true })
+      for (const m of ms.docs) {
+        const blad = (await payload.find({ collection: 'matchsheets', where: { match: { equals: m.id } }, depth: 0, limit: 1, overrideAccess: true })).docs[0]
+        if (blad?.status !== 'ingediend' || (blad.forfait as { uitslag?: string } | undefined)?.uitslag !== 'geen') continue
+        await klachtIndienen(payload, gebruiker['clubbeheer-baasrode'], Number(m.id), 'Onze speler Jens Aerts scoorde in de 2e helft een rugworp (+2), op het blad staat hij met een nekworp (+1). De eindstand klopt dus niet.')
+        stap('Klacht van Baasrode over een ingediend blad: wacht op de federatie')
+        break
+      }
+    }
+
+    // ── Referendum: open stemronde, de demo-speler mag stemmen ─────────────────────────────────
+    stap(await demoReferendumKlaarzetten(payload))
+
     return { ok: true, stappen, duurMs: Date.now() - begin }
   } catch (e) {
     return { ok: false, stappen, fout: e instanceof Error ? e.message : String(e), duurMs: Date.now() - begin }
@@ -541,5 +590,15 @@ export async function demoWedstrijden(payload: Payload) {
     live: await zoek('Sint-Michiels U14', 'Baasrode U14'),
     afgelopen: await zoek('Zandberg Heren', 'Baasrode Heren'),
     afgelast: await zoek('Lebbeke Dames', 'Zandberg Dames'),
+    ingediend: await (async () => {
+      const smH = await ploeg('Sint-Michiels Heren')
+      if (smH == null) return null
+      const ms = await payload.find({ collection: 'matches', where: { and: [{ status: { equals: 'finished' } }, { or: [{ homeTeam: { equals: smH } }, { awayTeam: { equals: smH } }] }] }, sort: '-date', depth: 0, limit: 10, overrideAccess: true })
+      for (const m of ms.docs) {
+        const blad = (await payload.find({ collection: 'matchsheets', where: { match: { equals: m.id } }, depth: 0, limit: 1, overrideAccess: true })).docs[0]
+        if (blad?.status === 'ingediend') return Number(m.id)
+      }
+      return null
+    })(),
   }
 }

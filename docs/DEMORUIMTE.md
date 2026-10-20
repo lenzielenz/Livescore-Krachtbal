@@ -45,6 +45,25 @@ klaarzetten, toegang), `src/app/(frontend)/demoruimte/`, `src/app/api/demoruimte
 - Inschrijvingen voor volgend seizoen: Baasrode en Zandberg ingediend (Baasrode met een kermisweekend),
   Lebbeke in concept, Sint-Michiels nog niets (dat toon je zelf).
 - Een medische kaart, aangevraagd door de ouder van een U14-speler.
+- Leden die **niet in orde** zijn, verspreid over de clubs: een nieuw lid zonder keuring
+  (Sint-Michiels), een afgekeurd lid (Baasrode), leden in concept (Lebbeke, Zandberg) en keuringen die
+  binnen 30 dagen verlopen. De federatie ziet op `/beheer/leden` per club hoeveel spelers er zijn, wie
+  goedgekeurd is, wie wacht en wie niet in orde is, bekijkt de **herinnering** vooraf (tekst en
+  ontvangers) en verstuurt ze. Ze gaat naar de clubbeheerders en -medewerkers (🔔 meldingen + push);
+  clubs zonder beheerder met een account krijgen niets — dat staat er ook bij.
+- Een open **referendum** (RHA/RDA, minimum 3 wedstrijden): 16 spelers stemden al, de demo-speler
+  (Jens Aerts) mag nog stemmen. De federatie ziet de tussenstand, sluit en maakt bekend (erelijst).
+  **↻ Referendum resetten** (in dat hoofdstuk van het draaiboek) wist enkel de stemmen en de uitslag
+  van dit seizoen en zet de ronde opnieuw open — de rest van de demo blijft staan.
+- **Wedstrijdbladen en klachten**: na de laatste handtekening gaat een blad vanzelf naar de federatie
+  en beide clubs (melding met link) en staat het in `/wedstrijdbladen` met de PDF. Baasrode diende al
+  een **klacht** in over een rugworp die als nekworp genoteerd staat; de federatie heropent het blad
+  (opnieuw ondertekenen) of wijst af op `/beheer/klachten`. Een club kan zelf een klacht indienen
+  onder een ingediend blad.
+- **Bulk voor de federatie**: boetes per groep aanvinken en samen opleggen/betaald/schrappen,
+  verplaatsingsaanvragen samen beslissen, iedereen met een nog af te tekenen blad in één keer herinneren.
+- De **seizoensstatistieken** van de club (`/club/seizoen`): per ploeg plaats, punten, W–G–V, saldo en
+  vorm; topscorers en meeste wedstrijden over de hele club.
 
 Alles wat een rol "doet", gebeurt via dezelfde routes als in de echte app (selectie, controle,
 vrijgave, start, blessure, afgelasting, aftrap, verplaatsing): de demo toont nooit iets wat de app

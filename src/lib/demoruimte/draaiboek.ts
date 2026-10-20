@@ -2,7 +2,7 @@
 // een bepaalde rol (één tik: rol wisselen + doorgaan). Puur — de pagina vult de wedstrijd-id's in
 // uit de klaargezette demowereld (lib/demoruimte/klaarzetten.ts → demoWedstrijden).
 
-export type DemoIds = { hoofd: number | null; dames: number | null; live: number | null; afgelopen: number | null; afgelast: number | null }
+export type DemoIds = { hoofd: number | null; dames: number | null; live: number | null; afgelopen: number | null; afgelast: number | null; ingediend?: number | null }
 export type DemoStap = { rol: string; href: string | null; tekst: string }
 export type Hoofdstuk = { sleutel: string; icoon: string; titel: string; verhaal: string; stappen: DemoStap[] }
 
@@ -23,10 +23,12 @@ export function draaiboek(ids: DemoIds): Hoofdstuk[] {
       sleutel: 'leden',
       icoon: '🪪',
       titel: 'Leden registreren',
-      verhaal: 'De club voert een lid in en dient in; de federatie keurt goed. Daarna mag het lid spelen en krijgt het een eigen login.',
+      verhaal: 'De club voert een lid in en dient in; de federatie keurt goed. Daarna mag het lid spelen en krijgt het een eigen login. De federatie ziet per club wie goedgekeurd is, wie wacht en wie niet in orde is, en stuurt de club een herinnering.',
       stappen: [
         { rol: 'clubbeheer', href: '/club/leden', tekst: 'Ledenlijst van Sint-Michiels (✅ ⏳ ✎)' },
-        { rol: 'federatie', href: '/beheer/leden', tekst: 'Wachtrij van de federatie: twee nieuwe leden goedkeuren' },
+        { rol: 'federatie', href: '/beheer/leden', tekst: 'Federatie: leden per club — goedgekeurd, wachtend, niet in orde' },
+        { rol: 'federatie', href: '/beheer/leden', tekst: 'Federatie: een club een herinnering sturen (bekijk eerst het voorbeeld)' },
+        { rol: 'clubbeheer', href: '/meldingen', tekst: 'Club: de herinnering komt binnen in de meldingen' },
         { rol: 'ouder', href: '/profiel', tekst: 'De ouder van een U14-speler: dossier en medische kaart' },
       ],
     },
@@ -35,9 +37,10 @@ export function draaiboek(ids: DemoIds): Hoofdstuk[] {
       icoon: '🏟️',
       titel: 'De wedstrijddag',
       verhaal:
-        'Sint-Michiels – Baasrode. Baasrode stond in de file: de coach schoof de aftrap zelf 15 minuten op en iedereen kreeg een melding. De selecties staan; nu controleert de scheidsrechter elke speler en geeft hij vrij. Dan tekent de tafel aan.',
+        'Sint-Michiels – Baasrode. Baasrode stond in de file: de coach schoof de aftrap zelf 15 minuten op en iedereen kreeg een melding. De selectie van de heren staat; nu controleert de scheidsrechter elke speler en geeft hij vrij. Dan tekent de tafel aan.',
       stappen: [
-        { rol: 'coach', href: m(ids.dames, (id) => `/opstelling/${id}`) ?? '/club', tekst: 'Coach: selectie, rugnummers en kapitein (dameswedstrijd van straks)' },
+        // De damesselectie maakt de clubbeheerder (de demo-coach traint de heren en mag die niet).
+        { rol: 'clubbeheer', href: m(ids.dames, (id) => `/opstelling/${id}`) ?? '/club', tekst: 'Club: selectie, rugnummers en kapitein (dameswedstrijd van straks)' },
         { rol: 'scheidsrechter', href: m(ids.hoofd, (id) => `/scheidsrechter/${id}`), tekst: 'Scheidsrechter: spelers controleren, keuring, vrijgeven' },
         { rol: 'tafel', href: m(ids.hoofd, (id) => `/scorekeeper/${id}`), tekst: 'Tafel: aantekenen — doelpunt, scorer, wissel' },
         { rol: 'supporter', href: m(ids.hoofd, (id) => `/match/${id}`), tekst: 'Supporter: live meevolgen' },
@@ -60,9 +63,24 @@ export function draaiboek(ids: DemoIds): Hoofdstuk[] {
       titel: 'Blessure, aftekenen en indienen',
       verhaal: 'Zandberg – Baasrode is gedaan. Jens Aerts verzwikte zijn enkel: dat staat op het blad, de verzekeringsaangifte is klaar en hij vindt de documenten op zijn profiel.',
       stappen: [
+        { rol: 'scheidsrechter', href: m(ids.afgelopen, (id) => `/scheidsrechter/${id}#deelname`), tekst: 'Scheidsrechter: bevestigen wie er speelde' },
         { rol: 'scheidsrechter', href: m(ids.afgelopen, (id) => `/aftekenen/${id}`), tekst: 'Kapiteins en scheidsrechter tekenen af, dan indienen' },
+        { rol: 'speler', href: m(ids.afgelopen, (id) => `/api/matchsheet/${id}/pdf`), tekst: 'Het wedstrijdblad als PDF, om te printen' },
         { rol: 'speler', href: '/profiel', tekst: 'De speler: aangifte en getuigschrift invullen en terugsturen' },
         { rol: 'federatie', href: '/ongevallen', tekst: 'Federatie: ongevallendossiers' },
+      ],
+    },
+    {
+      sleutel: 'klacht',
+      icoon: '⚖️',
+      titel: 'Wedstrijdbladen en klachten',
+      verhaal:
+        'Na de laatste handtekening gaat het blad vanzelf naar de federatie en beide clubs, en staat het altijd in de wedstrijdbladen met de PDF. Klopt er iets niet, dan dient een club een klacht in; de federatie heropent het blad (opnieuw ondertekenen) of wijst af. Baasrode klaagde al over een rugworp die als nekworp genoteerd staat.',
+      stappen: [
+        { rol: 'clubbeheer', href: '/wedstrijdbladen', tekst: 'Club: alle wedstrijdbladen van de club, met de PDF' },
+        { rol: 'clubbeheer', href: m(ids.ingediend ?? null, (id) => `/aftekenen/${id}`), tekst: 'Club: klacht indienen over een ingediend blad' },
+        { rol: 'federatie', href: '/beheer/klachten', tekst: 'Federatie: klachten — blad heropenen of afwijzen' },
+        { rol: 'federatie', href: '/wedstrijdbladen', tekst: 'Federatie: alle wedstrijdbladen, met filter op klacht' },
       ],
     },
     {
@@ -91,6 +109,25 @@ export function draaiboek(ids: DemoIds): Hoofdstuk[] {
         { rol: 'clubbeheer', href: '/club/inschrijving', tekst: 'Club: ploegen inschrijven met voorkeuren' },
         { rol: 'federatie', href: '/beheer/inschrijvingen', tekst: 'Federatie: verwerken en het kalendervoorstel maken' },
         { rol: 'federatie', href: '/beheer/planner', tekst: 'Planner: wedstrijden verslepen, verplaatsingsaanvraag beslissen' },
+      ],
+    },
+    {
+      sleutel: 'seizoen',
+      icoon: '📊',
+      titel: 'Het seizoen van de club',
+      verhaal: 'Op het einde van het seizoen heeft elke club haar eigen cijfers: per ploeg de plaats, punten, doelsaldo en vorm, de topscorers van de club en wie het meest speelde.',
+      stappen: [{ rol: 'clubbeheer', href: '/club/seizoen', tekst: 'Seizoensstatistieken van Sint-Michiels' }],
+    },
+    {
+      sleutel: 'referendum',
+      icoon: '🏅',
+      titel: 'Referendum: speler en speelster van het jaar',
+      verhaal:
+        'Wie genoeg wedstrijden speelde, stemt: 5, 4, 3, 2 en 1 punt voor spelers van andere clubs. Acht spelers per competitie stemden al. De federatie volgt de tussenstand, sluit de ronde en maakt de winnaars bekend — die komen in de erelijst. Met "Referendum resetten" begin je opnieuw.',
+      stappen: [
+        { rol: 'speler', href: '/referendum', tekst: 'De speler stemt (hij speelde genoeg wedstrijden)' },
+        { rol: 'federatie', href: '/federatie/referendum', tekst: 'Federatie: tussenstand, sluiten en bekendmaken' },
+        { rol: 'publiek', href: '/erelijst', tekst: 'De winnaars in de erelijst' },
       ],
     },
     {

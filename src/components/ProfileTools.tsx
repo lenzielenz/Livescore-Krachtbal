@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { verborgenInDemo } from '@/lib/omgeving'
 import { type Profile } from '@/lib/profiles'
 
 // Toont "de rest" van een profiel als een nette strook knoppen, bovenaan de
@@ -8,7 +9,7 @@ import { type Profile } from '@/lib/profiles'
 // tools (bv. het Payload-beheer, accounts) zichtbaar zijn — een niet-admin
 // federatielid krijgt zo geen knoppen die toch op "enkel admin" zouden botsen.
 export function ProfileTools({ profile, currentHref, isAdmin = false }: { profile: Profile; currentHref?: string; isAdmin?: boolean }) {
-  const tools = profile.tools.filter((t) => t.href !== currentHref && (!t.adminOnly || isAdmin))
+  const tools = profile.tools.filter((t) => t.href !== currentHref && (!t.adminOnly || isAdmin) && !verborgenInDemo(t.href))
   if (tools.length === 0) return null
 
   return (

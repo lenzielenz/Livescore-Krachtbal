@@ -639,6 +639,12 @@
 .ops-kap { min-width: 32px; min-height: 32px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--dim); font-weight: 800; cursor: pointer; }
 .ops-kap.on { background: #f6c544; border-color: #f6c544; color: #1a1a1a; }
 .ops-kap:disabled, .ops-nr:disabled { opacity: 0.6; cursor: default; }
+/* Gsm: rugnummer, C, voorstel en ster lieten de naam krimpen tot één letter ("L…"). Bij een
+   gekozen speler krijgt de naam de volle eerste regel; de knoppen schuiven rechts eronder. */
+@media (max-width: 520px) {
+  .wb-row:has(.ops-extra) { flex-wrap: wrap; row-gap: 6px; }
+  .wb-row:has(.ops-extra) .nm { flex: 1 1 calc(100% - 90px); }
+}
 
 /* Blessure doorgeven */
 .bl-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 10px 0 12px; }

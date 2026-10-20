@@ -31,6 +31,18 @@ export function isDemoOmgeving(): boolean {
   return omgeving() === DEMO_OMGEVING
 }
 
+/** Luiken die in de demoruimte niet getoond worden: de demo gaat over de federatieflow, niet over
+ *  het virtuele stadion of het trainingsluik. Hun menu-items en knoppen verdwijnen, en wie er toch
+ *  rechtstreeks naartoe surft, komt terug in het draaiboek (middleware). */
+export const DEMO_VERBORGEN = ['/virtueel', '/beheer/training'] as const
+
+/** Is dit pad (of een link ernaar) in de demoruimte verborgen? Altijd false buiten de demo. */
+export function verborgenInDemo(pad: string): boolean {
+  if (!isDemoOmgeving()) return false
+  const p = pad.split(/[?#]/)[0]
+  return DEMO_VERBORGEN.some((v) => p === v || p.startsWith(`${v}/`))
+}
+
 /** Staat deze instantie vast in federatiemodus (testomgeving of demoruimte)? */
 export function isFederatieOmgeving(): boolean {
   return isTestOmgeving() || isDemoOmgeving()

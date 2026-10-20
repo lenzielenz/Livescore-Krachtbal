@@ -175,6 +175,27 @@ export function Planner({
     router.refresh()
   }
 
+  // Bulk: alle aanvragen waar beide clubs akkoord gaan in één keer goedkeuren (of de gekozen afwijzen).
+  const [aanvraagKeuze, setAanvraagKeuze] = useState<Set<number>>(new Set())
+  const [bulkBezig, setBulkBezig] = useState(false)
+  const bulkAanvragen = async (lijst: VerplaatsingRij[], actie: 'goedkeuren' | 'afwijzen') => {
+    if (!lijst.length || !window.confirm(`${actie === 'goedkeuren' ? 'Goedkeuren' : 'Afwijzen'}: ${lijst.length} ${lijst.length === 1 ? 'aanvraag' : 'aanvragen'}?`)) return
+    setBulkBezig(true)
+    let gelukt = 0
+    const fouten: string[] = []
+    for (const a of lijst) {
+      const res = await fetch(`/api/match/${a.matchId}/verplaatsing`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ actie, id: a.id }) }).catch(() => null)
+      if (res?.ok) gelukt++
+      else fouten.push(`${a.titel}: ${((await res?.json().catch(() => ({}))) as { error?: string } | undefined)?.error ?? 'mislukt'}`)
+    }
+    setBulkBezig(false)
+    setAanvraagKeuze(new Set())
+    toast(fouten.length ? 'info' : 'success', `${gelukt} ${actie === 'goedkeuren' ? 'goedgekeurd' : 'afgewezen'} — iedereen is verwittigd.${fouten.length ? ` Niet gelukt: ${fouten.join('; ')}` : ''}`)
+    router.refresh()
+  }
+  const akkoordBeide = aanvragen.filter((a) => a.status === 'wacht_federatie')
+  const gekozenAanvragen = aanvragen.filter((a) => aanvraagKeuze.has(a.id))
+
   const gekozenGroep = gekozen != null ? groepVan(gekozen) : []
 
   return (
@@ -288,8 +309,39 @@ export function Planner({
         <p className="empty">Geen openstaande aanvragen.</p>
       ) : (
         <div className="ft-lijst">
+          <div className="bt-bulk" style={{ position: 'static' }}>
+            {akkoordBeide.length > 0 && (
+              <button type="button" className="ft-btn ft-primair" disabled={bulkBezig} onClick={() => void bulkAanvragen(akkoordBeide, 'goedkeuren')}>
+                ✅ Alle {akkoordBeide.length} goedkeuren waar beide clubs akkoord zijn
+              </button>
+            )}
+            {gekozenAanvragen.length > 0 && (
+              <>
+                <strong>{gekozenAanvragen.length} gekozen</strong>
+                <button type="button" className="ft-btn ft-primair" disabled={bulkBezig} onClick={() => void bulkAanvragen(gekozenAanvragen, 'goedkeuren')}>Goedkeuren ({gekozenAanvragen.length})</button>
+                <button type="button" className="ft-btn" disabled={bulkBezig} onClick={() => void bulkAanvragen(gekozenAanvragen, 'afwijzen')}>Afwijzen ({gekozenAanvragen.length})</button>
+              </>
+            )}
+            {akkoordBeide.length === 0 && gekozenAanvragen.length === 0 && <span className="ft-stat">Vink aanvragen aan om ze samen te behandelen.</span>}
+          </div>
           {aanvragen.map((a) => (
-            <div key={a.id} className="ft-kaart">
+            <div key={a.id} className={`ft-kaart${aanvraagKeuze.has(a.id) ? ' bt-gekozen' : ''}`}>
+              <label className="bt-alles">
+                <input
+                  type="checkbox"
+                  className="bt-vink"
+                  checked={aanvraagKeuze.has(a.id)}
+                  onChange={() =>
+                    setAanvraagKeuze((s) => {
+                      const n = new Set(s)
+                      if (n.has(a.id)) n.delete(a.id)
+                      else n.add(a.id)
+                      return n
+                    })
+                  }
+                />
+                Kiezen
+              </label>
               <strong>
                 <Link href={`/match/${a.matchId}`}>{a.titel}</Link>
               </strong>

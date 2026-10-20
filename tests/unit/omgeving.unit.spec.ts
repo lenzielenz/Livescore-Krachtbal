@@ -61,4 +61,17 @@ describe('demoruimte', () => {
     expect(demoToegang(codeHash('krachtbal'))).toBe(true)
     delete process.env.DEMO_TOEGANGSCODE
   })
+  it('verbergt virtueel krachtbal en training enkel in de demo', async () => {
+    const { verborgenInDemo } = await import('@/lib/omgeving')
+    process.env.PLATFORM_OMGEVING = 'demo'
+    expect(verborgenInDemo('/virtueel')).toBe(true)
+    expect(verborgenInDemo('/virtueel/stadion?x=1')).toBe(true)
+    expect(verborgenInDemo('/beheer/training/progressie')).toBe(true)
+    expect(verborgenInDemo('/beheer/trainingen')).toBe(false)
+    expect(verborgenInDemo('/club')).toBe(false)
+    process.env.PLATFORM_OMGEVING = 'federatie-test'
+    expect(verborgenInDemo('/virtueel')).toBe(false)
+    delete process.env.PLATFORM_OMGEVING
+    expect(verborgenInDemo('/beheer/training')).toBe(false)
+  })
 })

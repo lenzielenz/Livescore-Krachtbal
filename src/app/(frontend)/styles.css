@@ -1113,8 +1113,10 @@ body.kb-scherm .site-foot { display: none; }
 }
 .club-match-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 .club-match-actions .btn {
   padding: 9px 14px;
@@ -1759,3 +1761,128 @@ body.kb-scherm .site-foot { display: none; }
 
 /* Afgelaste wedstrijd (lib/afgelasting.ts) */
 .match-afgelast { margin: 8px 0 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid #e0a23d; background: rgba(224, 162, 61, 0.12); font-weight: 700; }
+
+/* ── Mijn club: tegelmenu (ClubMenu.tsx) ── */
+.cmenu { display: grid; gap: 14px; margin: 0 0 22px; }
+.cmenu-titel {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.cmenu-titel-wedstrijden { margin-top: 4px; }
+.cmenu-raster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 720px) {
+  .cmenu-raster { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.cmenu-meer > summary { cursor: pointer; font-weight: 700; color: var(--dim); font-size: 0.88rem; padding: 4px 0; }
+.cmenu-meer[open] > summary { margin-bottom: 8px; }
+.cmenu-tegel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: border-color 0.14s ease, color 0.14s ease;
+}
+.cmenu-tegel:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); color: var(--accent); }
+.cmenu-icoon { font-size: 1.25rem; flex: 0 0 auto; }
+.cmenu-label { min-width: 0; overflow-wrap: anywhere; }
+.cmenu-extra { margin: 28px 0 0; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--panel); }
+.cmenu-extra > summary { cursor: pointer; font-weight: 700; color: var(--dim); }
+.cmenu-extra[open] > summary { margin-bottom: 12px; }
+
+
+/* ── Mijn club: clubdashboard (ClubDashboard.tsx) ── */
+.cdash { display: grid; gap: 18px; margin: 0 0 22px; }
+.cdash-kop { display: flex; align-items: center; gap: 14px; }
+.cdash-kop-tekst { display: grid; gap: 2px; min-width: 0; }
+.cdash-naam { margin: 0; font-size: 1.25rem; font-weight: 800; }
+.cdash-sub { font-size: 0.82rem; color: var(--dim); }
+.cdash-cijfers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 900px) { .cdash-cijfers { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.cdash-cijfer {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  text-decoration: none;
+  border-top: 3px solid var(--line);
+}
+.cdash-cijfer:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.cdash-cijfer.toon-goed { border-top-color: #2ec27e; }
+.cdash-cijfer.toon-let-op { border-top-color: #f0b04a; }
+.cdash-cijfer.toon-actie { border-top-color: #ff6b6b; }
+.cdash-waarde { font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.cdash-label { font-size: 0.74rem; color: var(--dim); line-height: 1.25; }
+.cdash-blok { display: grid; gap: 4px; }
+.cdash-blok-kop { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.cdash-knop { color: var(--accent); font-weight: 700; font-size: 0.85rem; text-decoration: none; }
+.cdash-rust { margin: 0; color: #2ec27e; font-weight: 600; font-size: 0.9rem; }
+.cdash-taken { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.cdash-taak {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.cdash-taak:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.cdash-taak-tekst { flex: 1; min-width: 0; }
+.cdash-bol { width: 8px; height: 8px; border-radius: 50%; background: #f0b04a; flex: 0 0 auto; }
+.cdash-taak.dringend .cdash-bol { background: #ff6b6b; }
+.cdash-tabel-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.cdash-tabel { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.cdash-tabel th, .cdash-tabel td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+.cdash-tabel tbody tr:last-child > * { border-bottom: none; }
+.cdash-tabel thead th { font-size: 0.72rem; color: var(--dim); font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+.cdash-tabel .getal { text-align: right; font-variant-numeric: tabular-nums; width: 3.2em; }
+.cdash-tabel td.let-op { color: #f0b04a; font-weight: 700; }
+.cdash-tabel td.actie { color: #ff8a8a; font-weight: 700; }
+.cdash-tabel tbody th { font-weight: 700; }
+.cdash-ploeg { display: block; }
+.cdash-reeks { display: block; font-size: 0.74rem; color: var(--dim); font-weight: 500; }
+
+/* ── Seizoen van de club (/club/seizoen) ── */
+.cs-terug { margin: 0 0 12px; font-size: 0.88rem; }
+.cs-terug a { color: var(--accent); text-decoration: none; font-weight: 700; }
+.cs-cijfers { margin: 16px 0 6px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 900px) { .cs-cijfers { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.cs-titel { margin-top: 22px; }
+.cs-ploegen { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.cs-ploeg { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 12px 14px; display: grid; gap: 10px; }
+.cs-ploeg-kop { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.cs-ploeg-kop h3 { margin: 0; font-size: 1rem; }
+.cs-plaats { font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+.cs-plaats small { font-size: 0.8rem; color: var(--dim); font-weight: 600; }
+.cs-rij { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0; }
+.cs-rij div { display: grid; gap: 2px; }
+.cs-rij dt { font-size: 0.7rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }
+.cs-rij dd { margin: 0; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cs-vorm { display: flex; gap: 4px; }
+.cs-v { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; font-size: 0.72rem; font-weight: 800; color: #0b0f14; }
+.cs-v-W { background: #2ec27e; }
+.cs-v-G { background: #c9ced6; }
+.cs-v-V { background: #ff6b6b; }
+.cs-lijsten { display: grid; gap: 4px 18px; }
+@media (min-width: 900px) { .cs-lijsten { grid-template-columns: 1fr 1fr; } }
+.cs-sterk { font-weight: 800; }

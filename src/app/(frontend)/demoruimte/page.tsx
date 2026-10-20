@@ -9,7 +9,7 @@ import { DEMO_ROLLEN } from '@/lib/demoruimte/rollen'
 import { codeNodig, demoToegang, TOEGANG_COOKIE } from '@/lib/demoruimte/toegang'
 import { isDemoOmgeving } from '@/lib/omgeving'
 import { getPayloadClient } from '@/lib/payload-client'
-import { CodeInvoer, Klaarzetten, RolKiezer } from './DemoBediening'
+import { CodeInvoer, Klaarzetten, ReferendumReset, RolKiezer } from './DemoBediening'
 import './demoruimte.css'
 
 export const dynamic = 'force-dynamic'
@@ -96,6 +96,7 @@ export default async function DemoruimtePage() {
                   <DemoStapKnop key={s.tekst} rol={s.rol} href={klaar ? s.href : null} icoon={icoon(s.rol)} tekst={`${s.tekst} · als ${label(s.rol)}`} />
                 ))}
               </div>
+              {h.sleutel === 'referendum' && klaar && <ReferendumReset />}
             </li>
           ))}
         </ol>

@@ -1,7 +1,7 @@
 import { PDFDocument } from 'pdf-lib'
 import { describe, it, expect } from 'vitest'
 
-import { generateMatchSheetPdf, type MatchSheetPdfData } from '@/lib/submit/pdf'
+import { generateMatchSheetPdf, scorersVan, type MatchSheetPdfData } from '@/lib/submit/pdf'
 
 // Regressie: vroeger crashte de PDF op het ✓-teken (WinAnsi kan U+2713 niet encoderen) en op
 // niet-Latin-1 tekens in (Vlaamse) namen. De generator moet nu altijd een PDF opleveren.
@@ -76,5 +76,42 @@ describe('generateMatchSheetPdf', () => {
     // Niet-bevestigd toont de tegenhanger-regel; mag evenmin crashen.
     const nietBevestigd = await generateMatchSheetPdf({ ...base, eindscoreBevestiging: { akkoord: false } })
     expect(Buffer.from(nietBevestigd.slice(0, 4)).toString()).toBe('%PDF')
+  })
+
+  it('forfait, afwezige kapitein, terrein, status en echte handtekening: geen crash', async () => {
+    // 1x1 transparante PNG als handtekening.
+    const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+    const bytes = await generateMatchSheetPdf({
+      ...base,
+      terrein: 'Sportpark De Kruisbaan',
+      wedstrijdNr: '46',
+      status: { label: 'Ingediend', op: '20 oktober 2026 om 17:59' },
+      forfait: 'KV Gent niet opgedaagd',
+      score: { home: 30, away: 0 },
+      homeLineup: [{ rugnummer: 7, name: 'Jonáš Œuvré', deelgenomen: true, kapitein: true }],
+      handtekeningen: [
+        { label: 'Kapitein thuis', sig: { naam: 'André', akkoord: true, tijdstip: '20 oktober 2026 om 17:50', handtekening: png } },
+        { label: 'Kapitein uit', sig: { nvt: 'Niet van toepassing (forfait)' } },
+        { label: 'Scheidsrechter', sig: { naam: 'Wim', akkoord: true, handtekening: 'data:image/png;base64,kapot' } },
+      ],
+    })
+    expect(Buffer.from(bytes.slice(0, 4)).toString()).toBe('%PDF')
+  })
+})
+
+describe('scorersVan', () => {
+  it('telt punten en rugworpen per speler, meeste eerst', () => {
+    const goals = [
+      { half: 1, gameClock: 1, side: 'home' as const, shirtNumber: 7, playerName: 'An', points: 1 },
+      { half: 1, gameClock: 2, side: 'home' as const, shirtNumber: 9, playerName: 'Bo', points: 2, type: 'rug' as const },
+      { half: 2, gameClock: 3, side: 'home' as const, shirtNumber: 7, playerName: 'An', points: 1 },
+      { half: 2, gameClock: 4, side: 'home' as const, shirtNumber: 9, playerName: 'Bo', points: 1 },
+      { half: 2, gameClock: 5, side: 'away' as const, shirtNumber: 3, playerName: 'Cas', points: 1 },
+    ]
+    expect(scorersVan(goals, 'home')).toEqual([
+      { nr: 9, naam: 'Bo', punten: 3, rug: 1 },
+      { nr: 7, naam: 'An', punten: 2, rug: 0 },
+    ])
+    expect(scorersVan(goals, 'away')).toHaveLength(1)
   })
 })

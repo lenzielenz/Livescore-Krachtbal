@@ -19,6 +19,7 @@ import { AftrapWijzigingen } from './collections/AftrapWijzigingen'
 import { BoeteSoorten, Boetes } from './collections/Boetes'
 import { InschrijvingsRondes, Inschrijvingen } from './collections/Inschrijvingen'
 import { Verplaatsingsaanvragen } from './collections/Verplaatsingsaanvragen'
+import { Klachten } from './collections/Klachten'
 import { MedischeKaartAanvragen } from './collections/MedischeKaartAanvragen'
 import { Meldingen } from './collections/Meldingen'
 import { Matches } from './collections/Matches'
@@ -134,6 +135,7 @@ export default buildConfig({
     InschrijvingsRondes,
     Inschrijvingen,
     Verplaatsingsaanvragen,
+    Klachten,
     MedischeKaartAanvragen,
     Meldingen,
     Matches,

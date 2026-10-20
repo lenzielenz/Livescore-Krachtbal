@@ -73,6 +73,8 @@ export const PROFILES: Profile[] = [
       { href: '/federatie/reglement', label: '📖 Reglement & regels' },
       { href: '/federatie/statistieken', label: '📊 Statistieken' },
       { href: '/beheer/afgelastingen', label: '⛈️ Afgelastingen' },
+      { href: '/wedstrijdbladen', label: '📄 Wedstrijdbladen' },
+      { href: '/beheer/klachten', label: '⚖️ Klachten' },
       { href: '/beheer/boetes', label: '💶 Boetes' },
       { href: '/ongevallen', label: '🚑 Blessures & ongevallen' },
       { href: '/beheer/aantekenaars', label: '✏️ Aantekenaars' },
