@@ -39,6 +39,9 @@ import { MatchScorers } from './MatchScorers'
 import { MatchActivitySummary } from './MatchActivitySummary'
 import { PronostiekWidget } from './PronostiekWidget'
 import { AftrapVerschuiven } from '@/components/AftrapVerschuiven'
+import { Verplaatsing } from '@/components/Verplaatsing'
+import { verplaatsingen } from '@/lib/verplaatsing'
+import { userClubId } from '@/lib/access'
 import { aftrapGeschiedenis, aftrapRechten, volgendeOpTerrein } from '@/lib/aftrap'
 import { PapierenUitslag } from './PapierenUitslag'
 import { ReportResult } from './ReportResult'
@@ -151,6 +154,22 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     matchDoc && me && state.match.status === 'scheduled' && !matchDoc.afgelast
       ? await aftrapRechten(payload, me as never, matchDoc as never)
       : { wijzigen: false, meeschuiven: false, rol: '' }
+  // Verplaatsingsaanvraag (lib/verplaatsing.ts): de staf van beide clubs en de federatie.
+  const mijnClub = me && hasRole(me, 'club-beheerder', 'club-medewerker') ? Number(userClubId(me)) : null
+  const clubVanPloeg = (t: unknown) => {
+    const c = t && typeof t === 'object' ? (t as { club?: unknown }).club : null
+    return Number(c && typeof c === 'object' ? (c as { id?: unknown }).id : c)
+  }
+  const clubsVanMatch = [clubVanPloeg(matchDoc?.homeTeam), clubVanPloeg(matchDoc?.awayTeam)]
+  const verplaatsingRol: 'aanvrager' | 'tegenpartij' | 'federatie' | 'club' | null =
+    state.match.status !== 'scheduled' || !matchDoc ? null : isFederationLevel(me) ? 'federatie' : mijnClub != null && clubsVanMatch.includes(mijnClub) ? 'club' : null
+  const verplaatsingAanvraag = verplaatsingRol ? (await verplaatsingen(payload, { match: { equals: matchId } }, 1))[0] ?? null : null
+  const verplaatsingRolEcht =
+    verplaatsingRol === 'club' && verplaatsingAanvraag
+      ? verplaatsingAanvraag.aanvragerId === mijnClub
+        ? 'aanvrager'
+        : 'tegenpartij'
+      : verplaatsingRol
   const aftrapVolgende = aftrapRecht.meeschuiven && matchDoc ? await volgendeOpTerrein(payload, matchDoc as never) : []
   // Wie de wedstrijd mag rechtzetten (tijdstip + ploegnaam/club): de federatie, en nooit op een
   // analysewedstrijd — die is privé en wordt onder /analyse/beheer beheerd.
@@ -428,19 +447,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           ⏱️ Aftrap verschoven naar {formatTimeBE(aftrapLog[0].naar)} ({aftrapLog[0].redenTekst}).
         </p>
       )}
-      {aftrapRecht.wijzigen && matchDoc?.date && (
-        <AftrapVerschuiven
-          matchId={matchId}
-          aftrap={String(matchDoc.date)}
-          magMeeschuiven={aftrapRecht.meeschuiven}
-          volgende={aftrapVolgende.map((v) => ({
-            id: v.id,
-            titel: `${(v.homeTeam as { name?: string } | null)?.name ?? '?'} – ${(v.awayTeam as { name?: string } | null)?.name ?? '?'}`,
-            aftrap: String(v.date),
-          }))}
-          geschiedenis={aftrapLog}
-        />
-      )}
       {toonAantekenen && !matchDoc?.afgelast && (
         <Link href={`/scorekeeper/${matchId}`} className="match-score-cta">
           <span aria-hidden>✏️</span>
@@ -568,6 +574,28 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             googleUrl={googleAgenda}
           />
         </>
+      )}
+      {/* Wedstrijddag en planning voor wie mag: aftrap verschuiven (lib/aftrap.ts), verplaatsing
+          aanvragen of beantwoorden (lib/verplaatsing.ts). Onder de affiche, zodat de wedstrijd eerst staat. */}
+      {verplaatsingRolEcht && (
+        <Verplaatsing
+          matchId={matchId}
+          aanvraag={verplaatsingAanvraag && !['ingetrokken'].includes(verplaatsingAanvraag.status) ? verplaatsingAanvraag : null}
+          rol={verplaatsingRolEcht}
+        />
+      )}
+      {aftrapRecht.wijzigen && matchDoc?.date && (
+        <AftrapVerschuiven
+          matchId={matchId}
+          aftrap={String(matchDoc.date)}
+          magMeeschuiven={aftrapRecht.meeschuiven}
+          volgende={aftrapVolgende.map((v) => ({
+            id: v.id,
+            titel: `${(v.homeTeam as { name?: string } | null)?.name ?? '?'} – ${(v.awayTeam as { name?: string } | null)?.name ?? '?'}`,
+            aftrap: String(v.date),
+          }))}
+          geschiedenis={aftrapLog}
+        />
       )}
       {/* Weerbericht aan het veld voor de thuislocatie. Het paneel verbergt zichzelf zodra de
           napraatperiode voorbij is (een paar uur na de aftrap) — ook voor afgelopen wedstrijden

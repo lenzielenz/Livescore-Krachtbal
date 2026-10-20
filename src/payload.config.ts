@@ -17,6 +17,8 @@ import { OngevalDocumenten } from './collections/OngevalDocumenten'
 import { AfgelastingFotos, Afgelastingen } from './collections/Afgelastingen'
 import { AftrapWijzigingen } from './collections/AftrapWijzigingen'
 import { BoeteSoorten, Boetes } from './collections/Boetes'
+import { InschrijvingsRondes, Inschrijvingen } from './collections/Inschrijvingen'
+import { Verplaatsingsaanvragen } from './collections/Verplaatsingsaanvragen'
 import { MedischeKaartAanvragen } from './collections/MedischeKaartAanvragen'
 import { Meldingen } from './collections/Meldingen'
 import { Matches } from './collections/Matches'
@@ -129,6 +131,9 @@ export default buildConfig({
     AftrapWijzigingen,
     BoeteSoorten,
     Boetes,
+    InschrijvingsRondes,
+    Inschrijvingen,
+    Verplaatsingsaanvragen,
     MedischeKaartAanvragen,
     Meldingen,
     Matches,

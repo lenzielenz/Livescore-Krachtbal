@@ -21,7 +21,10 @@ const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 
 /** Alle collecties met een verwijzing naar clubs, met het veld waarin die zit. */
-const VERWIJZINGEN: { collection: 'players' | 'trainingen' | 'oefeningen' | 'sessiesjablonen' | 'news' | 'users' | 'tournaments'; veld: string }[] = [
+const VERWIJZINGEN: {
+  collection: 'players' | 'trainingen' | 'oefeningen' | 'sessiesjablonen' | 'news' | 'users' | 'tournaments' | 'boetes' | 'inschrijvingen' | 'accidents' | 'verplaatsingsaanvragen'
+  veld: string
+}[] = [
   { collection: 'players', veld: 'club' },
   { collection: 'trainingen', veld: 'club' },
   { collection: 'oefeningen', veld: 'club' },
@@ -29,6 +32,13 @@ const VERWIJZINGEN: { collection: 'players' | 'trainingen' | 'oefeningen' | 'ses
   { collection: 'news', veld: 'club' },
   { collection: 'users', veld: 'club' },
   { collection: 'tournaments', veld: 'hostClub' },
+  // Boetes en inschrijvingen zijn verplicht aan een club gekoppeld: zonder verhuizen blokkeren ze
+  // het opruimen van de lege club (en een boete hoort bij de vereniging, niet bij het logo).
+  { collection: 'boetes', veld: 'club' },
+  { collection: 'inschrijvingen', veld: 'club' },
+  { collection: 'accidents', veld: 'club' },
+  { collection: 'verplaatsingsaanvragen', veld: 'aanvrager' },
+  { collection: 'verplaatsingsaanvragen', veld: 'tegenpartij' },
 ]
 
 export async function POST(req: Request) {

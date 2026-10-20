@@ -34,6 +34,12 @@ const COMPETITIE: Where[] = [{ analyseOnly: { not_equals: true } }, { isDemo: { 
 
 export async function federatieTaken(payload: Payload, nu: Date = new Date()): Promise<Taak[]> {
   const t = nu.getTime()
+  const verplaatsingenOpen = await payload
+    .count({ collection: 'verplaatsingsaanvragen', where: { status: { equals: 'wacht_federatie' } }, overrideAccess: true })
+    .catch(() => ({ totalDocs: 0 }))
+  const inschrijvingenOpen = await payload
+    .count({ collection: 'inschrijvingen', where: { status: { equals: 'ingediend' } }, overrideAccess: true })
+    .catch(() => ({ totalDocs: 0 }))
   const boetesOpen = await payload
     .count({ collection: 'boetes', where: { status: { in: ['voorstel', 'betwist', 'betaling_gemeld'] } }, overrideAccess: true })
     .catch(() => ({ totalDocs: 0 }))
@@ -133,6 +139,28 @@ export async function federatieTaken(payload: Payload, nu: Date = new Date()): P
       href: '/federatie/reglement',
       actie: 'Bekijken',
       items: eindItems.slice(0, 4),
+    },
+    {
+      sleutel: 'verplaatsingen',
+      icoon: '🔁',
+      titel: 'Verplaatsingen te beslissen',
+      uitleg: 'Een club vroeg een andere datum en de tegenpartij ging akkoord.',
+      aantal: verplaatsingenOpen.totalDocs,
+      dringend: kleur(verplaatsingenOpen.totalDocs, false),
+      href: '/beheer/planner',
+      actie: 'Beslissen',
+      items: [],
+    },
+    {
+      sleutel: 'inschrijvingen',
+      icoon: '📝',
+      titel: 'Inschrijvingen te verwerken',
+      uitleg: 'Door de club ingediend: verwerken zet de ploegen klaar voor de kalender.',
+      aantal: inschrijvingenOpen.totalDocs,
+      dringend: kleur(inschrijvingenOpen.totalDocs, false),
+      href: '/beheer/inschrijvingen',
+      actie: 'Verwerken',
+      items: [],
     },
     {
       sleutel: 'boetes',

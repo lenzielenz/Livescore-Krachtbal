@@ -129,3 +129,10 @@ export function brusselsDayBoundsUtc(dateStr: string): { start: string; end: str
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000)
   return { start: start.toISOString(), end: end.toISOString() }
 }
+
+/** De zaterdag (YYYY-MM-DD) van het weekend waarin deze Belgische datum valt; zondag → de dag ervoor. */
+export function zaterdagVan(datum: string): string {
+  const [y, m, d] = datum.slice(0, 10).split('-').map(Number)
+  const dag = brusselsParts(new Date(Date.UTC(y, m - 1, d, 12))).weekdayMon0 // 0 = maandag
+  return shiftDateStr(datum.slice(0, 10), dag === 6 ? -1 : 5 - dag)
+}

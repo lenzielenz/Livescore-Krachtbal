@@ -147,6 +147,9 @@ Daaromheen, per feature-cluster:
 | **Training & voeding** | `/training`, `/opstelling` | `training-plan`, `training-metrics`, `nutrition-plan`, `calorie-tracker`, `food-database`, `gameplan` |
 | **Engagement** | `/hub`, `/pronostiek`, `/fans`, `/profiel`, `/wrapped`, `/superster`, `/recap` | `badges`, `fan-score`, `pronostiek-*`, `prediction-score`, `scorecard`, `mvp-vote`, `tribune`, `checkins`, `weekly-recap`, `team-of-the-week`, `match-report` |
 | **Clubs & federatie** | `/clubs`, `/club`, `/federatie`, `/scheidsrechter`, `/vergoedingen`, `/bekerfinale` | `club-colors`, `reeksen`, `reeks-standings`, `referee-credentials`, `vergoeding`, `sanctions` |
+| **Wedstrijddag** | `/scheidsrechter/[id]`, `/match/[id]`, `/scorekeeper/[id]` | `aftrap` (aftrap verschuiven + meeschuiven), `afgelasting`, `blessure`, `use-action-queue` (wachtrij, hartslag), `score-trust` (overnemen), `submit/pdf-noodblad` |
+| **Planning** | `/beheer/inschrijvingen`, `/club/inschrijving`, `/beheer/planner`, `/beheer/kalender` | `inschrijving`, `kalender-planner` (Berger + koppels + lokale zoektocht, puur), `kalender-plan-server`, `kalender-generator`, `verplaatsing` |
+| **Boetes & kosten** | `/beheer/boetes`, `/club/boetes` | `boetes` (voorstellen, opleggen, betwisten, scheidsrechterskosten) |
 | **Nieuws & info** | `/nieuws`, `/reglement`, `/uitleg`, `/demo`, `/prijzen` | `reglement`, `demo`, `krachtbal-quotes` |
 
 ## Live-laag (waarom de SSE-hub bestaat)

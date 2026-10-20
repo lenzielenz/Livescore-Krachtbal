@@ -93,7 +93,7 @@ export async function volgendeOpTerrein(payload: Payload, m: Wedstrijd): Promise
 }
 
 /** Iedereen die het moet weten: staf van beide clubs, de scheidsrechter(s), de spelers op de selectie. */
-async function betrokkenen(payload: Payload, m: Wedstrijd): Promise<number[]> {
+export async function betrokkenen(payload: Payload, m: { id: number; homeTeam?: unknown; awayTeam?: unknown }): Promise<number[]> {
   const staf = (await Promise.all(clubsVan(m).map((c) => clubStaf(payload, c)))).flat()
   const sheet = (await payload.find({ collection: 'matchsheets', where: { match: { equals: m.id } }, depth: 0, limit: 1, overrideAccess: true })).docs[0] as
     | { assignedReferee?: unknown; officials?: unknown }

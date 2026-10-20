@@ -87,7 +87,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
     // scheidsrechter, of anders het ingelogde account. Tekent een kapitein op het toestel van de
     // scheidsrechter, dan staat zíjn naam op het blad, niet die van de scheidsrechter.
     const kap = who === 'kapiteinThuis' ? match.homeCaptain : who === 'kapiteinUit' ? match.awayCaptain : null
-    const ref = who === 'scheidsrechter' ? sheet.assignedReferee : null
+    // Tekent de backup-scheidsrechter (de toegewezen was er niet), dan staat zíjn naam op het blad en
+    // krijgt hij de vergoeding (geflotenDoor → kwitantie).
+    const relIdVan = (v: unknown) => (v && typeof v === 'object' ? Number((v as { id?: unknown }).id) : v == null ? null : Number(v))
+    const eigenOfficial = relIdVan((user as { official?: unknown }).official)
+    const floot =
+      who === 'scheidsrechter' && eigenOfficial != null && [relIdVan(sheet.assignedReferee), relIdVan(sheet.backupReferee)].includes(eigenOfficial)
+        ? eigenOfficial
+        : null
+    const ref = who === 'scheidsrechter' ? (floot != null && floot === relIdVan(sheet.backupReferee) ? sheet.backupReferee : sheet.assignedReferee) : null
     const vooraf =
       (kap && typeof kap === 'object' ? String((kap as { name?: unknown }).name ?? '') : '') ||
       (ref && typeof ref === 'object' ? String((ref as { name?: unknown }).name ?? '') : '')
@@ -105,6 +113,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
           akkoord: Boolean(body.akkoord),
           tijdstip: body.akkoord ? new Date().toISOString() : null,
         },
+        ...(floot != null && body.akkoord ? { geflotenDoor: floot } : {}),
       },
       overrideAccess: true,
     })

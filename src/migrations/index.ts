@@ -144,6 +144,8 @@ import * as migration_20261020_120000_meldingen_medische_kaart from './20261020_
 import * as migration_20261020_140000_reglement_regels from './20261020_140000_reglement_regels'
 import * as migration_20261020_160000_ouders from './20261020_160000_ouders'
 import * as migration_20261020_180000_wedstrijddag_blessure_afgelasting from './20261020_180000_wedstrijddag_blessure_afgelasting'
+import * as migration_20261020_200000_aftrap_boetes from './20261020_200000_aftrap_boetes'
+import * as migration_20261020_220000_inschrijving_planning from './20261020_220000_inschrijving_planning'
 
 export const migrations = [
   {
@@ -870,5 +872,15 @@ export const migrations = [
     up: migration_20261020_180000_wedstrijddag_blessure_afgelasting.up,
     down: migration_20261020_180000_wedstrijddag_blessure_afgelasting.down,
     name: '20261020_180000_wedstrijddag_blessure_afgelasting',
+  },
+  {
+    up: migration_20261020_200000_aftrap_boetes.up,
+    down: migration_20261020_200000_aftrap_boetes.down,
+    name: '20261020_200000_aftrap_boetes',
+  },
+  {
+    up: migration_20261020_220000_inschrijving_planning.up,
+    down: migration_20261020_220000_inschrijving_planning.down,
+    name: '20261020_220000_inschrijving_planning',
   },
 ];

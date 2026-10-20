@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 
 import { brusselsParts, brusselsWallUtc, formatTimeBE } from '@/lib/datetime'
 
@@ -45,7 +45,7 @@ export function AftrapVerschuiven({
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null)
 
   const basis = new Date(aftrap)
-  const nieuw = useMemo(() => new Date(basis.getTime() + deltaMin * 60_000), [aftrap, deltaMin]) // eslint-disable-line react-hooks/exhaustive-deps
+  const nieuw = new Date(basis.getTime() + deltaMin * 60_000)
   const vroeger = reden === 'vervroegen'
   const stappen = vroeger ? [-60, -45, -30, -15] : [15, 30, 45, 60]
 

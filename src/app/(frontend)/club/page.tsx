@@ -288,6 +288,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
         <p className="myteams-focusbar">
           <Link href="/club/leden" className="myteams-link">🪪 Leden &amp; registratie — wie mag spelen →</Link>
           <Link href="/club/boetes" className="myteams-link">💶 Boetes &amp; scheidsrechterskosten →</Link>
+          <Link href="/club/inschrijving" className="myteams-link">📝 Inschrijving ploegen nieuw seizoen →</Link>
         </p>
       )}
       {isBeheerder && (

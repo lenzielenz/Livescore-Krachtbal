@@ -38,7 +38,14 @@ export async function buildKwitantieData(
   const official = await payload.findByID({ collection: 'officials', id: officialId, depth: 0 }).catch(() => null)
   const sheets = await payload.find({
     collection: 'matchsheets',
-    where: { assignedReferee: { equals: Number(officialId) } },
+    // De wedstrijden die hij effectief floot: als backup (geflotenDoor), of als toegewezen
+    // scheidsrechter zolang er geen ander als "gefloten door" staat.
+    where: {
+      or: [
+        { geflotenDoor: { equals: Number(officialId) } },
+        { and: [{ assignedReferee: { equals: Number(officialId) } }, { geflotenDoor: { exists: false } }] },
+      ],
+    },
     depth: 2,
     limit: 500,
   })

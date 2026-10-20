@@ -1,0 +1,26 @@
+/* Planner (Planner.tsx): weekends als kolommen, horizontaal scrollen; kaarten groot genoeg voor een vinger. */
+.pl { display: flex; flex-direction: column; gap: 10px; }
+.pl-balk { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; position: sticky; top: 0; z-index: 5; padding: 8px 0; background: var(--bg); }
+.pl-balk select { min-height: 40px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--txt); padding: 0 8px; }
+.pl-samen { display: inline-flex; gap: 6px; align-items: center; font-size: 0.85rem; }
+.pl-stat { font-size: 0.85rem; color: var(--dim); }
+.pl-hint { margin: 0; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 14%, transparent); font-size: 0.9rem; }
+.pl-link { border: 0; background: none; color: var(--accent); font-weight: 700; cursor: pointer; padding: 0; }
+.pl-bord { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 12px; align-items: flex-start; }
+.pl-kolom { flex: 0 0 230px; min-height: 160px; display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); }
+.pl-kan { outline: 2px dashed var(--accent); cursor: pointer; }
+.pl-niet { opacity: 0.45; cursor: not-allowed; }
+.pl-kop { display: flex; justify-content: space-between; font-size: 0.86rem; position: sticky; top: 0; }
+.pl-vrij, .pl-reden, .pl-zacht { margin: 0; font-size: 0.76rem; font-weight: 700; }
+.pl-vrij, .pl-reden { color: #e0533d; }
+.pl-zacht { color: #e0a23d; }
+.pl-kaart { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 8px 10px; min-height: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--txt); cursor: grab; font-size: 0.8rem; }
+.pl-kaart:active { cursor: grabbing; }
+.pl-r1 { color: var(--dim); font-size: 0.74rem; }
+.pl-r2 { font-weight: 700; }
+.pl-gekozen { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.pl-botst { border-color: #e0533d; }
+.pl-let { border-color: #e0a23d; }
+.pl-nieuw { background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
+.pl-rood { color: #e0533d; font-weight: 700; font-size: 0.74rem; }
+.pl-oranje { color: #c98a1f; font-size: 0.74rem; }

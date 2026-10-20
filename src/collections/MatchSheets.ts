@@ -157,6 +157,15 @@ export const MatchSheets: CollectionConfig = {
           admin: { description: 'Mag de wedstrijd óók vrijgeven (met dezelfde vrijgavecode) als de toegewezen SR afwezig is.' },
         },
         {
+          // Wie floot effectief: gezet bij het aftekenen door de scheidsrechter (de toegewezen óf de
+          // backup). De kwitantie telt de wedstrijd voor díe official (lib/vergoeding-data.ts).
+          name: 'geflotenDoor',
+          label: 'Gefloten door',
+          type: 'relationship',
+          relationTo: 'officials',
+          admin: { readOnly: true, description: 'Gezet bij het aftekenen. Leeg = de toegewezen scheidsrechter.' },
+        },
+        {
           name: 'assignedLinesman',
           label: 'Toegewezen grensrechter',
           type: 'relationship',

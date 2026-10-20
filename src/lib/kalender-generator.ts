@@ -6,8 +6,9 @@
 // De terugronde is de heenronde met thuis en uit omgedraaid.
 
 import { brusselsWallUtc, shiftDateStr } from './datetime'
+import { leesThuis } from './kalender-planner'
 
-export type KalenderPloeg = { id: number; naam: string; thuisUur?: string | null }
+export type KalenderPloeg = { id: number; naam: string; thuisUur?: string | null; thuisdag?: 'za' | 'zo' | null }
 export type KalenderWedstrijd = { speeldag: number; datum: string; thuis: number; uit: number; aftrapUtc: string }
 export type KalenderOpties = {
   /** Eerste speeldag, YYYY-MM-DD (Brusselse datum). */
@@ -79,10 +80,15 @@ export function maakKalender(ploegen: KalenderPloeg[], o: KalenderOpties): Kalen
     let veiligheid = 0
     while (vrij.has(datum) && veiligheid++ < 200) datum = shiftDateStr(datum, interval)
     for (const [thuis, tegen] of ronde) {
-      const uur = perId.get(thuis)?.thuisUur?.trim()
-      const [hh, mm] = (uur && UUR.test(uur) ? uur : standaard).split(':').map(Number)
-      const [y, m, d] = datum.split('-').map(Number)
-      uit.push({ speeldag: r + 1, datum, thuis, uit: tegen, aftrapUtc: brusselsWallUtc(y, m, d, hh, mm).toISOString() })
+      // "16:00", maar ook "za 16:00" / "zo 11:00" zoals de reeksindeling het thuisuur bewaart: de dag
+      // telt dan mee (zondag = de dag na de speeldag, als die op zaterdag valt).
+      const p = perId.get(thuis)
+      const { dag, uur } = leesThuis({ thuisdag: p?.thuisdag ?? null, thuisUur: p?.thuisUur ?? null }, { dag: 'za', uur: standaard })
+      const [hh, mm] = uur.split(':').map(Number)
+      const isZaterdag = new Date(`${datum}T12:00:00Z`).getUTCDay() === 6
+      const speeldatum = dag === 'zo' && isZaterdag ? shiftDateStr(datum, 1) : datum
+      const [y, m, d] = speeldatum.split('-').map(Number)
+      uit.push({ speeldag: r + 1, datum: speeldatum, thuis, uit: tegen, aftrapUtc: brusselsWallUtc(y, m, d, hh, mm).toISOString() })
     }
     datum = shiftDateStr(datum, interval)
   })

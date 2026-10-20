@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     if (ploegen.docs.length < 2) return Response.json({ error: 'Deze reeks heeft minder dan twee ploegen.' }, { status: 400 })
 
     const kalender = maakKalender(
-      ploegen.docs.map((p) => ({ id: Number(p.id), naam: String(p.name ?? ''), thuisUur: (p.thuisUur as string | null) ?? null })),
+      ploegen.docs.map((p) => ({ id: Number(p.id), naam: String(p.name ?? ''), thuisUur: (p.thuisUur as string | null) ?? null, thuisdag: ((p as { thuisdag?: 'za' | 'zo' | null }).thuisdag ?? null) })),
       {
         start: String(body?.start ?? ''),
         interval: Number(body?.interval) || 7,
