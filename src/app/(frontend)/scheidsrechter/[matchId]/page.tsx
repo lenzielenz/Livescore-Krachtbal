@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { FlowNietNodig } from '@/components/FlowNietNodig'
 import { MatchDayNav } from '@/components/MatchDayNav'
 import { SiteHeader } from '@/components/SiteHeader'
-import { isFederationLevel } from '@/lib/access'
+import { hasRole, isFederationLevel } from '@/lib/access'
 import { buildMatchState } from '@/lib/match-engine'
 import { countLineup, LINEUP_MIN } from '@/lib/match-readiness'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
@@ -12,6 +12,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { vereisteOfficialsTekst, type Reeks } from '@/lib/reeksen'
 import { isSupportersMode } from '@/lib/score-mode'
+import { DeelnameBevestigen, type DeelnameKant } from './DeelnameBevestigen'
 import { RefereePanel } from './RefereePanel'
 import '../../wedstrijdblad.css'
 import { formatDateTimeBE } from '@/lib/datetime'
@@ -85,6 +86,11 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
   const isFederation = isFederationLevel(user)
   const backupRef = sheet?.backupReferee as { name?: string } | number | null | undefined
   const backupRefereeName = backupRef && typeof backupRef === 'object' ? (backupRef.name ?? null) : null
+
+  const deelnameKanten: DeelnameKant[] = [
+    { side: 'home', teamNaam: liveState?.teams.home.name ?? 'Thuis', spelers: deelnameSpelers(sheet?.homeLineup as DeelnameRij[]) },
+    { side: 'away', teamNaam: liveState?.teams.away.name ?? 'Uit', spelers: deelnameSpelers(sheet?.awayLineup as DeelnameRij[]) },
+  ]
 
   const releaseAt = new Date(new Date(match.date as string).getTime() - releaseMinutes * 60_000)
 
@@ -160,9 +166,25 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
             : null
         }
       />
+
+      {liveState?.match.status === 'finished' && (isFederation || hasRole(user, 'scheidsrechter')) && (
+        <DeelnameBevestigen matchId={matchId} kanten={deelnameKanten} vergrendeld={sheet?.status === 'ingediend'} />
+      )}
       </div>
     </>
   )
+}
+
+type DeelnameRij = { player?: { id?: number; name?: string } | number; rugnummer?: number | null; deelgenomen?: boolean | null }
+function deelnameSpelers(rows: DeelnameRij[] | undefined): DeelnameKant['spelers'] {
+  return (rows ?? [])
+    .map((r) => ({
+      id: typeof r.player === 'object' ? Number(r.player?.id) : Number(r.player),
+      naam: typeof r.player === 'object' ? (r.player?.name ?? '—') : `#${r.player}`,
+      rugnummer: r.rugnummer ?? null,
+      deelgenomen: Boolean(r.deelgenomen),
+    }))
+    .filter((s) => Number.isFinite(s.id))
 }
 
 function LineupView({

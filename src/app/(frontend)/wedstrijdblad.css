@@ -628,3 +628,6 @@
   padding: 3px 0;
 }
 .rf-follow-item input { accent-color: var(--accent); }
+/* ⭐ favoriet per speler in de opstelling (staat dan bovenaan) */
+.ops-fav { margin-left: auto; min-width: 36px; min-height: 36px; border: none; background: transparent; color: var(--dim); font-size: 1.2rem; cursor: pointer; line-height: 1; }
+.ops-fav.on { color: #f6c544; }

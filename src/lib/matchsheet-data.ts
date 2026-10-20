@@ -220,12 +220,17 @@ export async function buildRoster(
     suggested: suggested.has(p.id as number),
   }))
 
-  // Volgorde: geblokkeerde leden onderaan; daarboven de meest gebruikte spelers eerst (vlotter voor
-  // de coach), bij gelijk gebruik op rugnummer.
+  // Volgorde: geblokkeerde leden onderaan; daarboven de favorieten, dan de meest gebruikte spelers
+  // (vlotter voor de coach), bij gelijk gebruik op rugnummer.
+  const favSet = new Set(favorites)
   players.sort((a, b) => {
     const ba = a.selectability.level === 'block' ? 1 : 0
     const bb = b.selectability.level === 'block' ? 1 : 0
     if (ba !== bb) return ba - bb
+    // ⭐ Favorieten van de coach staan altijd bovenaan.
+    const fa = favSet.has(a.id) ? 0 : 1
+    const fb = favSet.has(b.id) ? 0 : 1
+    if (fa !== fb) return fa - fb
     const ua = usage.get(a.id) ?? 0
     const ub = usage.get(b.id) ?? 0
     if (ua !== ub) return ub - ua

@@ -1,5 +1,6 @@
 import type { CollectionConfig, FieldHook } from 'payload'
 
+import { CLUB_FUNCTIE_OPTIONS } from '../lib/club-functies'
 import { fieldIsFederation, ROLE_OPTIONS, hasRole, isAdmin, isFederationLevel } from '../lib/access'
 
 /** Rollen die rechten binnen één club geven — wie ze draagt, wisselt niet zelf van club. */
@@ -197,6 +198,28 @@ export const Users: CollectionConfig = {
       admin: {
         description: 'Eigen ploeg binnen de gekozen club — highlight haar wedstrijden op het live-bord. De gebruiker stelt dit zelf in via "Mijn profiel".',
       },
+    },
+    {
+      // Functies die de CLUB toekent (lib/club-functies.ts) — anders dan `functie` hierboven, die de
+      // gebruiker zelf invult en nergens rechten geeft. Meerdere tegelijk (een speler kan ook coach
+      // zijn). Coach/trainer krijgen rechten op de ploegen in `functieTeams`; de
+      // jeugdverantwoordelijke op alle jeugdploegen van de club. Enkel via /api/club/team (de
+      // club-beheerder van de eigen club) of door de federatie.
+      name: 'clubFuncties',
+      label: 'Functies in de club (toegekend)',
+      type: 'select',
+      hasMany: true,
+      options: [...CLUB_FUNCTIE_OPTIONS],
+      access: { update: fieldIsFederation, create: fieldIsFederation },
+      admin: { description: 'Toegekend door de club-beheerder (Clubteam) of de federatie.' },
+    },
+    {
+      name: 'functieTeams',
+      label: 'Ploegen van deze coach/trainer',
+      type: 'relationship',
+      relationTo: 'teams',
+      hasMany: true,
+      access: { update: fieldIsFederation, create: fieldIsFederation },
     },
     {
       // Voor een supporter zonder eigen club (bv. "gewoon fan" of nog geen lid ergens): welke

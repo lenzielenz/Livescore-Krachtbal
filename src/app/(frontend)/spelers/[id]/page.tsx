@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 
 import { BandChart } from '@/components/analytics/BandChart'
 import { SiteHeader } from '@/components/SiteHeader'
+import { deelnameVanSpeler } from '@/lib/speler-deelname'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildPlayerDanger } from '@/lib/player-danger'
@@ -57,13 +58,14 @@ export default async function SpelerProfiel({ params }: Params) {
   const reeksCode = team?.reeks ? resolveCompetitieReeks(team.reeks) : null
   const payload = await getPayloadClient()
 
-  const [seasonPlayers, danger] = await Promise.all([
+  const [seasonPlayers, danger, deelname] = await Promise.all([
     reeksCode
       ? buildSeasonStats(payload, reeksCode, null, competitionWhere()).catch(() => [])
       : Promise.resolve([]),
     reeksCode
       ? buildPlayerDanger(payload, playerId, reeksCode, null, competitionWhere()).catch(() => null)
       : Promise.resolve(null),
+    deelnameVanSpeler(payload, playerId).catch(() => null),
   ])
   const stat = seasonPlayers.find((s) => s.playerId === playerId) ?? null
 
@@ -82,6 +84,14 @@ export default async function SpelerProfiel({ params }: Params) {
             </p>
           </div>
         </div>
+
+        {/* Selecties van de coach en wat de scheidsrechter na de wedstrijd bevestigde. */}
+        {deelname && deelname.geselecteerd > 0 ? (
+          <section className="ps-kpis">
+            <Kpi label="Geselecteerd" value={deelname.geselecteerd} />
+            <Kpi label="Gespeeld (bevestigd)" value={deelname.gespeeld} />
+          </section>
+        ) : null}
 
         {!stat ? (
           <p className="an-empty">Nog geen wedstrijdstatistieken voor deze speler.</p>

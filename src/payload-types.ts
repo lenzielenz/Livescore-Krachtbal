@@ -331,6 +331,11 @@ export interface User {
    */
   team?: (number | null) | Team;
   /**
+   * Toegekend door de club-beheerder (Clubteam) of de federatie.
+   */
+  clubFuncties?: ('jeugdverantwoordelijke' | 'trainer' | 'coach' | 'speler' | 'lid')[] | null;
+  functieTeams?: (number | Team)[] | null;
+  /**
    * Clubs die deze supporter volgt i.p.v. een eigen club te kiezen. De gebruiker beheert dit zelf.
    */
   followedClubs?: (number | Club)[] | null;
@@ -3169,6 +3174,8 @@ export interface UsersSelect<T extends boolean = true> {
   club?: T;
   functie?: T;
   team?: T;
+  clubFuncties?: T;
+  functieTeams?: T;
   followedClubs?: T;
   photo?: T;
   photoZoom?: T;

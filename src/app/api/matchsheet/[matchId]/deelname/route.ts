@@ -46,8 +46,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
       return out as LineupRow[]
     }
 
-    const home = Array.isArray(body.home) ? body.home.map(Number) : []
-    const away = Array.isArray(body.away) ? body.away.map(Number) : []
+    const home = Array.isArray(body.home) ? body.home.map(Number).filter(Number.isFinite) : []
+    const away = Array.isArray(body.away) ? body.away.map(Number).filter(Number.isFinite) : []
+
+    // Enkel spelers van de ploeg aan die kant: anders kon een vreemde speler "gespeeld" krijgen
+    // (en daarmee bv. meetellen voor het referendum).
+    const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
+    const teamVan = (v: unknown) => (v && typeof v === 'object' ? (v as { id: number }).id : (v as number | null))
+    for (const [ids, team] of [[home, teamVan(match?.homeTeam)], [away, teamVan(match?.awayTeam)]] as const) {
+      if (!ids.length) continue
+      const ok = await payload.find({ collection: 'players', where: { and: [{ id: { in: ids } }, { team: { equals: team } }] }, depth: 0, limit: ids.length })
+      if (team == null || ok.docs.length !== new Set(ids).size) {
+        return Response.json({ error: 'Een aangeduide speler hoort niet bij die ploeg.' }, { status: 400 })
+      }
+    }
 
     const updated = await payload.update({
       collection: 'matchsheets',

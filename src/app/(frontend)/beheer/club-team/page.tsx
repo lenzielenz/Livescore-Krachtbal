@@ -5,7 +5,7 @@ import { hasRole, userClubId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
-import { ClubTeamManager, type Member, type PlayerOption, type TeamRole } from './ClubTeamManager'
+import { ClubTeamManager, type Member, type PlayerOption, type TeamOption, type TeamRole } from './ClubTeamManager'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Clubteam — Krachtbal Live' }
@@ -59,7 +59,12 @@ export default async function ClubTeamPage() {
 
   const payload = await getPayloadClient()
   const meId = Number((me as { id: number }).id)
-  const [usersRes, playersRes] = await Promise.all([
+  const relIds = (v: unknown): number[] => (Array.isArray(v) ? v.map(relId).filter((x): x is number => x != null) : [])
+  const functiesVan = (u: unknown): string[] => {
+    const f = (u as { clubFuncties?: unknown }).clubFuncties
+    return Array.isArray(f) ? f.map(String) : []
+  }
+  const [usersRes, playersRes, teamsRes] = await Promise.all([
     payload
       .find({ collection: 'users', where: { club: { equals: myClub } }, sort: 'email', depth: 0, limit: 1000 })
       .catch(() => ({ docs: [] as Record<string, unknown>[] })),
@@ -72,7 +77,12 @@ export default async function ClubTeamPage() {
         limit: 2000,
       })
       .catch(() => ({ docs: [] as Record<string, unknown>[] })),
+    payload
+      .find({ collection: 'teams', where: { and: [{ club: { equals: myClub } }, competitionWhere()] }, sort: 'name', depth: 0, limit: 200 })
+      .catch(() => ({ docs: [] as Record<string, unknown>[] })),
   ])
+  const teams: TeamOption[] = teamsRes.docs.map((t) => ({ id: Number(t.id), naam: String((t as { name?: unknown }).name ?? '') }))
+  const ikDoc = usersRes.docs.find((u) => Number(u.id) === meId) ?? me
 
   const players: PlayerOption[] = playersRes.docs.map((p) => ({
     id: p.id as number,
@@ -87,9 +97,11 @@ export default async function ClubTeamPage() {
       email: (u as { email?: string }).email ?? '',
       roles: Array.isArray((u as { roles?: unknown }).roles) ? (u as { roles: string[] }).roles : [],
       playerId: relId((u as { player?: unknown }).player),
+      functies: functiesVan(u),
+      functieTeams: relIds((u as { functieTeams?: unknown }).functieTeams),
     }))
     .filter((u) => u.id !== meId && !u.roles.some((r) => PROTECTED.includes(r)))
-    .map((u) => ({ id: u.id, name: u.name, email: u.email, role: roleOf(u.roles), playerId: u.playerId }))
+    .map((u) => ({ id: u.id, name: u.name, email: u.email, role: roleOf(u.roles), playerId: u.playerId, functies: u.functies, functieTeams: u.functieTeams }))
 
   return (
     <>
@@ -99,10 +111,17 @@ export default async function ClubTeamPage() {
         <p className="empty" style={{ marginBottom: 16 }}>
           Geef leden van je club een rol. <strong>Club-medewerker</strong> mag aantekenen, opstellingen
           zetten en spelers &amp; training beheren; <strong>lid van de club</strong> kan z'n eigen
-          training bekijken. Koppel een lid aan z'n speler-dossier zodat het lid enkel z'n eigen
+          training bekijken. Daarnaast kan iemand <strong>functies</strong> hebben (meerdere tegelijk): een{' '}
+          <strong>coach</strong> zet de opstelling van zijn ploegen, een <strong>trainer</strong> de training, de{' '}
+          <strong>jeugdverantwoordelijke</strong> beide voor alle jeugdploegen. Koppel een lid aan z'n speler-dossier zodat het lid enkel z'n eigen
           progressie/aanwezigheid ziet. Scheidsrechters en federatie-accounts beheert de federatie.
         </p>
-        <ClubTeamManager members={members} players={players} />
+        <ClubTeamManager
+          members={members}
+          players={players}
+          teams={teams}
+          ik={{ id: meId, functies: functiesVan(ikDoc), functieTeams: relIds((ikDoc as { functieTeams?: unknown }).functieTeams) }}
+        />
       </div>
     </>
   )

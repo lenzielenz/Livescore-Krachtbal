@@ -1,5 +1,6 @@
-import { hasRole, isFederationLevel, userClubId, userRoles } from '@/lib/access'
-import { authUser, matchSideClubs } from '@/lib/api-auth'
+import { hasRole, isFederationLevel, userRoles } from '@/lib/access'
+import { authUser } from '@/lib/api-auth'
+import { magOpstellingVoor } from '@/lib/club-functies'
 import { clubsMayEditLineup, type MatchSheetStatus } from '@/lib/matchsheet-workflow'
 import { buildRoster, getOrCreateMatchSheet, type Side } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -19,16 +20,13 @@ type User = Awaited<ReturnType<typeof authUser>>
 async function geenToegang(payload: Payload, user: User, matchId: string, side: Side): Promise<Response | null> {
   if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
   if (isFederationLevel(user) || hasRole(user, 'scheidsrechter')) return null
-  if (!hasRole(user, 'club-beheerder', 'club-medewerker')) {
-    return Response.json({ error: 'Geen rechten voor de opstelling.' }, { status: 403 })
-  }
-  const clubs = await matchSideClubs(payload, matchId)
-  const need = side === 'home' ? clubs.home : clubs.away
-  const own = userClubId(user)
-  if (need == null || own == null || String(need) !== String(own)) {
-    return Response.json({ error: 'Je kan enkel de opstelling van je eigen ploeg bewerken.' }, { status: 403 })
-  }
-  return null
+  // Clubstaf voor de kant van de eigen club; een coach voor zijn ploegen; de jeugdverantwoordelijke
+  // voor de jeugdploegen van de club (lib/club-functies.ts).
+  const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
+  const teamId = match ? (side === 'home' ? match.homeTeam : match.awayTeam) : null
+  const team = teamId != null ? await payload.findByID({ collection: 'teams', id: typeof teamId === 'object' ? teamId.id : teamId, depth: 0 }).catch(() => null) : null
+  if (team && magOpstellingVoor(user, { id: team.id, club: team.club, category: team.category })) return null
+  return Response.json({ error: 'Je kan enkel de opstelling van je eigen ploeg bewerken.' }, { status: 403 })
 }
 
 // GET: selecteerbare roster voor één kant + de huidige opstelling op het blad.
@@ -60,7 +58,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ matchId:
 // POST: bewaart de opstelling van één kant op het blad.
 export async function POST(req: Request, { params }: { params: Promise<{ matchId: string }> }) {
   const { matchId } = await params
-  let body: { side?: string; players?: { player: number; rugnummer?: number }[]; saveFavorites?: boolean; confirmed?: boolean }
+  let body: {
+    side?: string
+    players?: { player: number; rugnummer?: number }[]
+    saveFavorites?: boolean
+    confirmed?: boolean
+    favoriet?: { player?: unknown; aan?: boolean }
+  }
   try {
     body = await req.json()
   } catch {
@@ -75,6 +79,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
     const fout = await geenToegang(payload, user, matchId, side)
     if (fout) return fout
     const roles = userRoles(user)
+
+    // ⭐ Eén speler als favoriet (aan/uit): staat dan altijd bovenaan de selectielijst van de ploeg.
+    // Bewaard in de vaste opstelling van de ploeg — dezelfde lijst als "★ Vaste opstelling".
+    if (body.favoriet && typeof body.favoriet === 'object') {
+      const roster = await buildRoster(payload, matchId, side)
+      if (!roster) return Response.json({ error: 'Wedstrijd of ploeg niet gevonden.' }, { status: 404 })
+      const spelerId = Number(body.favoriet.player)
+      if (!roster.players.some((p) => p.id === spelerId)) {
+        return Response.json({ error: 'Deze speler hoort niet bij deze ploeg.' }, { status: 400 })
+      }
+      const set = new Set(roster.favorites)
+      if (body.favoriet.aan) set.add(spelerId)
+      else set.delete(spelerId)
+      await payload.update({ collection: 'teams', id: roster.teamId, data: { vasteOpstellingIds: [...set].join(',') }, overrideAccess: true })
+      return Response.json({ ok: true, favorites: [...set] })
+    }
 
     const sheet = await getOrCreateMatchSheet(payload, matchId)
     const status = sheet.status as MatchSheetStatus

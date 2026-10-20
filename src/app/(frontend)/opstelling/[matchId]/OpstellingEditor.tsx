@@ -82,6 +82,36 @@ export function OpstellingEditor({
     onReadyChange?.(confirmed || (selected.size >= LINEUP_MIN && setsEqual(selected, savedSet)))
   }, [data, confirmed, selected, savedSet, onReadyChange])
 
+  // ⭐ Favoriet aan/uit: meteen bewaard op de ploeg, en de lijst herschikt (favorieten bovenaan).
+  const zetFavoriet = async (player: number, aan: boolean) => {
+    const res = await fetch(`/api/matchsheet/${matchId}/lineup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ side, favoriet: { player, aan } }),
+    })
+    const json = (await res.json().catch(() => ({}))) as { favorites?: number[]; error?: string }
+    if (!res.ok) {
+      toast('error', json.error ?? 'Favoriet bewaren mislukt.')
+      return
+    }
+    const favs = json.favorites ?? []
+    setFavorites(favs)
+    const fav = new Set(favs)
+    setData((d) =>
+      d
+        ? {
+            ...d,
+            players: [...d.players].sort((a, b) => {
+              const ba = a.selectability.level === 'block' ? 1 : 0
+              const bb = b.selectability.level === 'block' ? 1 : 0
+              if (ba !== bb) return ba - bb
+              return (fav.has(a.id) ? 0 : 1) - (fav.has(b.id) ? 0 : 1)
+            }),
+          }
+        : d,
+    )
+  }
+
   const toggle = (id: number) => {
     if (confirmed) return // vergrendeld: eerst ontgrendelen om te wijzigen
     setSelected((prev) => {
@@ -208,8 +238,20 @@ export function OpstellingEditor({
                 <span className="wb-nm-name">{p.name}</span>
                 {reason && p.selectability.level !== 'ok' && <span className={`wb-reason lvl-${p.selectability.level}`}>{reason}</span>}
               </span>
-              {favSet.has(p.id) && <span className="wb-tag" title="Vaste opstelling">★</span>}
               {!favSet.has(p.id) && p.suggested && <span className="wb-tag">voorstel</span>}
+              <button
+                type="button"
+                className={`ops-fav ${favSet.has(p.id) ? 'on' : ''}`}
+                aria-pressed={favSet.has(p.id)}
+                aria-label={favSet.has(p.id) ? `${p.name} geen favoriet meer` : `${p.name} als favoriet (bovenaan)`}
+                title={favSet.has(p.id) ? 'Favoriet — staat bovenaan' : 'Maak favoriet: staat dan altijd bovenaan'}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void zetFavoriet(p.id, !favSet.has(p.id))
+                }}
+              >
+                {favSet.has(p.id) ? '★' : '☆'}
+              </button>
             </li>
           )
         })}
