@@ -14,6 +14,7 @@ const KOLOMMEN: { key: keyof ClubRij; label: string }[] = [
   { key: 'meisjes', label: 'Meisjes' },
   { key: 'jongens', label: 'Jongens' },
   { key: 'forfaits', label: 'Forfaits' },
+  { key: 'ongevallen', label: 'Blessures' },
 ]
 
 // Per club, sorteerbaar (klik op een kolom). Met een CSV-knop om verder te werken in een rekenblad.

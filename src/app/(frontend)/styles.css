@@ -1748,3 +1748,6 @@ body.kb-scherm .site-foot { display: none; }
   .test-omgeving-band { padding: 5px 10px; font-size: 0.8rem; }
   .test-omgeving-uitleg { display: none; }
 }
+
+/* Afgelaste wedstrijd (lib/afgelasting.ts) */
+.match-afgelast { margin: 8px 0 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid #e0a23d; background: rgba(224, 162, 61, 0.12); font-weight: 700; }

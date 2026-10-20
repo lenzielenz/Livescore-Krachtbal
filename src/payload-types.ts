@@ -71,6 +71,9 @@ export interface Config {
     teams: Team;
     players: Player;
     'medische-attesten': MedischeAttesten;
+    'ongeval-documenten': OngevalDocumenten;
+    afgelastingen: Afgelastingen;
+    'afgelasting-fotos': AfgelastingFoto;
     'medische-kaart-aanvragen': MedischeKaartAanvragen;
     meldingen: Meldingen;
     matches: Match;
@@ -129,6 +132,9 @@ export interface Config {
     teams: TeamsSelect<false> | TeamsSelect<true>;
     players: PlayersSelect<false> | PlayersSelect<true>;
     'medische-attesten': MedischeAttestenSelect<false> | MedischeAttestenSelect<true>;
+    'ongeval-documenten': OngevalDocumentenSelect<false> | OngevalDocumentenSelect<true>;
+    afgelastingen: AfgelastingenSelect<false> | AfgelastingenSelect<true>;
+    'afgelasting-fotos': AfgelastingFotosSelect<false> | AfgelastingFotosSelect<true>;
     'medische-kaart-aanvragen': MedischeKaartAanvragenSelect<false> | MedischeKaartAanvragenSelect<true>;
     meldingen: MeldingenSelect<false> | MeldingenSelect<true>;
     matches: MatchesSelect<false> | MatchesSelect<true>;
@@ -710,31 +716,67 @@ export interface Official {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "medische-kaart-aanvragen".
+ * via the `definition` "ongeval-documenten".
  */
-export interface MedischeKaartAanvragen {
+export interface OngevalDocumenten {
   id: number;
-  player: number | Player;
+  accident: number | Accident;
+  player?: (number | null) | Player;
   club?: (number | null) | Club;
-  aangevraagdDoor?: (number | null) | User;
-  via: 'lid' | 'club' | 'ouder';
-  status: 'aangevraagd' | 'verstuurd' | 'geweigerd';
-  opmerking?: string | null;
-  behandeldOp?: string | null;
+  soort: 'aangifte' | 'getuigschrift' | 'ander';
+  geuploadDoor?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "meldingen".
+ * via the `definition` "accidents".
  */
-export interface Meldingen {
+export interface Accident {
   id: number;
-  user: number | User;
-  titel: string;
-  tekst?: string | null;
-  url?: string | null;
-  gelezen?: boolean | null;
+  titel?: string | null;
+  /**
+   * De wedstrijd waarbij het ongeval gebeurde (optioneel).
+   */
+  match?: (number | null) | Match;
+  /**
+   * Indien het slachtoffer een geregistreerd lid is.
+   */
+  player?: (number | null) | Player;
+  club?: (number | null) | Club;
+  slachtofferNaam: string;
+  slachtofferGeboortedatum?: string | null;
+  slachtofferAdres?: string | null;
+  slachtofferBeroep?: string | null;
+  ongevalPlaats?: string | null;
+  ongevalDatum?: string | null;
+  /**
+   * Bv. "2e helft 12:30, stand 10–8".
+   */
+  moment?: string | null;
+  omstandigheden?: string | null;
+  gemeldDoor?: (number | null) | User;
+  getuigen?:
+    | {
+        naam?: string | null;
+        adres?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  opmerkingen?: string | null;
+  status?: ('gemeld' | 'ingediend' | 'afgehandeld') | null;
+  ingediendOp?: string | null;
+  afgehandeldOp?: string | null;
+  federatieOpmerking?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -893,6 +935,7 @@ export interface Match {
   awayTeam: number | Team;
   date: string;
   status: 'scheduled' | 'live' | 'finished';
+  afgelast?: boolean | null;
   /**
    * Min. 10 m (15 m voor nieuwe terreinen, 5 m in zalen). Bepaalt de veldlengte en de afstandsberekening.
    */
@@ -1136,6 +1179,75 @@ export interface ReglementVerslagen {
   createdAt: string;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "afgelastingen".
+ */
+export interface Afgelastingen {
+  id: number;
+  match: number | Match;
+  clubs?: (number | Club)[] | null;
+  reden: 'terrein' | 'weer' | 'ander';
+  toelichting?: string | null;
+  oorspronkelijkeDatum?: string | null;
+  gemeldDoor?: (number | null) | User;
+  scheidsrechterNaam?: string | null;
+  status?: ('gemeld' | 'herpland' | 'ingetrokken') | null;
+  nieuweDatum?: string | null;
+  behandeldOp?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "afgelasting-fotos".
+ */
+export interface AfgelastingFoto {
+  id: number;
+  afgelasting: number | Afgelastingen;
+  clubs?: (number | Club)[] | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "medische-kaart-aanvragen".
+ */
+export interface MedischeKaartAanvragen {
+  id: number;
+  player: number | Player;
+  club?: (number | null) | Club;
+  aangevraagdDoor?: (number | null) | User;
+  via: 'lid' | 'club' | 'ouder';
+  status: 'aangevraagd' | 'verstuurd' | 'geweigerd';
+  opmerking?: string | null;
+  behandeldOp?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "meldingen".
+ */
+export interface Meldingen {
+  id: number;
+  user: number | User;
+  titel: string;
+  tekst?: string | null;
+  url?: string | null;
+  gelezen?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Eén per fysiek veld/scherm bij een club. Beheer het aantal velden via "Mijn club" → Veldscherm, niet hier.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1335,39 +1447,6 @@ export interface Matchsheet {
         id?: string | null;
       }[]
     | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "accidents".
- */
-export interface Accident {
-  id: number;
-  titel?: string | null;
-  /**
-   * De wedstrijd waarbij het ongeval gebeurde (optioneel).
-   */
-  match?: (number | null) | Match;
-  /**
-   * Indien het slachtoffer een geregistreerd lid is.
-   */
-  player?: (number | null) | Player;
-  slachtofferNaam: string;
-  slachtofferGeboortedatum?: string | null;
-  slachtofferAdres?: string | null;
-  slachtofferBeroep?: string | null;
-  ongevalPlaats?: string | null;
-  ongevalDatum?: string | null;
-  omstandigheden?: string | null;
-  getuigen?:
-    | {
-        naam?: string | null;
-        adres?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  opmerkingen?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -2484,6 +2563,18 @@ export interface PayloadLockedDocument {
         value: number | MedischeAttesten;
       } | null)
     | ({
+        relationTo: 'ongeval-documenten';
+        value: number | OngevalDocumenten;
+      } | null)
+    | ({
+        relationTo: 'afgelastingen';
+        value: number | Afgelastingen;
+      } | null)
+    | ({
+        relationTo: 'afgelasting-fotos';
+        value: number | AfgelastingFoto;
+      } | null)
+    | ({
         relationTo: 'medische-kaart-aanvragen';
         value: number | MedischeKaartAanvragen;
       } | null)
@@ -2821,6 +2912,65 @@ export interface MedischeAttestenSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ongeval-documenten_select".
+ */
+export interface OngevalDocumentenSelect<T extends boolean = true> {
+  accident?: T;
+  player?: T;
+  club?: T;
+  soort?: T;
+  geuploadDoor?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "afgelastingen_select".
+ */
+export interface AfgelastingenSelect<T extends boolean = true> {
+  match?: T;
+  clubs?: T;
+  reden?: T;
+  toelichting?: T;
+  oorspronkelijkeDatum?: T;
+  gemeldDoor?: T;
+  scheidsrechterNaam?: T;
+  status?: T;
+  nieuweDatum?: T;
+  behandeldOp?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "afgelasting-fotos_select".
+ */
+export interface AfgelastingFotosSelect<T extends boolean = true> {
+  afgelasting?: T;
+  clubs?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "medische-kaart-aanvragen_select".
  */
 export interface MedischeKaartAanvragenSelect<T extends boolean = true> {
@@ -2873,6 +3023,7 @@ export interface MatchesSelect<T extends boolean = true> {
   awayTeam?: T;
   date?: T;
   status?: T;
+  afgelast?: T;
   goalAreaDepth?: T;
   veldBreedte?: T;
   veldSpeelveld?: T;
@@ -3080,13 +3231,16 @@ export interface AccidentsSelect<T extends boolean = true> {
   titel?: T;
   match?: T;
   player?: T;
+  club?: T;
   slachtofferNaam?: T;
   slachtofferGeboortedatum?: T;
   slachtofferAdres?: T;
   slachtofferBeroep?: T;
   ongevalPlaats?: T;
   ongevalDatum?: T;
+  moment?: T;
   omstandigheden?: T;
+  gemeldDoor?: T;
   getuigen?:
     | T
     | {
@@ -3095,6 +3249,10 @@ export interface AccidentsSelect<T extends boolean = true> {
         id?: T;
       };
   opmerkingen?: T;
+  status?: T;
+  ingediendOp?: T;
+  afgehandeldOp?: T;
+  federatieOpmerking?: T;
   updatedAt?: T;
   createdAt?: T;
 }

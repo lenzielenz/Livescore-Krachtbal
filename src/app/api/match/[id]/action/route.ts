@@ -23,6 +23,7 @@ import {
   substitute,
   undoLastThrow,
 } from '@/lib/match-engine'
+import { volgBladStatus } from '@/lib/blad-status'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { notifyGoalScored } from '@/lib/match-notify'
 import { missingSteps } from '@/lib/match-readiness'
@@ -41,6 +42,9 @@ import {
   startSimpleMatch,
   undoSimpleGoal,
 } from '@/lib/simple-match-engine'
+
+/** Acties die de wedstrijd live zetten, afsluiten, heropenen of terugzetten. */
+const STATUS_ACTIES = new Set(['start', 'finish', 'reopen', 'reset', 'simplestart', 'simplegoal', 'simplehalf', 'half', 'reportresult'])
 
 // Eén POST-endpoint dat aantekenaar-acties dispatcht op het veld `action`.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -294,6 +298,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     await claim.vastleggen()
+
+    // Het wedstrijdblad volgt de wedstrijd: gestart → bezig, afgelopen → af te tekenen, terug
+    // gezet → wedstrijdklaar (lib/blad-status.ts). Enkel bij acties die de wedstrijdstatus raken.
+    if (STATUS_ACTIES.has(action)) await volgBladStatus(payload, matchId).catch((e) => console.error('blad-status:', e))
 
     // Vertrouwenslaag: onthoud wie deze wedstrijd aantekent. De eerste die scoort wordt official
     // scorer; elke volgende actie houdt die claim levend (zie score-trust.ts). Fire-and-forget.

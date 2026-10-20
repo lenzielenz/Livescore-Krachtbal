@@ -321,6 +321,13 @@ export function SimpleScorekeeper({
               📡 {veldPaired ? (veldQueued ? 'In wachtrij voor veldscherm' : 'Veldscherm gekoppeld') : 'Veldscherm koppelen'}
             </button>
           )}
+          {/* Federatieflow: een blessure tijdens de wedstrijd meteen doorgeven (op het blad, aangifte,
+              meldingen). Opent apart, zodat het aantekenen hier gewoon doorloopt. */}
+          {!supportersMode && (
+            <a href={`/aftekenen/${matchId}#blessure`} target="_blank" rel="noreferrer" className="ssk-toplink">
+              🚑 Blessure
+            </a>
+          )}
           <Link href={`/veld/${matchId}`} className="ssk-toplink">Veldscherm →</Link>
         </span>
       </header>

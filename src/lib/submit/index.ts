@@ -114,11 +114,30 @@ export async function submitMatchSheet(
   if (!sheet) return { ok: false, error: 'Geen wedstrijdblad gevonden.' }
   if (sheet.status === 'ingediend') return { ok: false, error: 'Al ingediend (Item 37).' }
 
-  // Beide kapiteins moeten aftekenen.
+  // Pas na het eindsignaal (of een forfait) valt er iets in te dienen.
+  const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
+  const forfait = ((sheet.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen') !== 'geen'
+  if (matchDoc?.status !== 'finished' && !forfait) {
+    return { ok: false, error: 'De wedstrijd is nog niet afgelopen.' }
+  }
+
+  // Beide kapiteins én de scheidsrechter moeten aftekenen.
   const kapThuis = sigOf(sheet.kapiteinThuis)
   const kapUit = sigOf(sheet.kapiteinUit)
   if (!kapThuis.akkoord || !kapUit.akkoord) {
     return { ok: false, error: 'Beide kapiteins moeten eerst aftekenen.' }
+  }
+  if (!sigOf(sheet.scheidsrechter).akkoord) {
+    return { ok: false, error: 'De scheidsrechter moet eerst aftekenen.' }
+  }
+
+  // Wie speelde (O-markering) telt voor het vastspelen en het referendum: de scheidsrechter
+  // bevestigt het na de wedstrijd. Zonder die bevestiging zou het blad niemand als speler tellen.
+  if (!forfait) {
+    const gespeeld = (rows: unknown) => (Array.isArray(rows) ? rows : []).some((r) => (r as { deelgenomen?: boolean }).deelgenomen)
+    if (!gespeeld(sheet.homeLineup) || !gespeeld(sheet.awayLineup)) {
+      return { ok: false, error: 'Bevestig eerst wie er speelde (scheidsrechterspagina, "Wie speelde").' }
+    }
   }
 
   // Score uit de live-scoring. NIET stil doorgaan bij een fout: een ingediend (onwijzigbaar)

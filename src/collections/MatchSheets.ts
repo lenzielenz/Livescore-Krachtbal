@@ -8,6 +8,7 @@ import {
   canTransition,
   nextStatus,
 } from '../lib/matchsheet-workflow'
+import { SYSTEEM_STATUS } from '../lib/blad-status'
 
 // Eén opstellingsregel (per speler op het blad).
 const lineupFields: Field[] = [
@@ -34,7 +35,7 @@ const ensureVrijgaveCode: CollectionBeforeChangeHook = ({ data, operation }) => 
 }
 
 // Status-machine afdwingen + override-log bijhouden (WEDSTRIJDBLAD-PROMPT §workflow, Item 37).
-const enforceWorkflow: CollectionBeforeChangeHook = async ({ data, originalDoc, req, operation }) => {
+const enforceWorkflow: CollectionBeforeChangeHook = async ({ data, originalDoc, req, operation, context }) => {
   if (operation === 'create') return data
   const from = originalDoc?.status as MatchSheetStatus | undefined
   const to = data?.status as MatchSheetStatus | undefined
@@ -45,6 +46,8 @@ const enforceWorkflow: CollectionBeforeChangeHook = async ({ data, originalDoc, 
   }
 
   if (!from || !to || from === to) return data
+  // De status volgt de wedstrijd (lib/blad-status.ts): die overgang is geen manuele keuze.
+  if (context?.[SYSTEEM_STATUS]) return data
 
   const roles = userRoles(req.user)
   const check = canTransition(from, to, { roles, isAssignedReferee: false })

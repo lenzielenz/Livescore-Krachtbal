@@ -49,11 +49,56 @@ attest zien enkel de federatie en de staf van de eigen club.
 
 ## 5. Wedstrijddag
 
-1. De coach kiest zijn selectie (`/opstelling/[id]`); ⭐ favorieten staan bovenaan. De server
-   aanvaardt enkel spelers van die ploeg die mogen spelen.
-2. De scheidsrechter geeft akkoord, er wordt aangetekend, de kapiteins tekenen af.
-3. Na de wedstrijd bevestigt de scheidsrechter **wie speelde**. Dat staat daarna bij elke speler
-   (`/spelers/[id]`: geselecteerd / gespeeld) en telt voor het referendum.
+Elke stap bewaakt de volgende; het wedstrijdblad volgt de wedstrijd vanzelf
+(`src/lib/blad-status.ts`: vrijgegeven → *wedstrijdklaar*, gestart → *bezig*, afgelopen → *af te tekenen*).
+
+1. **Selectie — coach** (`/opstelling/[id]`, of via "Mijn club": een coach ziet er zijn eigen ploegen).
+   - Hij vinkt spelers aan (⭐ favorieten bovenaan, spelers uit een lagere ploeg met hun knipjes),
+     past zo nodig het **rugnummer op dit blad** aan en duidt de **kapitein (C)** aan.
+   - De server aanvaardt enkel spelers van die ploeg (of een lagere ploeg van de club) die mogen spelen.
+   - Tot de scheidsrechter vrijgeeft, kan de coach wijzigen. Daarna ligt de selectie vast; een speler die
+     laat toekomt, zet de scheidsrechter er nog bij.
+2. **Controle en vrijgave — scheidsrechter** (`/scheidsrechter/[id]`):
+   - hij **controleert elke speler** op beide lijsten ("jij bent die speler, alles in orde"). Wie volgens
+     het reglement niet in orde is (vergunning, medische keuring, knipjes, vastgespeeld, categorie),
+     staat in het rood en komt niet op de speellijst — ook de scheidsrechter kan dat niet overschrijven,
+     enkel de federatie;
+   - hij bevestigt de materiële keuring;
+   - dan geeft hij vrij met zijn QR of code. Dat kan pas met twee volledige opstellingen (min. 4), alle
+     spelers gecontroleerd en in orde, en een bevestigde keuring.
+   Enkel de toegewezen (of backup-)scheidsrechter kan iets aan déze wedstrijd doen.
+3. **Aantekenen — tafel** (`/scorekeeper/[id]`): kiest uit de selectie van de coach, met de rugnummers
+   van het blad. Starten kan pas na de vrijgave (en niet als de wedstrijd afgelast is).
+4. **Blessure** — op elk moment: 🚑 in het aantekenscherm, op de scheidsrechterspagina of bij het
+   aftekenen. De scheidsrechter, de tafel, of de coach/club van die ploeg kiest de speler en omschrijft
+   kort; het moment (helft, klok, stand) komt er vanzelf bij. Zie *Blessures* hieronder.
+5. **Aftekenen** (`/aftekenen/[id]`), pas na het eindsignaal: beide kapiteins en de scheidsrechter. De
+   kapiteins tekenen op het toestel van de scheidsrechter (of met hun eigen login, of via clubstaf/coach);
+   hun naam komt uit de opstelling. Een handtekening is definitief.
+6. **Wie speelde** — de scheidsrechter bevestigt het. Dat telt voor vastspelen en het referendum.
+7. **Indienen** — de scheidsrechter: kan pas als de wedstrijd afgelopen is, alle drie getekend hebben,
+   de officials volledig zijn en "wie speelde" bevestigd is. Daarna is het blad onwijzigbaar.
+
+### Afgelasting
+
+Terrein onbespeelbaar of slecht weer? De scheidsrechter gelast af op `/scheidsrechter/[id]`:
+reden, toelichting en **minstens één foto** van de omstandigheden. De wedstrijd blijft gepland maar kan
+niet starten; de clubs en de federatie krijgen een melding. De federatie (`/beheer/afgelastingen`,
+dashboard) bekijkt de foto's en **plant een nieuwe datum** (of trekt de afgelasting in); clubs en
+scheidsrechter horen het. Code: `src/lib/afgelasting.ts`.
+
+### Blessures
+
+Een doorgegeven blessure wordt meteen:
+- een **ongevalsaangifte** (gekoppeld aan wedstrijd, speler en club);
+- een regel bij "Opmerkingen / kwetsuren" op het wedstrijdblad;
+- een melding voor de club, de speler (en zijn ouders) en de federatie.
+
+De speler vindt op *Mijn profiel* de **vooraf ingevulde aangifte** en een **geneeskundig getuigschrift**
+voor de dokter. Hij laat ze invullen, laadt ze op en dient in. Een club kan dat voor haar speler doen
+(`/ongevallen`). De federatie ziet alle dossiers (`/ongevallen`, dashboard) en handelt af of stuurt terug
+met een opmerking; de cijfers staan in de statistieken (per maand, categorie en club).
+Code: `src/lib/blessure.ts`, `src/lib/ongeval-dossier.ts`.
 
 ## 6. Dashboard — federatie
 

@@ -27,6 +27,10 @@ type RosterResponse = {
   current: { player?: number; rugnummer?: number }[]
   favorites?: number[]
   confirmed?: boolean
+  /** Kapitein van deze ploeg voor deze wedstrijd (speler-id). */
+  kapitein?: number | null
+  /** Vergrendeld voor jou (de scheidsrechter gaf vrij, of de wedstrijd loopt) — met de reden. */
+  vergrendeld?: string | null
   error?: string
 }
 
@@ -54,6 +58,11 @@ export function OpstellingEditor({
   // verschil + de rijen zijn niet meer aanvinkbaar tot je ontgrendelt.
   const [confirmed, setConfirmed] = useState(false)
   const [showBlocked, setShowBlocked] = useState(false)
+  // Kapitein (tekent na de wedstrijd af) en het rugnummer per speler op dít blad (een speler uit een
+  // lagere ploeg kan een nummer dragen dat in deze ploeg al bestaat).
+  const [kapitein, setKapitein] = useState<number | null>(null)
+  const [nummers, setNummers] = useState<Record<number, string>>({})
+  const [extraGewijzigd, setExtraGewijzigd] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -71,6 +80,11 @@ export function OpstellingEditor({
     // Het reeds bewaarde (de huidige opstelling op het blad) is de referentie voor "bewaard?".
     setSavedSet(new Set(current))
     setConfirmed(Boolean(json.confirmed))
+    setKapitein(json.kapitein ?? null)
+    const nrs: Record<number, string> = {}
+    for (const c of json.current ?? []) if (typeof c.player === 'number' && c.rugnummer != null) nrs[c.player] = String(c.rugnummer)
+    setNummers(nrs)
+    setExtraGewijzigd(false)
   }, [matchId, side])
 
   useEffect(() => {
@@ -81,8 +95,8 @@ export function OpstellingEditor({
   // zodra beide opstellingen in orde zijn. Zelfde definitie als de groene indicator hieronder.
   useEffect(() => {
     if (!data || data.error) return
-    onReadyChange?.(confirmed || (selected.size >= LINEUP_MIN && setsEqual(selected, savedSet)))
-  }, [data, confirmed, selected, savedSet, onReadyChange])
+    onReadyChange?.(confirmed || Boolean(data.vergrendeld) || (selected.size >= LINEUP_MIN && setsEqual(selected, savedSet) && !extraGewijzigd))
+  }, [data, confirmed, selected, savedSet, extraGewijzigd, onReadyChange])
 
   // ⭐ Favoriet aan/uit: meteen bewaard op de ploeg, en de lijst herschikt (favorieten bovenaan).
   const zetFavoriet = async (player: number, aan: boolean) => {
@@ -114,14 +128,21 @@ export function OpstellingEditor({
     )
   }
 
+  const slot = data?.vergrendeld ?? null
   const toggle = (id: number) => {
-    if (confirmed) return // vergrendeld: eerst ontgrendelen om te wijzigen
+    if (confirmed || slot) return // vergrendeld: eerst ontgrendelen om te wijzigen
+    const weg = selected.has(id)
     setSelected((prev) => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
+      if (weg) next.delete(id)
       else next.add(id)
       return next
     })
+    if (weg && kapitein === id) setKapitein(null)
+  }
+  const nummerVan = (p: RosterEntry) => {
+    const n = Number(nummers[p.id])
+    return nummers[p.id] != null && nummers[p.id] !== '' && Number.isFinite(n) ? n : p.shirtNumber
   }
 
   // `confirm`: undefined laat de bevestiging ongemoeid; true vergrendelt, false ontgrendelt.
@@ -131,17 +152,19 @@ export function OpstellingEditor({
     setMsg(null)
     const players = data.players
       .filter((p) => selected.has(p.id))
-      .map((p) => ({ player: p.id, rugnummer: p.shirtNumber }))
+      .map((p) => ({ player: p.id, rugnummer: nummerVan(p) }))
+    const kap = kapitein != null && selected.has(kapitein) ? kapitein : null
     const res = await fetch(`/api/matchsheet/${matchId}/lineup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ side, players, saveFavorites: asFavorite, confirmed: confirm }),
+      body: JSON.stringify({ side, players, kapitein: kap, saveFavorites: asFavorite, confirmed: confirm }),
     })
     const json = await res.json()
     setSaving(false)
     if (res.ok) {
       if (asFavorite) setFavorites(players.map((p) => p.player))
       setSavedSet(new Set(selected))
+      setExtraGewijzigd(false)
       if (typeof confirm === 'boolean') setConfirmed(confirm)
       const ok =
         confirm === true
@@ -179,11 +202,13 @@ export function OpstellingEditor({
 
       {/* Bevestigd? Dan een duidelijk vergrendeld-signaal (los van "bewaard"). Anders de gewone
           klaar-indicator: genoeg spelers + bewaard = groen "klaar". */}
-      {confirmed ? (
+      {slot ? (
+        <div className="ops-ready locked">🔒 {slot}</div>
+      ) : confirmed ? (
         <div className="ops-ready locked">🔒 Opstelling bevestigd en vergrendeld · {selected.size} spelers</div>
       ) : (
         (() => {
-          const dirty = !setsEqual(selected, savedSet)
+          const dirty = !setsEqual(selected, savedSet) || extraGewijzigd
           if (enough && !dirty) {
             return <div className="ops-ready ok">✓ Opstelling klaar en bewaard · {selected.size} spelers</div>
           }
@@ -199,16 +224,20 @@ export function OpstellingEditor({
         <button
           type="button"
           className="ops-quick-btn"
-          disabled={confirmed || favorites.length === 0}
+          disabled={confirmed || Boolean(slot) || favorites.length === 0}
           onClick={() => setSelected(new Set(favorites))}
           title={favorites.length === 0 ? 'Nog geen vaste opstelling bewaard' : 'Vul de onthouden vaste opstelling in'}
         >
           ★ Vaste opstelling{favorites.length ? ` (${favorites.length})` : ''}
         </button>
-        <button type="button" className="ops-quick-btn" disabled={confirmed || selected.size === 0} onClick={() => setSelected(new Set())}>
+        <button type="button" className="ops-quick-btn" disabled={confirmed || Boolean(slot) || selected.size === 0} onClick={() => { setSelected(new Set()); setKapitein(null) }}>
           Wissen
         </button>
       </div>
+
+      {!slot && selected.size > 0 && kapitein == null && (
+        <p className="wb-sub">Duid de kapitein aan met <strong>C</strong> — hij tekent na de wedstrijd af.</p>
+      )}
 
       {blockedCount > 0 && (
         <label className="ops-blocked-toggle">
@@ -246,6 +275,36 @@ export function OpstellingEditor({
                 )}
                 {reason && p.selectability.level !== 'ok' && <span className={`wb-reason lvl-${p.selectability.level}`}>{reason}</span>}
               </span>
+              {selected.has(p.id) && (
+                <span className="ops-extra" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    className="ops-nr"
+                    inputMode="numeric"
+                    aria-label={`Rugnummer ${p.name}`}
+                    title="Rugnummer op dit blad"
+                    value={nummers[p.id] ?? String(p.shirtNumber)}
+                    disabled={confirmed || Boolean(slot)}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 3)
+                      setNummers((o) => ({ ...o, [p.id]: v }))
+                      setExtraGewijzigd(true)
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className={`ops-kap ${kapitein === p.id ? 'on' : ''}`}
+                    aria-pressed={kapitein === p.id}
+                    title={kapitein === p.id ? 'Kapitein' : 'Maak kapitein'}
+                    disabled={confirmed || Boolean(slot)}
+                    onClick={() => {
+                      setKapitein(kapitein === p.id ? null : p.id)
+                      setExtraGewijzigd(true)
+                    }}
+                  >
+                    C
+                  </button>
+                </span>
+              )}
               {!favSet.has(p.id) && p.suggested && <span className="wb-tag">voorstel</span>}
               <button
                 type="button"
@@ -273,7 +332,7 @@ export function OpstellingEditor({
         na keuring verschijnt hij hier.
       </p>
 
-      {confirmed ? (
+      {slot ? null : confirmed ? (
         // Vergrendeld: enkel ontgrendelen kan nog. Bewaren/wijzigen is geblokkeerd tot dan.
         <div className="ops-save">
           <button type="button" onClick={() => save(false, false)} disabled={saving} className="wb-btn">

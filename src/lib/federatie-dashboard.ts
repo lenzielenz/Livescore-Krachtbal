@@ -36,11 +36,12 @@ export async function federatieTaken(payload: Payload, nu: Date = new Date()): P
   const t = nu.getTime()
   const iso = (ms: number) => new Date(ms).toISOString()
 
-  const [registraties, komend, live, recentAf, clubs, beheerders, kaarten] = await Promise.all([
+  const [registraties, komend, live, recentAf, clubs, beheerders, kaarten, ongevallen, ongevallenOpen, afgelast] = await Promise.all([
     payload.count({ collection: 'players', where: { registratieStatus: { equals: 'ingediend' } }, overrideAccess: true }),
     payload.find({
       collection: 'matches',
-      where: { and: [...COMPETITIE, { status: { equals: 'scheduled' } }, { date: { greater_than_equal: iso(t) } }, { date: { less_than: iso(t + 14 * DAG) } }] },
+      // Afgelaste wedstrijden staan apart (taak "Afgelaste wedstrijden"), niet als opstelling of scheidsrechter te regelen.
+      where: { and: [...COMPETITIE, { status: { equals: 'scheduled' } }, { afgelast: { not_equals: true } }, { date: { greater_than_equal: iso(t) } }, { date: { less_than: iso(t + 14 * DAG) } }] },
       sort: 'date',
       depth: 1,
       limit: 500,
@@ -66,6 +67,9 @@ export async function federatieTaken(payload: Payload, nu: Date = new Date()): P
     payload.find({ collection: 'clubs', where: { analyseOnly: { not_equals: true } }, depth: 0, limit: 500, pagination: false, overrideAccess: true }),
     payload.find({ collection: 'users', where: { roles: { contains: 'club-beheerder' } }, depth: 0, limit: 2000, pagination: false, overrideAccess: true }),
     payload.count({ collection: 'medische-kaart-aanvragen', where: { status: { equals: 'aangevraagd' } }, overrideAccess: true }),
+    payload.find({ collection: 'accidents', where: { status: { equals: 'ingediend' } }, sort: 'ingediendOp', depth: 0, limit: 4, overrideAccess: true }),
+    payload.count({ collection: 'accidents', where: { status: { equals: 'gemeld' } }, overrideAccess: true }),
+    payload.find({ collection: 'afgelastingen', where: { status: { equals: 'gemeld' } }, sort: 'createdAt', depth: 2, limit: 4, overrideAccess: true }),
   ])
 
   const matchIds = [...komend.docs, ...recentAf.docs].map((m) => Number(m.id))
@@ -126,6 +130,28 @@ export async function federatieTaken(payload: Payload, nu: Date = new Date()): P
       href: '/federatie/reglement',
       actie: 'Bekijken',
       items: eindItems.slice(0, 4),
+    },
+    {
+      sleutel: 'afgelastingen',
+      icoon: '⛈️',
+      titel: 'Afgelaste wedstrijden',
+      uitleg: "Door de scheidsrechter afgelast, met foto's. Plan een nieuwe datum.",
+      aantal: afgelast.totalDocs,
+      dringend: kleur(afgelast.totalDocs, false),
+      href: '/beheer/afgelastingen',
+      actie: 'Herplannen',
+      items: afgelast.docs.map((a) => ({ label: a.match && typeof a.match === 'object' ? wedstrijdLabel(a.match) : 'Wedstrijd', href: '/beheer/afgelastingen' })),
+    },
+    {
+      sleutel: 'ongevallen',
+      icoon: '🚑',
+      titel: 'Ongevalsdossiers te behandelen',
+      uitleg: `Ingediend door speler of club. ${ongevallenOpen.totalDocs} blessure(s) wachten nog op documenten.`,
+      aantal: ongevallen.totalDocs,
+      dringend: kleur(ongevallen.totalDocs, false),
+      href: '/ongevallen',
+      actie: 'Behandelen',
+      items: ongevallen.docs.map((a) => ({ label: String(a.slachtofferNaam ?? ''), href: '/ongevallen' })),
     },
     {
       sleutel: 'kaarten',

@@ -1,4 +1,5 @@
 import { hasRole, isFederationLevel } from '@/lib/access'
+import { refereeMayHandleMatch, type AuthedUser } from '@/lib/api-auth'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
 
@@ -24,11 +25,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
     const payload = await getPayloadClient()
     const { user } = await payload.auth({ headers: req.headers })
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
-    if (!(isFederationLevel(user) || hasRole(user, 'scheidsrechter'))) {
-      return Response.json({ error: 'Enkel scheidsrechter/federatie.' }, { status: 403 })
+    if (!(isFederationLevel(user) || (hasRole(user, 'scheidsrechter') && (await refereeMayHandleMatch(payload, user as unknown as AuthedUser, matchId))))) {
+      return Response.json({ error: 'Enkel de scheidsrechter van deze wedstrijd of de federatie.' }, { status: 403 })
     }
 
     const sheet = await getOrCreateMatchSheet(payload, matchId)
+    if (sheet.status === 'ingediend') return Response.json({ error: 'Het blad is ingediend (Item 37).' }, { status: 409 })
 
     const merge = (existing: LineupRow[] | undefined, played: number[]): LineupRow[] => {
       const rows = (existing ?? []).map((r) => ({ ...r }))

@@ -13,6 +13,7 @@ import { mayScoreMatch, type AuthedUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { isSupportersMode } from '@/lib/score-mode'
+import { wedstrijdSelectie } from '@/lib/wedstrijd-selectie'
 import { Scorekeeper } from './Scorekeeper'
 import { SimpleScorekeeper } from './SimpleScorekeeper'
 import './scorekeeper.css'
@@ -51,21 +52,40 @@ export default async function ScorekeeperPage({
   // roster zien. Zo lekt deze opname-route geen andermans analyse-spelers, ook niet via een gegokt id.
   if (matchDoc?.analyseOnly && !canViewAnalyseMatch(user, matchDoc)) notFound()
 
+  // Federatieflow: de aantekentafel kiest uit de selectie van de coach (het wedstrijdblad), met het
+  // rugnummer van dat blad — ook spelers uit een lagere ploeg. Zonder selectie (supporters, analyse,
+  // geen blad) blijven het de spelers van beide ploegen (lib/wedstrijd-selectie.ts).
+  const selectie = await wedstrijdSelectie(payload, matchId)
+  const selectieIds = [...selectie.home, ...selectie.away].map((r) => r.id)
   const players = await payload.find({
     collection: 'players',
-    where: { team: { in: [state.teams.home.id, state.teams.away.id] } },
+    where: {
+      or: [
+        { team: { in: [state.teams.home.id, state.teams.away.id] } },
+        ...(selectieIds.length ? [{ id: { in: selectieIds } }] : []),
+      ],
+    },
     sort: 'shirtNumber',
     depth: 0,
-    limit: 200,
+    limit: 300,
   })
 
-  const roster = players.docs.map((p) => ({
-    id: p.id,
-    name: p.name,
-    shirtNumber: p.shirtNumber,
-    teamId: typeof p.team === 'object' ? p.team.id : p.team,
-    position: (p.position as string | null) ?? null,
-  }))
+  const kantVan = (side: 'home' | 'away') => {
+    const teamId = state.teams[side].id
+    const sel = selectie[side]
+    const byId = new Map(players.docs.map((p) => [Number(p.id), p]))
+    const bron = sel.length
+      ? sel.map((r) => ({ p: byId.get(r.id), nr: r.rugnummer })).filter((x) => x.p)
+      : players.docs.filter((p) => (typeof p.team === 'object' ? p.team.id : p.team) === teamId).map((p) => ({ p, nr: null }))
+    return bron.map(({ p, nr }) => ({
+      id: p!.id,
+      name: p!.name,
+      shirtNumber: nr ?? p!.shirtNumber,
+      teamId,
+      position: (p!.position as string | null) ?? null,
+    }))
+  }
+  const roster = [...kantVan('home'), ...kantVan('away')]
 
   const reeks = reeksNaam(matchDoc?.reeks)
   const isDemo = Boolean((matchDoc as { isDemo?: boolean } | null)?.isDemo)

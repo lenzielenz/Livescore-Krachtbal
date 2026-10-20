@@ -6,7 +6,7 @@ import { isSpeelgerechtigd, keuringGeldig, KEURING_GELDIG_DAGEN } from './regist
 import { seasonFromDate } from './seasons'
 
 // Statistieken over de hele organisatie, voor de federatie (/federatie/statistieken). Alles
-// afgeleid uit wat er al is (leden, ploegen, wedstrijden, bladen, officials) — niets apart bewaard.
+// afgeleid uit wat er al is (leden, ploegen, wedstrijden, bladen, officials, ongevalsaangiften) — niets apart bewaard.
 
 export type Telling = { label: string; aantal: number }
 export type ClubRij = {
@@ -20,6 +20,7 @@ export type ClubRij = {
   meisjes: number
   jongens: number
   forfaits: number
+  ongevallen: number
 }
 export type Statistieken = {
   seizoen: string
@@ -43,6 +44,8 @@ export type Statistieken = {
   ploegen: { totaal: number; perReeks: Telling[] }
   wedstrijden: { gespeeld: number; gepland: number; forfaits: number; dubbelForfait: number; zonderScheidsrechter: number }
   scheidsrechters: { totaal: number; perType: Telling[]; inzet: Telling[] }
+  /** Blessures die bij wedstrijden doorgegeven werden (collections/Accidents.ts), dit seizoen. */
+  ongevallen: { totaal: number; jeugd: number; senioren: number; perStatus: Telling[]; perMaand: Telling[]; perCategorie: Telling[] }
   clubs: ClubRij[]
 }
 
@@ -87,7 +90,7 @@ export async function federatieStatistieken(payload: Payload, nu: Date = new Dat
   const perClub = new Map<number, ClubRij>(
     clubs.docs.map((c) => [
       Number(c.id),
-      { id: Number(c.id), naam: String(c.name ?? ''), ploegen: 0, leden: 0, spelers: 0, speelgerechtigd: 0, jeugd: 0, meisjes: 0, jongens: 0, forfaits: 0 },
+      { id: Number(c.id), naam: String(c.name ?? ''), ploegen: 0, leden: 0, spelers: 0, speelgerechtigd: 0, jeugd: 0, meisjes: 0, jongens: 0, forfaits: 0, ongevallen: 0 },
     ]),
   )
   const perReeks = new Map<string, number>()
@@ -160,6 +163,42 @@ export async function federatieStatistieken(payload: Payload, nu: Date = new Dat
     if (ref != null) inzet.set(ref, (inzet.get(ref) ?? 0) + 1)
     else if (m.status === 'scheduled') zonderRef += 1
   }
+  // Ongevallen: vanaf 1 juli van het seizoen.
+  const seizoenStart = new Date(Date.UTC(peiljaar, 6, 1)).toISOString()
+  const ongevallen = await payload.find({
+    collection: 'accidents',
+    where: { or: [{ ongevalDatum: { greater_than_equal: seizoenStart } }, { and: [{ ongevalDatum: { exists: false } }, { createdAt: { greater_than_equal: seizoenStart } }] }] },
+    depth: 0,
+    limit: 5000,
+    pagination: false,
+    overrideAccess: true,
+  })
+  const spelerCat = new Map(players.docs.map((p) => [Number(p.id), categorieVoorGeboortedatum(p.birthDate as string | null, peiljaar)]))
+  const ongStatus = new Map<string, number>()
+  const ongMaand = new Map<string, number>()
+  const ongCat = new Map<string, number>()
+  let ongJeugd = 0
+  let ongSenioren = 0
+  const MAANDEN = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
+  for (const a of ongevallen.docs) {
+    tel(ongStatus, ({ gemeld: 'Documenten te bezorgen', ingediend: 'Bij de federatie', afgehandeld: 'Afgehandeld' } as Record<string, string>)[String(a.status ?? 'gemeld')] ?? 'Documenten te bezorgen')
+    const d = new Date(String(a.ongevalDatum ?? a.createdAt))
+    tel(ongMaand, `${MAANDEN[d.getUTCMonth()]} ${d.getUTCFullYear()}`)
+    const cat = spelerCat.get(relId(a.player) ?? -1)
+    if (cat) {
+      tel(ongCat, cat)
+      if (cat === 'senioren') ongSenioren += 1
+      else ongJeugd += 1
+    }
+    const c = perClub.get(relId(a.club) ?? -1)
+    if (c) c.ongevallen += 1
+  }
+  const maandVolgorde = [...ongMaand.keys()].sort((x, y) => {
+    const [mx, jx] = x.split(' ')
+    const [my, jy] = y.split(' ')
+    return Number(jx) - Number(jy) || MAANDEN.indexOf(mx) - MAANDEN.indexOf(my)
+  })
+
   const refNaam = new Map(officials.docs.map((o) => [Number(o.id), String(o.name ?? '')]))
   const perType = new Map<string, number>()
   for (const o of officials.docs) tel(perType, String(o.type ?? 'onbekend'))
@@ -186,6 +225,14 @@ export async function federatieStatistieken(payload: Payload, nu: Date = new Dat
       inzet: [...inzet.entries()]
         .map(([id, aantal]) => ({ label: refNaam.get(id) ?? `#${id}`, aantal }))
         .sort((a, b) => b.aantal - a.aantal),
+    },
+    ongevallen: {
+      totaal: ongevallen.docs.length,
+      jeugd: ongJeugd,
+      senioren: ongSenioren,
+      perStatus: naarLijst(ongStatus, ['Documenten te bezorgen', 'Bij de federatie', 'Afgehandeld']),
+      perMaand: naarLijst(ongMaand, maandVolgorde),
+      perCategorie: naarLijst(ongCat, ['U8', 'U10', 'U12', 'U14', 'U16', 'U18', 'U20', 'senioren']),
     },
     clubs: [...perClub.values()].filter((c) => c.ploegen > 0 || c.leden > 0).sort((a, b) => b.leden - a.leden || a.naam.localeCompare(b.naam)),
   }

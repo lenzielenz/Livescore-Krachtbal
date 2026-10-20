@@ -402,6 +402,15 @@ export const Matches: CollectionConfig = {
           required: true,
         },
         {
+          // Afgelast door de scheidsrechter (terrein, weer): de wedstrijd blijft gepland maar kan niet
+          // starten tot de federatie een nieuwe datum plant (lib/afgelasting.ts, collections/Afgelastingen.ts).
+          name: 'afgelast',
+          label: 'Afgelast — nieuwe datum te plannen',
+          type: 'checkbox',
+          defaultValue: false,
+          access: { update: ({ req }) => isFederationLevel(req.user) },
+        },
+        {
           name: 'goalAreaDepth',
           label: 'Diepte doelgebied (m)',
           type: 'number',

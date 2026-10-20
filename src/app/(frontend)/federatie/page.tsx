@@ -20,6 +20,7 @@ const TOOLGROEPEN: { titel: string; tools: { href: string; icoon: string; label:
     tools: [
       { href: '/beheer/kalender', icoon: '🗓️', label: 'Kalender opmaken', uitleg: 'Per reeks heen en terug, met vrije weekends.' },
       { href: '/beheer/wedstrijden', icoon: '🔁', label: 'Wedstrijden verplaatsen', uitleg: 'Datum en uur aanpassen; clubs krijgen een melding.' },
+      { href: '/beheer/afgelastingen', icoon: '⛈️', label: 'Afgelastingen', uitleg: "Door de scheidsrechter afgelast, met foto's; nieuwe datum plannen." },
       { href: '/beheer/planning', icoon: '📅', label: 'Planning importeren', uitleg: 'Kalender of reeksindeling uit een bestand.' },
       { href: '/federatie/reglement', icoon: '📖', label: 'Reglement & regels', uitleg: 'Versies, verslagen, vastspelen en eindrondes.' },
     ],
@@ -30,6 +31,7 @@ const TOOLGROEPEN: { titel: string; tools: { href: string; icoon: string; label:
       { href: '/beheer/clubs', icoon: '🏟️', label: 'Clubs & logins', uitleg: 'Club aanmaken, clubbeheerder uitnodigen.' },
       { href: '/beheer/scheidsrechters', icoon: '🧑‍⚖️', label: 'Scheidsrechters toewijzen', uitleg: 'Per speeldag, met automatisch invullen.' },
       { href: '/beheer/leden', icoon: '🩺', label: 'Spelers keuren', uitleg: 'Aanvragen van clubs goedkeuren of afkeuren.' },
+      { href: '/ongevallen', icoon: '🚑', label: 'Blessures & ongevallen', uitleg: 'Aangiften en getuigschriften van spelers behandelen.' },
     ],
   },
   {

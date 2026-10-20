@@ -4,32 +4,26 @@ import { FlowNietNodig } from '@/components/FlowNietNodig'
 import { MatchDayNav } from '@/components/MatchDayNav'
 import { SiteHeader } from '@/components/SiteHeader'
 import { hasRole, isFederationLevel } from '@/lib/access'
+import { BlessureMelden } from '@/components/BlessureMelden'
+import { refereeMayHandleMatch, type AuthedUser } from '@/lib/api-auth'
+import { afgelastingenLijst, magAfgelasten } from '@/lib/afgelasting'
+import { blessureKanten } from '@/lib/blessure'
 import { buildMatchState } from '@/lib/match-engine'
 import { countLineup, LINEUP_MIN } from '@/lib/match-readiness'
-import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
+import { buildRoster, getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { isReleaseTime } from '@/lib/matchsheet-workflow'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { vereisteOfficialsTekst, type Reeks } from '@/lib/reeksen'
 import { isSupportersMode } from '@/lib/score-mode'
 import { DeelnameBevestigen, type DeelnameKant } from './DeelnameBevestigen'
+import { Afgelasten } from './Afgelasten'
 import { RefereePanel } from './RefereePanel'
+import { SpelerControle, type ControleRij } from './SpelerControle'
 import '../../wedstrijdblad.css'
 import { formatDateTimeBE } from '@/lib/datetime'
 
 export const dynamic = 'force-dynamic'
-
-type LineupRow = { player?: { name?: string; vergunningsstatus?: string } | number; rugnummer?: number }
-
-// Naam + vergunningsstatus per speler, zodat de scheidsrechter in één oogopslag ziet dat
-// iedereen die speelt gekeurd is (geldige vergunning).
-function names(rows: LineupRow[] | undefined): { rugnummer?: number; name: string; vergunning: string | null }[] {
-  return (rows ?? []).map((r) => ({
-    rugnummer: r.rugnummer,
-    name: typeof r.player === 'object' ? (r.player?.name ?? '—') : `#${r.player}`,
-    vergunning: typeof r.player === 'object' ? (r.player?.vergunningsstatus ?? null) : null,
-  }))
-}
 
 export default async function ScheidsrechterPage({ params }: { params: Promise<{ matchId: string }> }) {
   const { matchId } = await params
@@ -84,6 +78,33 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
   // Rol bepalen: enkel de federatie ziet de vrijgavecode (om ze door te geven aan de SR).
   const user = await getAuthUser()
   const isFederation = isFederationLevel(user)
+  // De controle per speler: wie staat op de lijst, is hij volgens het reglement in orde (dezelfde
+  // controle als bij het opstellen), en heeft de scheidsrechter hem gecontroleerd?
+  const magControleren = isFederation || (hasRole(user, 'scheidsrechter') && (await refereeMayHandleMatch(payload, user as unknown as AuthedUser, Number(matchId))))
+  const controleVan = async (side: 'home' | 'away'): Promise<ControleRij[]> => {
+    const roster = await buildRoster(payload, matchId, side).catch(() => null)
+    const perId = new Map((roster?.players ?? []).map((p) => [p.id, p]))
+    const rijen = ((side === 'home' ? sheet?.homeLineup : sheet?.awayLineup) ?? []) as { player?: unknown; rugnummer?: number | null; ibGecontroleerd?: boolean | null }[]
+    return rijen.map((r) => {
+      const id = Number(r.player && typeof r.player === 'object' ? (r.player as { id: number }).id : r.player)
+      const p = perId.get(id)
+      const naam = r.player && typeof r.player === 'object' ? String((r.player as { name?: unknown }).name ?? '') : (p?.name ?? `#${id}`)
+      return {
+        id,
+        rugnummer: r.rugnummer ?? null,
+        naam,
+        blokkade: !p ? 'hoort niet (meer) bij deze ploeg' : p.selectability.level === 'block' ? p.selectability.reasons.join(' ') : null,
+        gecontroleerd: Boolean(r.ibGecontroleerd),
+      }
+    })
+  }
+  const controle = { home: await controleVan('home'), away: await controleVan('away') }
+  const magAfgelastenHier = await magAfgelasten(payload, user as unknown as AuthedUser | null, Number(matchId))
+  // De laatste afgelasting die nog speelt (gemeld), of anders de jongste — enkel zolang de wedstrijd afgelast is
+  // of net herpland werd.
+  const afgelastingen = await afgelastingenLijst(payload, { match: { equals: Number(matchId) } }, 1)
+  const afgelasting = afgelastingen[0] && (match.afgelast || afgelastingen[0].status === 'herpland') ? afgelastingen[0] : null
+  const blessureKantenLijst = await blessureKanten(payload, user as unknown as AuthedUser | null, Number(matchId))
   const backupRef = sheet?.backupReferee as { name?: string } | number | null | undefined
   const backupRefereeName = backupRef && typeof backupRef === 'object' ? (backupRef.name ?? null) : null
 
@@ -103,7 +124,41 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
       </h1>
       <MatchDayNav matchId={matchId} current="scheidsrechter" />
 
-      {!released ? (
+      {/* Afgelast (terrein, weer)? Dan ligt de wedstrijd stil tot de federatie herplant. */}
+      {afgelasting ? (
+        <section className="wb-card" style={{ marginBottom: 16, borderColor: '#e0a23d' }}>
+          <h2>⛈️ Afgelast — {afgelasting.reden}</h2>
+          <p className="wb-sub">
+            {afgelasting.status === 'gemeld'
+              ? 'De federatie plant een nieuwe datum. Tot dan kan de wedstrijd niet starten.'
+              : afgelasting.status === 'herpland' && afgelasting.nieuweDatum
+                ? `Herpland op ${formatDateTimeBE(new Date(afgelasting.nieuweDatum))}.`
+                : 'De afgelasting werd ingetrokken.'}
+            {afgelasting.toelichting ? ` ${afgelasting.toelichting}` : ''}
+          </p>
+          {afgelasting.fotos.length > 0 && (
+            <div className="af-fotos">
+              {afgelasting.fotos.map((f) => (
+                <a key={f} href={f} target="_blank" rel="noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={f} alt="Omstandigheden" />
+                </a>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : (
+        match.status === 'scheduled' &&
+        magAfgelastenHier && (
+          <section className="wb-card" style={{ marginBottom: 16 }}>
+            <h2>Terrein of weer niet in orde?</h2>
+            <p className="wb-sub">Gelast af met een paar foto&apos;s van de omstandigheden. De federatie plant een nieuwe datum.</p>
+            <Afgelasten matchId={matchId} />
+          </section>
+        )
+      )}
+
+      {!released && !magControleren ? (
         <p className="wb-intro">
           De opstellingen worden zichtbaar vanaf{' '}
           {formatDateTimeBE(releaseAt, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}{' '}
@@ -111,8 +166,8 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
         </p>
       ) : (
         <div className="wb-grid" style={{ marginBottom: 16 }}>
-          <LineupView title="Thuis" rows={names(sheet?.homeLineup as LineupRow[])} />
-          <LineupView title="Uit" rows={names(sheet?.awayLineup as LineupRow[])} />
+          <SpelerControle matchId={matchId} side="home" titel={`Thuis — ${liveState?.teams.home.name ?? ''}`} rijen={controle.home} vergrendeld={!magControleren || sheet?.status === 'ingediend'} />
+          <SpelerControle matchId={matchId} side="away" titel={`Uit — ${liveState?.teams.away.name ?? ''}`} rijen={controle.away} vergrendeld={!magControleren || sheet?.status === 'ingediend'} />
         </div>
       )}
 
@@ -146,6 +201,7 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
         awayScore={liveState?.score.away ?? 0}
         homeTeam={liveState?.teams.home.name ?? 'Thuis'}
         awayTeam={liveState?.teams.away.name ?? 'Uit'}
+        spelersNietInOrde={[...controle.home, ...controle.away].filter((r) => !r.gecontroleerd || r.blokkade).length}
         lineupReady={{
           homeOk: countLineup(sheet?.homeLineup) >= LINEUP_MIN,
           awayOk: countLineup(sheet?.awayLineup) >= LINEUP_MIN,
@@ -170,6 +226,12 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
       {liveState?.match.status === 'finished' && (isFederation || hasRole(user, 'scheidsrechter')) && (
         <DeelnameBevestigen matchId={matchId} kanten={deelnameKanten} vergrendeld={sheet?.status === 'ingediend'} />
       )}
+
+      {blessureKantenLijst.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <BlessureMelden matchId={matchId} kanten={blessureKantenLijst} />
+        </div>
+      )}
       </div>
     </>
   )
@@ -185,44 +247,4 @@ function deelnameSpelers(rows: DeelnameRij[] | undefined): DeelnameKant['spelers
       deelgenomen: Boolean(r.deelgenomen),
     }))
     .filter((s) => Number.isFinite(s.id))
-}
-
-function LineupView({
-  title,
-  rows,
-}: {
-  title: string
-  rows: { rugnummer?: number; name: string; vergunning: string | null }[]
-}) {
-  const allesGekeurd = rows.length > 0 && rows.every((r) => r.vergunning === 'geldig')
-  return (
-    <section className="wb-card">
-      <h2>{title}</h2>
-      {rows.length === 0 ? (
-        <p className="wb-sub">Nog geen opstelling ingevuld.</p>
-      ) : (
-        <>
-          {/* In één oogopslag: alle opgestelde spelers gekeurd (geldige vergunning) of niet. */}
-          {allesGekeurd ? (
-            <div className="ops-ready ok">✓ Alle spelers gekeurd</div>
-          ) : (
-            <div className="ops-ready todo">Niet alle spelers hebben een geldige vergunning.</div>
-          )}
-          <ul className="wb-rows">
-            {rows.map((r, i) => (
-              <li key={i} className="wb-row" style={{ cursor: 'default' }}>
-                <strong className="num">{r.rugnummer ?? '–'}</strong>
-                <span className="nm">{r.name}</span>
-                {r.vergunning === 'geldig' ? (
-                  <span className="off-st ok">✓ gekeurd</span>
-                ) : (
-                  <span className="off-st bad">⚠ {r.vergunning === 'aangevraagd' ? 'vergunning aangevraagd' : 'geen vergunning'}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-    </section>
-  )
 }

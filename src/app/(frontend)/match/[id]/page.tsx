@@ -408,7 +408,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           aantekenaar tegelijk zijn (zie claimHeld in score-trust.ts). Federatie/admin blijven de
           noodrem en zien de knop wel. In de federatieflow krijgt enkel de aangeduide tafel hem
           (mayScoreMatch): clubverantwoordelijke, aantekenaar of scheidsrechter van dienst. */}
-      {toonAantekenen && (
+      {/* Afgelast door de scheidsrechter (terrein, weer): de wedstrijd gaat niet door op dit uur. */}
+      {Boolean(matchDoc?.afgelast) && state.match.status === 'scheduled' && (
+        <p className="match-afgelast">⛈️ Afgelast — de federatie plant een nieuwe datum.</p>
+      )}
+      {toonAantekenen && !matchDoc?.afgelast && (
         <Link href={`/scorekeeper/${matchId}`} className="match-score-cta">
           <span aria-hidden>✏️</span>
           <span>

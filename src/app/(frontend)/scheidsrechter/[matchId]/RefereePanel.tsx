@@ -8,7 +8,6 @@ import { toast } from '@/components/Toaster'
 import { KEURING_ITEMS, KEURING_OPTIONS } from '@/lib/keuring'
 import {
   MATCHSHEET_STATUS_OPTIONS,
-  nextStatus,
   sheetOpenForScoring,
   type MatchSheetStatus,
 } from '@/lib/matchsheet-workflow'
@@ -61,6 +60,7 @@ export function RefereePanel({
   homeTeam,
   awayTeam,
   lineupReady,
+  spelersNietInOrde = 0,
   officialsHint,
   isFederation,
   vrijgaveCode,
@@ -86,6 +86,8 @@ export function RefereePanel({
   homeTeam: string
   awayTeam: string
   lineupReady: { homeOk: boolean; awayOk: boolean }
+  /** Spelers op de lijsten die nog niet gecontroleerd zijn, of volgens het reglement niet in orde. */
+  spelersNietInOrde?: number
   officialsHint: string | null
   isFederation: boolean
   vrijgaveCode: string | null
@@ -120,6 +122,7 @@ export function RefereePanel({
     if (ok) {
       setStartAkkoord(akkoord)
       if (json.naam) setStartNaam(json.naam)
+      if (json.status) setStatus(json.status)
       notify(
         true,
         akkoord
@@ -184,6 +187,7 @@ export function RefereePanel({
     { ok: lineupReady.homeOk && lineupReady.awayOk, label: 'Opstellingen (min. 4 per ploeg)' },
     { ok: validation.ok, label: 'Officials volledig en geldig' },
     { ok: keuringBevestigd, label: 'Keuring bevestigd' },
+    { ok: spelersNietInOrde === 0, label: 'Spelers gecontroleerd' },
     { ok: startAkkoord, label: 'Akkoord scheidsrechter' },
   ]
   const allesKlaar = klaarChecks.every((c) => c.ok)
@@ -245,27 +249,11 @@ export function RefereePanel({
     }
   }
 
-  // Eén knop i.p.v. losse statuskeuzes: doorloop de tussenstappen van de status-machine
-  // (concept → vrijgegeven → wedstrijdklaar) zodat de aantekenaar kan starten.
-  const wedstrijdKlaarzetten = async () => {
-    let s = status
-    while (s !== 'wedstrijdklaar') {
-      const n = nextStatus(s)
-      if (!n || n === 'bezig') break
-      const { ok, json } = await post({ action: 'status', to: n })
-      if (!ok) {
-        notify(false, json.error || 'Statuswijziging mislukt.')
-        return
-      }
-      s = json.status
-      setStatus(s)
-    }
-    notify(true, 'Wedstrijd klaargezet — de aantekenaar kan starten.')
-  }
-
   const startBlokkers: string[] = []
   if (!lineupReady.homeOk) startBlokkers.push('opstelling thuis')
   if (!lineupReady.awayOk) startBlokkers.push('opstelling uit')
+  if (!keuringBevestigd) startBlokkers.push('de materiële keuring (bevestigen)')
+  if (spelersNietInOrde > 0) startBlokkers.push(`${spelersNietInOrde} speler${spelersNietInOrde === 1 ? '' : 's'} te controleren of niet in orde`)
 
   return (
     <div className="wb-grid">
@@ -277,7 +265,7 @@ export function RefereePanel({
         </p>
         {startBlokkers.length > 0 && (
           <p className="wb-sub" style={{ color: '#e0533d' }}>
-            Let op: {startBlokkers.join(' en ')} nog niet volledig (minstens 4 spelers per ploeg).
+            Nog in orde te brengen vóór je vrijgeeft: {startBlokkers.join(', ')}. Een opstelling telt minstens 4 spelers.
           </p>
         )}
         {backupRefereeName && (
@@ -604,14 +592,11 @@ export function RefereePanel({
             )}
           </div>
         ) : (
-          <button
-            onClick={wedstrijdKlaarzetten}
-            disabled={busy || !allesKlaar}
-            className="wb-btn wb-btn-primary"
-            title={allesKlaar ? 'Zet de wedstrijd klaar voor de aantekenaar' : 'Eerst alles hierboven in orde brengen'}
-          >
-            {busy ? 'Bezig…' : '✓ Alles in orde — wedstrijd starten'}
-          </button>
+          // De status volgt de vrijgave vanzelf (lib/blad-status.ts): geen aparte knop meer.
+          <p className="wb-sub">
+            {allesKlaar ? 'Alles in orde.' : 'Breng alles hierboven in orde en geef de wedstrijd vrij'} — dan kan de
+            aantekentafel starten.
+          </p>
         )}
         {isFederation && (
           <>

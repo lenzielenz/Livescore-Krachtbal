@@ -8,6 +8,7 @@ import { normalizeLogoFit } from '@/lib/logo-fit'
 import { getPayloadClient } from '@/lib/payload-client'
 import { AccountVerwijderen } from './AccountVerwijderen'
 import { MijnDossier } from './MijnDossier'
+import { MijnOngevallen } from './MijnOngevallen'
 import { ProfileForm, type ProfileInitial } from './ProfileForm'
 import '../wedstrijdblad.css'
 import './profiel.css'
@@ -98,6 +99,10 @@ export default async function ProfielPage() {
           Stel hier je eigen profiel samen: je naam, je club, je positie in het spel en je profielfoto
           (uploaden, inzoomen en verschuiven). Klaar? <Link href="/profiel/scorecard" style={{ color: 'var(--accent)', fontWeight: 700 }}>Bekijk je scorecard →</Link> · <Link href="/profiel/paspoort" style={{ color: 'var(--accent)', fontWeight: 700 }}>Supporterpaspoort →</Link> · <Link href="/profiel/badges" style={{ color: 'var(--accent)', fontWeight: 700 }}>Badges →</Link> · <Link href="/profiel/ideeen" style={{ color: 'var(--accent)', fontWeight: 700 }}>Mijn ideeën →</Link>
         </p>
+        <MijnOngevallen
+          payload={payload}
+          playerIds={[idOf(u.player), ...(Array.isArray(u.kinderen) ? u.kinderen : []).map((k) => idOf(k))].filter(Boolean).map(Number)}
+        />
         {idOf(u.player) && <MijnDossier payload={payload} playerId={Number(idOf(u.player))} />}
         {(Array.isArray(u.kinderen) ? u.kinderen : []).map((k) => idOf(k)).filter(Boolean).map((k) => (
           <MijnDossier key={String(k)} payload={payload} playerId={Number(k)} ouder />

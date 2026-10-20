@@ -631,3 +631,36 @@
 /* ⭐ favoriet per speler in de opstelling (staat dan bovenaan) */
 .ops-fav { margin-left: auto; min-width: 36px; min-height: 36px; border: none; background: transparent; color: var(--dim); font-size: 1.2rem; cursor: pointer; line-height: 1; }
 .ops-fav.on { color: #f6c544; }
+
+/* Opstelling: rugnummer op dit blad + kapitein (C) per geselecteerde speler. */
+.ops-extra { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.ops-extra ~ .ops-fav { margin-left: 4px; }
+.ops-nr { width: 3.2em; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--txt); text-align: center; font-weight: 700; }
+.ops-kap { min-width: 32px; min-height: 32px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--dim); font-weight: 800; cursor: pointer; }
+.ops-kap.on { background: #f6c544; border-color: #f6c544; color: #1a1a1a; }
+.ops-kap:disabled, .ops-nr:disabled { opacity: 0.6; cursor: default; }
+
+/* Blessure doorgeven */
+.bl-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 10px 0 12px; }
+.bl-form label { display: grid; gap: 4px; font-size: 0.8rem; color: var(--dim); }
+.bl-form .bl-breed { grid-column: 1 / -1; }
+
+/* Ongevalsdossier (profiel, club, federatie) */
+.od-lijst { display: grid; gap: 12px; }
+.od-kaart { border: 1px solid var(--line); border-left-width: 4px; border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; }
+.od-kop { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; }
+.od-status { margin-left: auto; font-weight: 700; font-size: 0.85rem; }
+.od-dim { color: var(--dim); font-size: 0.82rem; margin: 0; }
+.od-tekst { margin: 0; font-size: 0.9rem; }
+.od-opm { margin: 0; padding: 8px 10px; border-radius: 8px; background: rgba(224, 162, 61, 0.12); font-size: 0.88rem; }
+.od-stappen { margin: 0; padding-left: 20px; font-size: 0.88rem; display: grid; gap: 4px; }
+.od-stappen a, .od-dim a, .od-docs a { color: var(--accent); font-weight: 600; }
+.od-docs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 0.88rem; }
+.od-upload, .od-fed { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.od-upload select { max-width: 260px; }
+.od-fed input { flex: 1; min-width: 220px; }
+
+/* Afgelasting: foto's van de omstandigheden */
+.af-fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 8px; }
+.af-fotos img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); display: block; }
+.wb-link { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font: inherit; text-decoration: underline; }

@@ -48,7 +48,7 @@ function Staven({ titel, lijst, eenheid = '' }: { titel: string; lijst: Telling[
 }
 
 // Inzicht in de hele organisatie: leden (jeugd, meisjes, jongens), ploegen, wedstrijden en forfaits,
-// scheidsrechters, en per club. Alles afgeleid (lib/federatie-statistieken.ts).
+// scheidsrechters, blessures, en per club. Alles afgeleid (lib/federatie-statistieken.ts).
 export default async function StatistiekenPage() {
   const me = await getAuthUser()
   if (!isFederationLevel(me)) return <FederatieAlleen titel="Statistieken" />
@@ -106,6 +106,23 @@ export default async function StatistiekenPage() {
         </div>
         <div className="st-rooster">
           <Staven titel="Toegewezen wedstrijden per scheidsrechter (dit seizoen)" lijst={s.scheidsrechters.inzet} />
+        </div>
+
+        <h2 className="st-kop">Blessures &amp; ongevallen</h2>
+        <div className="st-tegels">
+          <Tegel waarde={s.ongevallen.totaal} label="blessures doorgegeven" sub={`${s.ongevallen.jeugd} jeugd · ${s.ongevallen.senioren} senioren`} />
+          {s.ongevallen.perStatus.map((t) => (
+            <Tegel key={t.label} waarde={t.aantal} label={t.label.toLowerCase()} />
+          ))}
+          <Tegel waarde={pct(s.ongevallen.totaal, s.wedstrijden.gespeeld)} label="per gespeelde wedstrijd" />
+        </div>
+        <div className="st-rooster">
+          <Staven titel="Blessures per maand" lijst={s.ongevallen.perMaand} />
+          <Staven titel="Blessures per categorie" lijst={s.ongevallen.perCategorie} />
+          <Staven
+            titel="Blessures per club"
+            lijst={s.clubs.filter((c) => c.ongevallen > 0).map((c) => ({ label: c.naam, aantal: c.ongevallen })).sort((a, b) => b.aantal - a.aantal)}
+          />
         </div>
 
         <h2 className="st-kop">Per club</h2>

@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 
 import { buildMatchState, recordRefereeStop, recordTimeout } from './match-engine'
 import { isSupportersMode } from './score-mode'
+import { hoortBijKant } from './wedstrijd-selectie'
 import {
   buildFixedSimpleScore,
   MATCH_ASSUMED_DONE_MS,
@@ -118,7 +119,8 @@ export async function recordSimpleGoal(
   if (scorer && Number.isFinite(scorer.id) && scorer.id > 0) {
     // Bewaak dat de gekozen speler tot de scorende ploeg behoort.
     player = await payload.findByID({ collection: 'players', id: scorer.id, depth: 0 }).catch(() => null)
-    if (!player || relId(player.team) !== teamId) {
+    // Een speler uit een lagere ploeg die de coach selecteerde, hoort er ook bij.
+    if (!player || teamId == null || !(await hoortBijKant(payload, matchId, side, teamId, player))) {
       throw new Error('Die speler hoort niet bij de scorende ploeg.')
     }
   } else if (!(await isSupportersMode(payload))) {
