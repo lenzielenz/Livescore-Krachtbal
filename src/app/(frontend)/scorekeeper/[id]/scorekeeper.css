@@ -846,7 +846,7 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
 .sk-entry-pass .sk-entry-title { color: #c9a0ff; }
 
 /* Overnemen als het toestel van de aantekenaar uitvalt (Overnemen.tsx) */
-.sk-overnemen { display: grid; gap: 8px; max-width: 520px; margin: 16px 0; padding: 16px; border-radius: 14px; border: 1px solid var(--border, #d5dae1); background: var(--surface, #fff); }
+.sk-overnemen { display: grid; gap: 8px; max-width: 520px; margin: 16px 0; padding: 16px; border-radius: 14px; border: 1px solid var(--line, #2b3240); background: var(--panel, #161b24); color: var(--txt, #f5f7fa); }
 .sk-overnemen p { margin: 0; }
 .sk-overnemen-stil { font-size: 0.88rem; opacity: 0.75; }
 .sk-overnemen-knop { min-height: 52px; justify-content: center; font-size: 1.05rem; border: 0; cursor: pointer; }

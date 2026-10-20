@@ -7,7 +7,7 @@ import { ServiceWorker } from '@/components/ServiceWorker'
 import { SessieVerlengen } from '@/components/SessieVerlengen'
 import { TestOmgevingBand } from '@/components/TestOmgevingBand'
 import { Toaster } from '@/components/Toaster'
-import { isTestOmgeving } from '@/lib/omgeving'
+import { isDemoOmgeving, isTestOmgeving } from '@/lib/omgeving'
 import './styles.css'
 
 // Premium typografie: Sora als display-lettertype (titels, merk, scores), Inter voor tekst.
@@ -25,6 +25,7 @@ export const metadata: Metadata = {
   icons: { icon: '/icon.svg', apple: '/apple-icon-180.png' },
   // De federatie-testomgeving hoort niet in zoekmachines (zie omgeving.ts).
   ...(isTestOmgeving() ? { title: 'Krachtbal Live · TEST', robots: { index: false, follow: false } } : {}),
+  ...(isDemoOmgeving() ? { title: 'Krachtbal Live · DEMO', robots: { index: false, follow: false } } : {}),
 }
 
 export const viewport: Viewport = {

@@ -1749,5 +1749,13 @@ body.kb-scherm .site-foot { display: none; }
   .test-omgeving-uitleg { display: none; }
 }
 
+/* Demoruimte: dezelfde band, in demokleur, met "kijk als" (DemoRolBand.tsx). */
+.demo-band { background: repeating-linear-gradient(135deg, #7c5cff 0 14px, #6a4bec 14px 28px); color: #fff; }
+.demo-band .test-omgeving-link { background: #fff; color: #3d22b8; }
+.demo-band-acties { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.demo-band-als { font-weight: 700; }
+@media (max-width: 560px) { .demo-band-als { display: none; } }
+.demo-band-kies { min-height: 32px; border-radius: 999px; border: 0; padding: 0 10px; font-weight: 700; color: #1d1040; background: #fff; max-width: 70vw; }
+
 /* Afgelaste wedstrijd (lib/afgelasting.ts) */
 .match-afgelast { margin: 8px 0 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid #e0a23d; background: rgba(224, 162, 61, 0.12); font-weight: 700; }

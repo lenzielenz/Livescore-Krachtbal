@@ -1,0 +1,38 @@
+/* Demoruimte (draaiboek): groot en leesbaar op een projector of tablet. */
+.dr { display: grid; gap: 18px; }
+.dr-kop { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; justify-content: space-between; }
+.dr-kop > div:first-child { flex: 1 1 420px; }
+.dr-klaar { display: grid; gap: 8px; max-width: 420px; }
+.dr-knop { min-height: 52px; padding: 0 22px; border-radius: 14px; border: 0; background: #6a4bec; color: #fff; font-weight: 800; font-size: 1.02rem; cursor: pointer; }
+.dr-knop:disabled { opacity: 0.6; cursor: progress; }
+.dr-melding { margin: 0; padding: 12px 16px; border-radius: 12px; background: color-mix(in srgb, #6a4bec 16%, transparent); font-weight: 600; }
+.dr-verslag { padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); font-size: 0.86rem; }
+.dr-verslag ul { margin: 6px 0 0; padding-left: 18px; }
+.dr-fout { color: #e0533d; }
+.dr-blok h2 { margin: 0 0 10px; font-size: 1.05rem; }
+.dr-rollen { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.dr-rol { display: grid; gap: 2px; justify-items: start; text-align: left; padding: 12px 14px; min-height: 76px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--txt); cursor: pointer; }
+.dr-rol.aan { border-color: #7c5cff; box-shadow: 0 0 0 2px #7c5cff; }
+.dr-rol-icoon { font-size: 1.4rem; }
+.dr-rol-label { font-weight: 800; font-size: 0.92rem; }
+.dr-rol-naam { color: var(--dim); font-size: 0.8rem; }
+.dr-hoofdstukken { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 14px; }
+.dr-hoofdstuk { display: grid; gap: 10px; align-content: start; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); }
+.dr-h-kop { display: flex; gap: 10px; align-items: center; }
+.dr-h-kop h2 { margin: 0; font-size: 1.1rem; }
+.dr-nr { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #6a4bec; color: #fff; font-weight: 800; flex: 0 0 auto; }
+.dr-verhaal { margin: 0; color: var(--dim); font-size: 0.92rem; line-height: 1.45; }
+.dr-stappen { display: grid; gap: 8px; }
+.dr-stap { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; text-align: left; padding: 10px 12px; min-height: 52px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--txt); font-size: 0.92rem; cursor: pointer; }
+.dr-stap:hover:not(:disabled) { border-color: #7c5cff; }
+.dr-stap:disabled { opacity: 0.5; cursor: not-allowed; }
+.dr-stap-rol { font-size: 1.25rem; }
+.dr-stap-pijl { font-weight: 800; color: #7c5cff; }
+.dr-code { display: grid; gap: 10px; max-width: 360px; }
+.dr-code input { min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--txt); padding: 0 12px; font-size: 1rem; }
+.dr-voet { color: var(--dim); font-size: 0.8rem; }
+@media (max-width: 520px) {
+  .dr-hoofdstukken { grid-template-columns: 1fr; }
+  .dr-rollen { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .dr-rol { min-height: 64px; padding: 10px; }
+}

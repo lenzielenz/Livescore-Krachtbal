@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { hasRole, isFederationLevel, userClubId } from './access'
+import { zonderVoorvoegsel } from './blessure'
 import { accountsVanSpeler, clubStaf, meld, relId } from './meldingen'
 import { kinderIds } from './ouders'
 
@@ -166,7 +167,7 @@ export async function dossiers(payload: Payload, where: Record<string, unknown>,
       datum: a.ongevalDatum ? String(a.ongevalDatum) : null,
       moment: String((a as { moment?: unknown }).moment ?? ''),
       // Zonder het voorvoegsel "Wedstrijd (ploeg), moment:" — dat staat er al apart.
-      omschrijving: String(a.omstandigheden ?? '').replace(/^Wedstrijd[^:]*:\s*/, ''),
+      omschrijving: zonderVoorvoegsel(a.omstandigheden, a.moment),
       status: ((a as { status?: string }).status ?? 'gemeld') as OngevalStatus,
       opmerking: ((a as { federatieOpmerking?: string | null }).federatieOpmerking ?? null) || null,
       documenten: docs.docs
