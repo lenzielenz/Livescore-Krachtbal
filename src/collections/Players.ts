@@ -273,6 +273,15 @@ export const Players: CollectionConfig = {
           admin: { description: 'Verplicht vanaf 13 jaar (instelbaar). Hiermee krijgt het lid een eigen login.' },
         },
         {
+          // Voor een jeugdspeler: de ouder krijgt met dit adres een login waarin het dossier van het
+          // kind staat (medische kaart aanvragen, keuring invoeren). Zie lib/ouders.ts.
+          name: 'ouderEmail',
+          label: 'E-mailadres ouder',
+          type: 'email',
+          access: { read: sensitiveFieldRead },
+          admin: { description: 'Voor jeugd: de ouder ziet het dossier van het kind in zijn eigen login.' },
+        },
+        {
           type: 'row',
           fields: [
             {

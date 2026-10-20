@@ -2,9 +2,9 @@ import type { CollectionConfig } from 'payload'
 
 import { hasRole, isFederationLevel, userClubId } from '../lib/access'
 
-// Aanvraag van een medische kaart bij de federatie — door het lid zelf (vanuit zijn profiel) of door
-// de club voor een lid. De federatie behandelt ze (verstuurd/geweigerd); de andere partij krijgt
-// telkens een melding (lib/medische-kaart.ts). Aanmaken en behandelen enkel via de routes.
+// Aanvraag van een medische kaart bij de federatie — door het lid zelf (vanuit zijn profiel), door een
+// ouder voor zijn kind of door de club voor een lid. De federatie behandelt ze (verstuurd/geweigerd);
+// de andere partij krijgt telkens een melding (lib/medische-kaart.ts). Aanmaken en behandelen enkel via de routes.
 export const MedischeKaartAanvragen: CollectionConfig = {
   slug: 'medische-kaart-aanvragen',
   labels: { singular: 'Aanvraag medische kaart', plural: 'Aanvragen medische kaart' },
@@ -18,6 +18,10 @@ export const MedischeKaartAanvragen: CollectionConfig = {
       const speler = (req.user as { player?: unknown } | null)?.player
       const spelerId = speler && typeof speler === 'object' ? (speler as { id?: unknown }).id : speler
       if (spelerId != null) ors.push({ player: { equals: spelerId } })
+      const kinderen = ((req.user as { kinderen?: unknown[] } | null)?.kinderen ?? [])
+        .map((k) => (k && typeof k === 'object' ? (k as { id?: unknown }).id : k))
+        .filter((k) => k != null)
+      if (kinderen.length) ors.push({ player: { in: kinderen } })
       return ors.length ? ({ or: ors } as never) : false
     },
     create: () => false,
@@ -35,6 +39,7 @@ export const MedischeKaartAanvragen: CollectionConfig = {
       options: [
         { label: 'Door het lid zelf', value: 'lid' },
         { label: 'Door de club', value: 'club' },
+        { label: 'Door een ouder', value: 'ouder' },
       ],
     },
     {

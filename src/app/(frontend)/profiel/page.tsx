@@ -99,6 +99,9 @@ export default async function ProfielPage() {
           (uploaden, inzoomen en verschuiven). Klaar? <Link href="/profiel/scorecard" style={{ color: 'var(--accent)', fontWeight: 700 }}>Bekijk je scorecard →</Link> · <Link href="/profiel/paspoort" style={{ color: 'var(--accent)', fontWeight: 700 }}>Supporterpaspoort →</Link> · <Link href="/profiel/badges" style={{ color: 'var(--accent)', fontWeight: 700 }}>Badges →</Link> · <Link href="/profiel/ideeen" style={{ color: 'var(--accent)', fontWeight: 700 }}>Mijn ideeën →</Link>
         </p>
         {idOf(u.player) && <MijnDossier payload={payload} playerId={Number(idOf(u.player))} />}
+        {(Array.isArray(u.kinderen) ? u.kinderen : []).map((k) => idOf(k)).filter(Boolean).map((k) => (
+          <MijnDossier key={String(k)} payload={payload} playerId={Number(k)} ouder />
+        ))}
         <ProfileForm initial={initial} clubs={clubs} teams={teams} />
         <AccountVerwijderen />
       </div>

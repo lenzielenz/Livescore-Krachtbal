@@ -1,10 +1,7 @@
 import { authUser, hasRole, userClubId } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { clubMagBewerken } from '@/lib/registratie'
-import { clubPloegen } from '@/lib/registratie-server'
-
-const MAX_BYTES = 8 * 1024 * 1024
-const TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp'])
+import { attestFout, attestOpslaan, clubPloegen } from '@/lib/registratie-server'
 
 const relId = (v: unknown): number | null => {
   const id = v && typeof v === 'object' ? (v as { id?: unknown }).id : v
@@ -12,8 +9,7 @@ const relId = (v: unknown): number | null => {
 }
 
 // Het doktersattest van een lid opladen (multipart: playerId + bestand). Enkel clubstaf, enkel voor
-// een lid van de eigen club. Een nieuw attest vervangt het vorige; het oude bestand verdwijnt mee
-// (medisch gegeven: niet langer bewaren dan nodig).
+// een lid van de eigen club. Een nieuw attest vervangt het vorige (lib/registratie-server.ts).
 export async function POST(req: Request) {
   const payload = await getPayloadClient()
   const user = await authUser(payload, req)
@@ -29,9 +25,8 @@ export async function POST(req: Request) {
   const playerId = Number(form.get('playerId'))
   const bestand = form.get('bestand')
   if (!Number.isFinite(playerId)) return Response.json({ error: 'Ongeldig lid.' }, { status: 400 })
-  if (!(bestand instanceof File)) return Response.json({ error: 'Kies een bestand.' }, { status: 400 })
-  if (!TYPES.has(bestand.type)) return Response.json({ error: 'Enkel een PDF of een foto (JPG, PNG, WebP).' }, { status: 400 })
-  if (bestand.size > MAX_BYTES) return Response.json({ error: 'Het bestand is groter dan 8 MB.' }, { status: 400 })
+  const fout = attestFout(bestand)
+  if (fout) return Response.json({ error: fout }, { status: 400 })
 
   try {
     const speler = await payload.findByID({ collection: 'players', id: playerId, depth: 0, overrideAccess: true }).catch(() => null)
@@ -43,20 +38,14 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Dit lid ligt bij de federatie ter goedkeuring.' }, { status: 409 })
     }
 
-    const ext = bestand.type === 'application/pdf' ? 'pdf' : bestand.type.split('/')[1]
-    const attest = await payload.create({
-      collection: 'medische-attesten',
-      data: { player: playerId, club: Number(clubId), geuploadDoor: Number(user.id) },
-      // Geen originele bestandsnaam: die bevat vaak de naam van het kind of de dokter.
-      file: { data: Buffer.from(await bestand.arrayBuffer()), mimetype: bestand.type, name: `attest-${playerId}-${Date.now()}.${ext}`, size: bestand.size },
-      overrideAccess: true,
+    const attestId = await attestOpslaan(payload, {
+      playerId,
+      clubId: Number(clubId),
+      userId: Number(user.id),
+      bestand: bestand as File,
+      vorige: relId(speler.medischAttestBestand),
     })
-    const vorige = relId(speler.medischAttestBestand)
-    await payload.update({ collection: 'players', id: playerId, data: { medischAttestBestand: attest.id }, overrideAccess: true })
-    if (vorige != null) {
-      await payload.delete({ collection: 'medische-attesten', id: vorige, overrideAccess: true }).catch(() => null)
-    }
-    return Response.json({ ok: true, attestId: attest.id })
+    return Response.json({ ok: true, attestId })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }

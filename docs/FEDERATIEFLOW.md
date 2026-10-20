@@ -97,3 +97,15 @@ Details en aannames: [REGELS-CONFORMITEIT.md §6](REGELS-CONFORMITEIT.md).
 - Elk lid vanaf 13 jaar (instelbaar) heeft een e-mailadres. Na goedkeuring krijgt het een eigen login.
 - Het lid vraagt zijn medische kaart aan vanuit *Mijn profiel*; de club kan het ook voor het lid doen.
   De aanvraag gaat naar de federatie (`/beheer/leden`); de andere partij krijgt een melding (🔔).
+
+### Ouders van jeugdspelers
+
+- De club vult bij een jeugdspeler het **e-mailadres van een ouder** in (`/club/leden`). Dat account
+  krijgt het kind meteen (niet pas na goedkeuring); bestaat het nog niet, dan wordt het aangemaakt en
+  krijgt de ouder een uitnodiging (of geeft de clubbeheerder de link door: knop "👪 ouder").
+- Op *Mijn profiel* ziet de ouder het **dossier van het kind**: status, keuring, aanvragen. Hij vraagt er de
+  medische kaart aan en **voert de keuring in** (datum + ingevuld attest). De club krijgt telkens een melding
+  om na te kijken en in te dienen.
+- Verandert de club het adres, dan ziet de vorige ouder het dossier niet meer. Een ouder kan zichzelf
+  niet aan een kind koppelen: enkel de club (via het adres) of de federatie (`Users.kinderen`).
+- Code: `src/lib/ouders.ts`, `src/lib/medische-kaart.ts` (`keuringInvoeren`), `/api/medische-kaart/keuring`.

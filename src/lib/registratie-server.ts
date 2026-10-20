@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto'
 
 import { stuurMail, uitnodigingHtml } from './mail'
 import { accountsVanSpeler, clubStaf, meld } from './meldingen'
+import { zorgVoorOuderLogin } from './ouders'
 import {
   clubMagBewerken,
   EMAIL_VERPLICHT_VANAF,
@@ -72,6 +73,7 @@ export type LidGegevens = {
   birthDate: string
   geslacht: string
   email?: string | null
+  ouderEmail?: string | null
   soortLid: string
   shirtNumber?: number | null
   medischeKeuringOp?: string | null
@@ -95,6 +97,8 @@ export async function lidOpslaan(payload: Payload, clubId: number | string, g: L
   if (!SOORTEN.has(g.soortLid)) return { ok: false, status: 400, error: 'Kies speler of gewoon lid.' }
   const email = (g.email ?? '').trim().toLowerCase()
   if (email && !geldigEmail(email)) return { ok: false, status: 400, error: 'Dat e-mailadres klopt niet.' }
+  const ouderEmail = (g.ouderEmail ?? '').trim().toLowerCase()
+  if (ouderEmail && !geldigEmail(ouderEmail)) return { ok: false, status: 400, error: 'Het e-mailadres van de ouder klopt niet.' }
   if (!email && emailVerplicht(g.birthDate, await emailVanaf(payload))) {
     return { ok: false, status: 400, error: `Een e-mailadres is verplicht vanaf ${await emailVanaf(payload)} jaar.` }
   }
@@ -150,20 +154,27 @@ export async function lidOpslaan(payload: Payload, clubId: number | string, g: L
     birthDate: g.birthDate,
     geslacht: g.geslacht as 'm' | 'v',
     email: email || null,
+    ouderEmail: ouderEmail || null,
     soortLid: g.soortLid as 'speler' | 'lid',
     shirtNumber,
     medischeKeuringOp: g.medischeKeuringOp || null,
   }
+  let id: number
   if (bestaand) {
     await payload.update({ collection: 'players', id: bestaand.id, data, overrideAccess: true })
-    return { ok: true, id: bestaand.id }
+    id = bestaand.id
+  } else {
+    const nieuw = await payload.create({
+      collection: 'players',
+      data: { ...data, name: `${voornaam} ${achternaam}`, registratieStatus: 'concept', vergunningsstatus: 'geen' },
+      overrideAccess: true,
+    })
+    id = Number(nieuw.id)
   }
-  const nieuw = await payload.create({
-    collection: 'players',
-    data: { ...data, name: `${voornaam} ${achternaam}`, registratieStatus: 'concept', vergunningsstatus: 'geen' },
-    overrideAccess: true,
-  })
-  return { ok: true, id: Number(nieuw.id) }
+  // De ouder krijgt meteen toegang (niet pas na goedkeuring): hij voert vaak zelf de keuring in, en
+  // die is nodig om in te dienen. Een gewijzigd adres haalt de vorige ouder eraf.
+  if (ouderEmail || String(bestaand?.ouderEmail ?? '')) await zorgVoorOuderLogin(payload, id)
+  return { ok: true, id }
 }
 
 export type IndienResultaat = { ingediend: number[]; overgeslagen: { id: number; naam: string; reden: string }[] }
@@ -278,7 +289,7 @@ export async function registratiesBeoordelen(
         tekst: login?.status === 'aangemaakt' ? (login.gemaild ? 'Het lid kreeg een uitnodiging om in te loggen.' : 'Er is een login klaar; geef de link door vanuit Leden & registratie.') : 'Het lid mag spelen.',
         url: '/club/leden',
       })
-      await meld(payload, await accountsVanSpeler(payload, p.id), { titel: '✅ Je registratie is goedgekeurd', tekst: 'Je mag spelen.', url: '/profiel' })
+      await meld(payload, await accountsVanSpeler(payload, p.id), { titel: `✅ Registratie van ${naam} goedgekeurd`, tekst: speler ? 'Mag spelen.' : 'Lid van de club.', url: '/profiel' })
     } else {
       await meld(payload, await clubStaf(payload, club), { titel: `✗ ${naam} afgekeurd`, tekst: reden, url: '/club/leden' })
     }
@@ -336,4 +347,41 @@ export async function zorgVoorLogin(payload: Payload, playerId: number): Promise
     gemaild = (await stuurMail({ aan: email, onderwerp: 'Je login voor Krachtbal Live', html: uitnodigingHtml(String(p.name ?? ''), clubNaam, herstelLink(token, basis)) })).verstuurd
   }
   return { status: 'aangemaakt', userId: Number(user.id), gemaild }
+}
+
+export const ATTEST_MAX_BYTES = 8 * 1024 * 1024
+export const ATTEST_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp'])
+
+/** Controleert een opgeladen attest; geeft de fout terug of null. */
+export function attestFout(bestand: unknown): string | null {
+  if (!(bestand instanceof File)) return 'Kies een bestand.'
+  if (!ATTEST_TYPES.has(bestand.type)) return 'Enkel een PDF of een foto (JPG, PNG, WebP).'
+  if (bestand.size > ATTEST_MAX_BYTES) return 'Het bestand is groter dan 8 MB.'
+  return null
+}
+
+/**
+ * Het doktersattest bij een speler bewaren (door de club, een ouder of het lid zelf). Een nieuw attest
+ * vervangt het vorige; het oude bestand verdwijnt mee (medisch gegeven: niet langer bewaren dan nodig).
+ */
+export async function attestOpslaan(
+  payload: Payload,
+  o: { playerId: number; clubId: number | null; userId: number; bestand: File; vorige: number | null },
+): Promise<number> {
+  const ext = o.bestand.type === 'application/pdf' ? 'pdf' : o.bestand.type.split('/')[1]
+  const attest = await payload.create({
+    collection: 'medische-attesten',
+    data: { player: o.playerId, club: o.clubId, geuploadDoor: o.userId },
+    // Geen originele bestandsnaam: die bevat vaak de naam van het kind of de dokter.
+    file: {
+      data: Buffer.from(await o.bestand.arrayBuffer()),
+      mimetype: o.bestand.type,
+      name: `attest-${o.playerId}-${Date.now()}.${ext}`,
+      size: o.bestand.size,
+    },
+    overrideAccess: true,
+  })
+  await payload.update({ collection: 'players', id: o.playerId, data: { medischAttestBestand: attest.id }, overrideAccess: true })
+  if (o.vorige != null) await payload.delete({ collection: 'medische-attesten', id: o.vorige, overrideAccess: true }).catch(() => null)
+  return Number(attest.id)
 }

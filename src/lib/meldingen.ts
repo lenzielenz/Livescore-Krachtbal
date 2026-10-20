@@ -34,9 +34,15 @@ export async function clubStaf(payload: Payload, clubId: number | null): Promise
   return res.docs.map((u) => Number(u.id))
 }
 
-/** De account(s) gekoppeld aan dit spelersdossier (het lid zelf). */
+/** De account(s) bij dit spelersdossier: het lid zelf en, voor een jeugdspeler, zijn ouder(s). */
 export async function accountsVanSpeler(payload: Payload, playerId: number): Promise<number[]> {
-  const res = await payload.find({ collection: 'users', where: { player: { equals: playerId } }, depth: 0, limit: 5, overrideAccess: true })
+  const res = await payload.find({
+    collection: 'users',
+    where: { or: [{ player: { equals: playerId } }, { kinderen: { in: [playerId] } }] },
+    depth: 0,
+    limit: 10,
+    overrideAccess: true,
+  })
   return res.docs.map((u) => Number(u.id))
 }
 

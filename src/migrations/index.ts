@@ -142,6 +142,7 @@ import * as migration_20261020_080000_club_functies from './20261020_080000_club
 import * as migration_20261020_100000_referendum from './20261020_100000_referendum'
 import * as migration_20261020_120000_meldingen_medische_kaart from './20261020_120000_meldingen_medische_kaart'
 import * as migration_20261020_140000_reglement_regels from './20261020_140000_reglement_regels'
+import * as migration_20261020_160000_ouders from './20261020_160000_ouders'
 
 export const migrations = [
   {
@@ -858,5 +859,10 @@ export const migrations = [
     up: migration_20261020_140000_reglement_regels.up,
     down: migration_20261020_140000_reglement_regels.down,
     name: '20261020_140000_reglement_regels',
+  },
+  {
+    up: migration_20261020_160000_ouders.up,
+    down: migration_20261020_160000_ouders.down,
+    name: '20261020_160000_ouders',
   },
 ];

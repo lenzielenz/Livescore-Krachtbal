@@ -374,6 +374,10 @@ export interface User {
    */
   player?: (number | null) | Player;
   /**
+   * De jeugdspelers waarvan dit account de ouder is. Ze staan op "Mijn profiel".
+   */
+  kinderen?: (number | Player)[] | null;
+  /**
    * Eigen/coach-beoordeling per as (0–100) voor de scorecard. De gebruiker beheert dit zelf.
    */
   scorecardSkills?:
@@ -636,6 +640,10 @@ export interface Player {
    */
   email?: string | null;
   /**
+   * Voor jeugd: de ouder ziet het dossier van het kind in zijn eigen login.
+   */
+  ouderEmail?: string | null;
+  /**
    * Een gewoon lid speelt geen wedstrijden en heeft geen vergunning nodig.
    */
   soortLid?: ('speler' | 'lid') | null;
@@ -709,7 +717,7 @@ export interface MedischeKaartAanvragen {
   player: number | Player;
   club?: (number | null) | Club;
   aangevraagdDoor?: (number | null) | User;
-  via: 'lid' | 'club';
+  via: 'lid' | 'club' | 'ouder';
   status: 'aangevraagd' | 'verstuurd' | 'geweigerd';
   opmerking?: string | null;
   behandeldOp?: string | null;
@@ -2776,6 +2784,7 @@ export interface PlayersSelect<T extends boolean = true> {
   achternaam?: T;
   geslacht?: T;
   email?: T;
+  ouderEmail?: T;
   soortLid?: T;
   vergunningsnummer?: T;
   medischeKeuringOp?: T;
@@ -3537,6 +3546,7 @@ export interface UsersSelect<T extends boolean = true> {
   photoOffsetY?: T;
   position?: T;
   player?: T;
+  kinderen?: T;
   scorecardSkills?: T;
   myTeams?: T;
   kantineScherm?: T;

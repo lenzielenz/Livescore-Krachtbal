@@ -64,12 +64,15 @@ export default async function ClubLedenPage() {
       })
     : { docs: [] }
 
-  // Wie heeft al een login (account gekoppeld aan het dossier)? En wie heeft een open aanvraag voor
-  // een medische kaart?
+  // Wie heeft al een login (account gekoppeld aan het dossier), welke jeugdspeler een ouder met login?
+  // En wie heeft een open aanvraag voor een medische kaart?
   const spelerIds = playersRes.docs.map((p) => Number(p.id))
-  const [accounts, aanvragen, vanaf] = await Promise.all([
+  const [accounts, ouders, aanvragen, vanaf] = await Promise.all([
     spelerIds.length
       ? payload.find({ collection: 'users', where: { player: { in: spelerIds } }, depth: 0, limit: 3000, pagination: false, overrideAccess: true })
+      : { docs: [] },
+    spelerIds.length
+      ? payload.find({ collection: 'users', where: { kinderen: { in: spelerIds } }, depth: 0, limit: 3000, pagination: false, overrideAccess: true })
       : { docs: [] },
     spelerIds.length
       ? payload.find({
@@ -85,6 +88,13 @@ export default async function ClubLedenPage() {
   ])
   const vast = await vastspelenVoorClub(payload, Number(clubId)).catch(() => null)
   const loginVan = new Map(accounts.docs.map((u) => [relId(u.player), { id: Number(u.id), email: String(u.email ?? '') }]))
+  const ouderVan = new Map<number, { id: number; email: string }>()
+  for (const u of ouders.docs) {
+    for (const k of Array.isArray(u.kinderen) ? u.kinderen : []) {
+      const kid = relId(k)
+      if (kid != null && !ouderVan.has(kid)) ouderVan.set(kid, { id: Number(u.id), email: String(u.email ?? '') })
+    }
+  }
   const kaartOpen = new Set(aanvragen.docs.map((a) => relId(a.player)))
   const magLinks = hasRole(me, 'club-beheerder')
 
@@ -109,6 +119,8 @@ export default async function ClubLedenPage() {
       actief: p.actief !== false,
       email: String(p.email ?? ''),
       login: loginVan.get(Number(p.id)) ?? null,
+      ouderEmail: String(p.ouderEmail ?? ''),
+      ouder: ouderVan.get(Number(p.id)) ?? null,
       kaartOpen: kaartOpen.has(Number(p.id)),
       knipjes: knipjesTekst(vast?.get(Number(p.id))),
     }

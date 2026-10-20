@@ -74,3 +74,10 @@
 .av-knoppen { display: flex; flex-wrap: wrap; gap: 8px; }
 .av-btn.danger { background: #3a1018; border-color: #5a1828; color: #ffd5e0; }
 .av-btn.danger:disabled { opacity: 0.45; }
+
+/* Keuring invoeren (Mijn spelersdossier / dossier van je kind) */
+.pf-dossier-acties { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+.pf-keuring { display: grid; gap: 10px; margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.pf-keuring label { display: grid; gap: 4px; font-size: 0.85rem; color: var(--dim); }
+.pf-keuring input[type='date'] { max-width: 220px; }
+.pf-keuring-acties { display: flex; gap: 8px; }

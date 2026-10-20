@@ -33,6 +33,9 @@ export type ClubLid = {
   email: string
   /** Account gekoppeld aan dit dossier (eigen login), of null. */
   login: { id: number; email: string } | null
+  /** E-mailadres van een ouder (jeugd) en diens account, dat het dossier van het kind ziet. */
+  ouderEmail: string
+  ouder: { id: number; email: string } | null
   /** Ligt er een aanvraag voor een medische kaart bij de federatie? */
   kaartOpen: boolean
   /** Vastspelen: hoe vaak hoger gespeeld, of vast in een hogere reeks (lib/competitieregels.ts). */
@@ -105,6 +108,7 @@ function LidFormulier({
     shirtNumber: lid ? String(lid.shirtNumber) : '',
     medischeKeuringOp: lid?.medischeKeuringOp ?? '',
     email: lid?.email ?? '',
+    ouderEmail: lid?.ouderEmail ?? '',
   })
   const [bestand, setBestand] = useState<File | null>(null)
   const [bezig, setBezig] = useState(false)
@@ -174,6 +178,16 @@ function LidFormulier({
             onChange={set('email')}
             autoComplete="off"
             placeholder="voor de eigen login"
+          />
+        </label>
+        <label>
+          E-mailadres ouder (jeugd)
+          <input
+            type="email"
+            value={v.ouderEmail}
+            onChange={set('ouderEmail')}
+            autoComplete="off"
+            placeholder="ouder ziet het dossier en voert de keuring in"
           />
         </label>
         <label>
@@ -452,6 +466,14 @@ export function ClubLeden({
                         >
                           ✉️ {l.email}
                         </span>
+                      ) : null}
+                      {/* De ouder van een jeugdspeler heeft een login met het dossier van het kind. */}
+                      {l.ouder ? (
+                        magLinks ? (
+                          <Herstellink userId={l.ouder.id} email={l.ouder.email} chipClassName="cl-btn" label="👪 ouder" />
+                        ) : (
+                          <span className="cl-sub">👪 {l.ouder.email}</span>
+                        )
                       ) : null}
                       {l.soortLid !== 'lid' && (
                         <KaartAanvragen open={l.kaartOpen} playerId={l.id} klein />

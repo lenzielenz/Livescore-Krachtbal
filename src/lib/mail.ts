@@ -31,3 +31,12 @@ je ziet er je wedstrijden, je medische keuring en je kan je medische kaart aanvr
 <p><a href="${esc(link)}">Kies hier je wachtwoord</a> (de link is 7 dagen geldig).</p>
 <p>Sportieve groeten,<br>KVKBF</p>`
 }
+
+/** De uitnodiging voor een ouder: login met het dossier van het kind. */
+export function ouderUitnodigingHtml(kind: string, club: string, link: string): string {
+  return `<p>Dag,</p>
+<p>${esc(club)} gaf je e-mailadres op als ouder van ${esc(kind)}. Je hebt nu een login op Krachtbal Live:
+je ziet er het spelersdossier van ${esc(kind)}, je voert de medische keuring in en je vraagt de medische kaart aan.</p>
+<p><a href="${esc(link)}">Kies hier je wachtwoord</a> (de link is 7 dagen geldig).</p>
+<p>Sportieve groeten,<br>KVKBF</p>`
+}

@@ -277,6 +277,18 @@ export const Users: CollectionConfig = {
       admin: { description: 'Koppel je account aan je spelersdossier zodat je scorecard je echte cijfers toont.' },
     },
     {
+      // Ouder → dossiers van de kinderen (jeugdspelers). Gelegd vanuit het e-mailadres van de ouder
+      // dat de club bij de speler invult (lib/ouders.ts), of door de federatie. Niet zelf te zetten:
+      // anders hangt iemand zich aan het medisch dossier van eender welk kind.
+      name: 'kinderen',
+      label: 'Kinderen (ouder van)',
+      type: 'relationship',
+      relationTo: 'players',
+      hasMany: true,
+      access: { update: fieldIsFederation, create: fieldIsFederation },
+      admin: { description: 'De jeugdspelers waarvan dit account de ouder is. Ze staan op "Mijn profiel".' },
+    },
+    {
       // Zelf-/coachbeoordeling per radar-as (0..100). Vult de scorecard wanneer er (nog) geen
       // wedstrijddata is. De gebruiker (of zijn coach) beheert dit zelf via de scorecard.
       name: 'scorecardSkills',

@@ -5,11 +5,21 @@ import { useState } from 'react'
 
 import { toast } from '@/components/Toaster'
 
-/** Knop "Medische kaart aanvragen" — voor jezelf (playerId leeg) of als club voor een lid. */
-export function KaartAanvragen({ open, playerId, klein }: { open: boolean; playerId?: number; klein?: boolean }) {
+/** Knop "Medische kaart aanvragen" — voor jezelf (playerId leeg), als ouder voor je kind of als club voor een lid. */
+export function KaartAanvragen({
+  open,
+  playerId,
+  klein,
+  voor = playerId != null ? 'club' : 'zelf',
+}: {
+  open: boolean
+  playerId?: number
+  klein?: boolean
+  voor?: 'zelf' | 'kind' | 'club'
+}) {
   const router = useRouter()
   const [bezig, setBezig] = useState(false)
-  if (open) return klein ? <span className="cl-sub">🩺 kaart aangevraagd</span> : <p className="wb-sub">🩺 Je aanvraag ligt bij de federatie.</p>
+  if (open) return klein ? <span className="cl-sub">🩺 kaart aangevraagd</span> : <p className="wb-sub">🩺 De aanvraag ligt bij de federatie.</p>
   return (
     <button
       type="button"
@@ -26,7 +36,7 @@ export function KaartAanvragen({ open, playerId, klein }: { open: boolean; playe
           })
           const d = (await res.json().catch(() => ({}))) as { error?: string }
           if (!res.ok) return toast('error', d.error ?? 'Aanvragen mislukt.')
-          toast('success', playerId != null ? 'Aangevraagd bij de federatie; het lid krijgt een melding.' : 'Aangevraagd bij de federatie; je club krijgt een melding.')
+          toast('success', voor === 'club' ? 'Aangevraagd bij de federatie; het lid krijgt een melding.' : 'Aangevraagd bij de federatie; de club krijgt een melding.')
           router.refresh()
         } finally {
           setBezig(false)

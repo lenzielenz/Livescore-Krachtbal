@@ -19,6 +19,8 @@ const meldingenVan = async (user: number) =>
 describe('e-mail, login en medische kaart', () => {
   beforeAll(async () => {
     payload = await getPayload({ config: await config })
+    // In een lege databank wordt de eerste gebruiker admin; zo is de beheerder hieronder gewone clubstaf.
+    await payload.create({ collection: 'users', data: { email: `eerste-kaart-${STAMP}@test.be`, password: 'kaart-test-123' }, overrideAccess: true })
     ids.club = Number((await payload.create({ collection: 'clubs', data: { name: `Kaart ${STAMP}` }, overrideAccess: true })).id)
     ids.ander = Number((await payload.create({ collection: 'clubs', data: { name: `Kaart ander ${STAMP}` }, overrideAccess: true })).id)
     ids.ploeg = Number(
@@ -91,7 +93,7 @@ describe('e-mail, login en medische kaart', () => {
     const beheerder = await payload.findByID({ collection: 'users', id: ids.beheerder, depth: 0, overrideAccess: true })
     const r = await kaartAanvragen(payload, beheerder, ids.speler)
     expect(r.ok).toBe(true)
-    expect((await meldingenVan(ids.lid))[0].titel).toContain('Je club vroeg')
+    expect((await meldingenVan(ids.lid))[0].titel).toContain('De club vroeg')
     const vreemd = { id: 99_999, roles: ['club-beheerder'], club: ids.ander }
     expect(await kaartAanvragen(payload, vreemd, ids.speler)).toMatchObject({ ok: false, status: 403 })
   })
