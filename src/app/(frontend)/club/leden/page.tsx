@@ -4,6 +4,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { hasRole, userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
+import { knipjesTekst, vastspelenVoorClub } from '@/lib/competitieregels'
 import { emailVanaf } from '@/lib/registratie-server'
 import { ClubLeden, type ClubLid } from './ClubLeden'
 import './club-leden.css'
@@ -82,6 +83,7 @@ export default async function ClubLedenPage() {
       : { docs: [] },
     emailVanaf(payload),
   ])
+  const vast = await vastspelenVoorClub(payload, Number(clubId)).catch(() => null)
   const loginVan = new Map(accounts.docs.map((u) => [relId(u.player), { id: Number(u.id), email: String(u.email ?? '') }]))
   const kaartOpen = new Set(aanvragen.docs.map((a) => relId(a.player)))
   const magLinks = hasRole(me, 'club-beheerder')
@@ -108,6 +110,7 @@ export default async function ClubLedenPage() {
       email: String(p.email ?? ''),
       login: loginVan.get(Number(p.id)) ?? null,
       kaartOpen: kaartOpen.has(Number(p.id)),
+      knipjes: knipjesTekst(vast?.get(Number(p.id))),
     }
   })
 

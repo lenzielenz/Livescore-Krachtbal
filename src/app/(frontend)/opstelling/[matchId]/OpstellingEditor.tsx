@@ -14,6 +14,8 @@ type RosterEntry = {
   vergunningsstatus: string
   selectability: { level: 'ok' | 'warn' | 'block'; reasons: string[] }
   suggested: boolean
+  geleendVan?: string
+  knipjes?: { keer: number; max: number; vastIn: string | null }
 }
 
 type RosterResponse = {
@@ -236,6 +238,12 @@ export function OpstellingEditor({
               <strong className="num">{p.shirtNumber}</strong>
               <span className="nm">
                 <span className="wb-nm-name">{p.name}</span>
+                {p.geleendVan && (
+                  <span className="wb-reason">
+                    uit {p.geleendVan}
+                    {p.knipjes ? ` · 🎟️ ${p.knipjes.keer}/${p.knipjes.max} keer hoger` : ''}
+                  </span>
+                )}
                 {reason && p.selectability.level !== 'ok' && <span className={`wb-reason lvl-${p.selectability.level}`}>{reason}</span>}
               </span>
               {!favSet.has(p.id) && p.suggested && <span className="wb-tag">voorstel</span>}

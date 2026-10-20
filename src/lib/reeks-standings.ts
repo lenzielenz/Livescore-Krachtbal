@@ -3,32 +3,107 @@ import type { Payload } from 'payload'
 import { competitionWhere } from './analyse-access'
 import type { ClinchContext } from './championship'
 import { buildScoreboards } from './match-engine'
-import { computeStandings, resolveForfait, type StandingRow, type StandingsMatch } from './standings'
+import {
+  computeStandings,
+  resolveForfait,
+  type StandingRow,
+  type StandingsMatch,
+} from './standings'
 
 // Bouwt de actuele stand én het aantal resterende wedstrijden per ploeg voor één reeks. Gedeeld
 // door de rangschikking-/kampioenschapslogica.
 
 const rel = (v: unknown): number | null =>
-  v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
+  v && typeof v === 'object'
+    ? ((v as { id?: number }).id ?? null)
+    : typeof v === 'number'
+      ? v
+      : null
 
 export async function buildReeksStandings(
   payload: Payload,
   reeks: string,
 ): Promise<{ standings: StandingRow[]; remaining: Map<number, number>; clinchCtx: ClinchContext }> {
   const teamsRes = await payload
-    .find({ collection: 'teams', where: { and: [{ reeks: { equals: reeks } }, competitionWhere()] }, depth: 0, limit: 200 })
+    .find({
+      collection: 'teams',
+      where: { and: [{ reeks: { equals: reeks } }, competitionWhere()] },
+      depth: 0,
+      limit: 200,
+    })
     .catch(() => ({ docs: [] as { id: number }[] }))
   const teamIds = teamsRes.docs.map((t) => Number(t.id))
 
   const finishedRes = await payload
-    .find({ collection: 'matches', where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }, { analyseOnly: { not_equals: true } }] }, depth: 0, limit: 1000 })
+    .find({
+      collection: 'matches',
+      where: {
+        and: [
+          { reeks: { equals: reeks } },
+          { status: { equals: 'finished' } },
+          { analyseOnly: { not_equals: true } },
+        ],
+      },
+      depth: 0,
+      limit: 1000,
+    })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const finished = finishedRes.docs.filter((m) => !(m as { isDemo?: boolean }).isDemo)
-  const cards = await buildScoreboards(payload, finished as Parameters<typeof buildScoreboards>[1])
+  const { standings, standingsMatches } = await standingsUitWedstrijden(
+    payload,
+    finished as Record<string, unknown>[],
+    teamIds,
+  )
 
+  // Resterende (nog te spelen) wedstrijden per ploeg.
+  const remRes = await payload
+    .find({
+      collection: 'matches',
+      where: {
+        and: [
+          { reeks: { equals: reeks } },
+          { status: { in: ['scheduled', 'live'] } },
+          { analyseOnly: { not_equals: true } },
+        ],
+      },
+      depth: 0,
+      limit: 1000,
+    })
+    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  const remaining = new Map<number, number>()
+  const fixtures: ClinchContext['fixtures'] = []
+  for (const m of remRes.docs) {
+    if ((m as { isDemo?: boolean }).isDemo) continue
+    const homeId = rel((m as { homeTeam?: unknown }).homeTeam)
+    const awayId = rel((m as { awayTeam?: unknown }).awayTeam)
+    for (const tid of [homeId, awayId]) {
+      if (tid != null) remaining.set(Number(tid), (remaining.get(Number(tid)) ?? 0) + 1)
+    }
+    if (homeId != null && awayId != null) fixtures.push({ homeId, awayId })
+  }
+  return { standings, remaining, clinchCtx: { fixtures, results: standingsMatches } }
+}
+
+/**
+ * De stand uit een lijst afgelopen wedstrijden: score uit de worpen (buildScoreboards) en forfaits
+ * van het wedstrijdblad. Gedeeld door de reeksstand en de stand van een eindronde.
+ */
+export async function standingsUitWedstrijden(
+  payload: Payload,
+  finished: Record<string, unknown>[],
+  teamIds: number[],
+): Promise<{ standings: StandingRow[]; standingsMatches: StandingsMatch[] }> {
+  const cards = await buildScoreboards(payload, finished as Parameters<typeof buildScoreboards>[1])
   const matchIds = finished.map((m) => (m as { id: number }).id)
   const sheetsRes = matchIds.length
-    ? await payload.find({ collection: 'matchsheets', where: { match: { in: matchIds } }, depth: 0, pagination: false }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    ? await payload
+        .find({
+          collection: 'matchsheets',
+          where: { match: { in: matchIds } },
+          depth: 0,
+          pagination: false,
+        })
+        .catch(() => ({ docs: [] as Record<string, unknown>[] }))
     : { docs: [] as Record<string, unknown>[] }
   const ffByMatch = new Map<number, string>()
   for (const s of sheetsRes.docs) {
@@ -56,21 +131,5 @@ export async function buildReeksStandings(
     })
   }
   const standings = computeStandings(standingsMatches, teamIds)
-
-  // Resterende (nog te spelen) wedstrijden per ploeg.
-  const remRes = await payload
-    .find({ collection: 'matches', where: { and: [{ reeks: { equals: reeks } }, { status: { in: ['scheduled', 'live'] } }, { analyseOnly: { not_equals: true } }] }, depth: 0, limit: 1000 })
-    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
-  const remaining = new Map<number, number>()
-  const fixtures: ClinchContext['fixtures'] = []
-  for (const m of remRes.docs) {
-    if ((m as { isDemo?: boolean }).isDemo) continue
-    const homeId = rel((m as { homeTeam?: unknown }).homeTeam)
-    const awayId = rel((m as { awayTeam?: unknown }).awayTeam)
-    for (const tid of [homeId, awayId]) {
-      if (tid != null) remaining.set(Number(tid), (remaining.get(Number(tid)) ?? 0) + 1)
-    }
-    if (homeId != null && awayId != null) fixtures.push({ homeId, awayId })
-  }
-  return { standings, remaining, clinchCtx: { fixtures, results: standingsMatches } }
+  return { standings, standingsMatches }
 }

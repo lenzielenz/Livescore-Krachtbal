@@ -181,3 +181,26 @@ gemakswaarde op het worp-record.
    passnetwerk op de analysepagina. Invoer is optioneel.
 7. **§3.3 fout-events** — enkel als de aantekenaar het ritme aankan; anders bewust buiten scope
    houden zoals §11 voorschrijft.
+
+---
+
+## 6. Competitieregels uit het reglement en de verslagen (bouwstenen)
+
+Spelregels staan in de code (hierboven). **Competitieregels** — die per seizoen of per verslag van
+de federatie kunnen veranderen — staan niet in de code maar als **bouwstenen** in de databank
+(`competitieregels`, beheer op `/federatie/reglement`). Elke bouwsteen wijst naar zijn bron: een
+artikel van de geldende reglementversie of een verslag. **Zonder bouwsteen past het platform
+niets toe** — het verzint geen regels. Uitvoering: `src/lib/competitieregels.ts`.
+
+| Bouwsteen | Wat het platform doet | Status |
+|---|---|---|
+| **Vastspelen** (`maxKeerHoger`, per categorie) | Telt per speler hoe vaak hij dit seizoen in een **hogere** ploeg van zijn club speelde (bevestigde deelname, anders de selectie). Bij het maximum zit hij vast in die reeks: in een lagere ploeg is hij geblokkeerd (scheidsrechter/federatie kunnen overschrijven). De selectie toont de teller ("keer 2 van 3"). | ✅ |
+| **Eindronde** (`bronReeksen`, `topPerReeks`, heen/terug, startdag) | Zodra de bronreeksen uitgespeeld zijn, maakt het platform zelf de eindronde aan (na de laatste afgelopen wedstrijd): de besten per reeks, met kalender. Wedstrijden krijgen reeks `EINDR` + een verwijzing naar de eindronde, zodat de gewone standen zuiver blijven. De federatie krijgt een melding. | ✅ |
+
+Afwijkingen / aannames:
+- **Niveau van een reeks** komt uit `reeksRang` (`src/lib/reeksen.ts`): 1NAH/1NAD > 2NAH > landelijk >
+  regionaal; RHA/RHB/RHC zijn **hetzelfde** niveau (parallelle reeksen). Bij de jeugd staat A boven
+  B. Beloften (1NAHB) staan op hetzelfde niveau als de hoofdreeks.
+- **Vastspelen** telt enkel binnen dezelfde club en dezelfde categorie; hoger spelen in een andere
+  categorie volgt de leeftijdsregels (`lib/age-categories.ts`).
+- Het **aantal keer** staat niet in de code: de federatie vult het in uit het reglement.

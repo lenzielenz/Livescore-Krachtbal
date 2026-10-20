@@ -67,6 +67,7 @@ export const PROFILES: Profile[] = [
       { href: '/beheer/wedstrijden', label: '🔁 Wedstrijden verplaatsen' },
       { href: '/beheer/kalender', label: '🗓️ Kalender opmaken' },
       { href: '/federatie/referendum', label: '🏅 Referendum' },
+      { href: '/federatie/reglement', label: '📖 Reglement & regels' },
       { href: '/beheer/aantekenaars', label: '✏️ Aantekenaars' },
       { href: '/beheer/planning', label: '📅 Seizoensplanning' },
       { href: '/beheer/rechten', label: '🔑 Functies toekennen' },

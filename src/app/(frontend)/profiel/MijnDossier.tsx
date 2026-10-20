@@ -1,5 +1,6 @@
 import type { Payload } from 'payload'
 
+import { knipjesTekst, vastspelenVoorClub } from '@/lib/competitieregels'
 import { formatDateBE } from '@/lib/datetime'
 import { KEURING_GELDIG_DAGEN, keuringGeldig, registratieIcoon } from '@/lib/registratie'
 import { registratieInput } from '@/lib/registratie-server'
@@ -26,6 +27,8 @@ export async function MijnDossier({ payload, playerId }: { payload: Payload; pla
     overrideAccess: true,
   })
   const open = aanvragen.docs.some((a) => a.status === 'aangevraagd')
+  const clubId = team?.club != null ? Number(typeof team.club === 'object' ? team.club.id : team.club) : null
+  const knipjes = clubId != null ? knipjesTekst((await vastspelenVoorClub(payload, clubId).catch(() => null))?.get(playerId)) : null
 
   return (
     <section className="wb-card" style={{ marginBottom: 16 }}>
@@ -49,6 +52,12 @@ export async function MijnDossier({ payload, playerId }: { payload: Payload; pla
               : 'nog geen'}
           </strong>
         </li>
+        {knipjes && (
+          <li className="wb-row" style={{ cursor: 'default' }}>
+            <span className="nm">Hoger spelen (knipjes)</span>
+            <strong>{knipjes}</strong>
+          </li>
+        )}
         {aanvragen.docs.map((a) => (
           <li key={a.id} className="wb-row" style={{ cursor: 'default' }}>
             <span className="nm">

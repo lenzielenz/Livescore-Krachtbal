@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 
 import { BandChart } from '@/components/analytics/BandChart'
 import { SiteHeader } from '@/components/SiteHeader'
+import { knipjesTekst, vastspelenVoorClub } from '@/lib/competitieregels'
 import { deelnameVanSpeler } from '@/lib/speler-deelname'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -67,6 +68,9 @@ export default async function SpelerProfiel({ params }: Params) {
       : Promise.resolve(null),
     deelnameVanSpeler(payload, playerId).catch(() => null),
   ])
+  const clubId = (player as { club?: unknown }).club
+  const clubNr = clubId && typeof clubId === 'object' ? Number((clubId as { id?: unknown }).id) : Number(clubId)
+  const knipjes = Number.isFinite(clubNr) ? knipjesTekst((await vastspelenVoorClub(payload, clubNr).catch(() => null))?.get(playerId)) : null
   const stat = seasonPlayers.find((s) => s.playerId === playerId) ?? null
 
   return (
@@ -92,6 +96,7 @@ export default async function SpelerProfiel({ params }: Params) {
             <Kpi label="Gespeeld (bevestigd)" value={deelname.gespeeld} />
           </section>
         ) : null}
+        {knipjes ? <p className="ps-meta">{knipjes}</p> : null}
 
         {!stat ? (
           <p className="an-empty">Nog geen wedstrijdstatistieken voor deze speler.</p>

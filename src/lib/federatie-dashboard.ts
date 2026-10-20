@@ -1,5 +1,6 @@
 import type { Payload, Where } from 'payload'
 
+import { eindrondeStatus } from './competitieregels'
 import { formatDateTimeBE } from './datetime'
 
 // Wat staat er voor de federatie nog te doen? Eén lijst taken, elk met een aantal, een paar
@@ -88,6 +89,19 @@ export async function federatieTaken(payload: Payload, nu: Date = new Date()): P
   const zonderLogin = clubs.docs.filter((c) => clubsMetPloeg.has(Number(c.id)) && !metBeheerder.has(Number(c.id)))
 
   const kleur = (n: number, rood: boolean): Taak['dringend'] => (n === 0 ? 'groen' : rood ? 'rood' : 'oranje')
+
+  // Eindrondes volgens de regels: klaar om te starten (het systeem maakt ze zelf aan na de volgende
+  // afgelopen wedstrijd) of al aangemaakt in de laatste 14 dagen (kalender nakijken).
+  const eindRegels = await payload.find({ collection: 'competitieregels', where: { and: [{ soort: { equals: 'eindronde' } }, { actief: { equals: true } }] }, depth: 0, limit: 20, overrideAccess: true })
+  const eindItems: TaakItem[] = []
+  for (const r of eindRegels.docs) {
+    const st = await eindrondeStatus(payload, r as never).catch(() => null)
+    if (!st) continue
+    if (st.bestaat) {
+      const er = await payload.findByID({ collection: 'eindrondes', id: st.bestaat, depth: 0, overrideAccess: true }).catch(() => null)
+      if (er && t - new Date(String(er.createdAt)).getTime() < 14 * DAG) eindItems.push({ label: `${st.naam}: aangemaakt — kijk de kalender na`, href: `/eindronde/${st.bestaat}` })
+    } else if (st.klaar) eindItems.push({ label: `${st.naam}: reeksen uitgespeeld, ${st.doorgaan.length} ploegen gaan door`, href: '/federatie/reglement' })
+  }
   const eersteRefDatum = zonderRef[0] ? new Date(String(zonderRef[0].date)).getTime() : Infinity
 
   return [
@@ -101,6 +115,17 @@ export async function federatieTaken(payload: Payload, nu: Date = new Date()): P
       href: '/beheer/leden',
       actie: 'Keuren',
       items: [],
+    },
+    {
+      sleutel: 'eindrondes',
+      icoon: '🏁',
+      titel: 'Eindrondes',
+      uitleg: 'Volgens de regels van het reglement; het systeem maakt ze zelf aan.',
+      aantal: eindItems.length,
+      dringend: kleur(eindItems.length, false),
+      href: '/federatie/reglement',
+      actie: 'Bekijken',
+      items: eindItems.slice(0, 4),
     },
     {
       sleutel: 'kaarten',

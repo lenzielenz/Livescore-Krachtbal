@@ -49,15 +49,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
     const home = Array.isArray(body.home) ? body.home.map(Number).filter(Number.isFinite) : []
     const away = Array.isArray(body.away) ? body.away.map(Number).filter(Number.isFinite) : []
 
-    // Enkel spelers van de ploeg aan die kant: anders kon een vreemde speler "gespeeld" krijgen
-    // (en daarmee bv. meetellen voor het referendum).
-    const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
-    const teamVan = (v: unknown) => (v && typeof v === 'object' ? (v as { id: number }).id : (v as number | null))
-    for (const [ids, team] of [[home, teamVan(match?.homeTeam)], [away, teamVan(match?.awayTeam)]] as const) {
+    // Enkel spelers van de club van die kant (eigen ploeg, of hoger spelend uit een lagere ploeg):
+    // anders kon een vreemde speler "gespeeld" krijgen (en meetellen voor referendum of vastspelen).
+    const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 1 }).catch(() => null)
+    const clubVan = (v: unknown) => {
+      const c = v && typeof v === 'object' ? (v as { club?: unknown }).club : null
+      return c && typeof c === 'object' ? (c as { id: number }).id : (c as number | null)
+    }
+    for (const [ids, club] of [[home, clubVan(match?.homeTeam)], [away, clubVan(match?.awayTeam)]] as const) {
       if (!ids.length) continue
-      const ok = await payload.find({ collection: 'players', where: { and: [{ id: { in: ids } }, { team: { equals: team } }] }, depth: 0, limit: ids.length })
-      if (team == null || ok.docs.length !== new Set(ids).size) {
-        return Response.json({ error: 'Een aangeduide speler hoort niet bij die ploeg.' }, { status: 400 })
+      const ok = await payload.find({ collection: 'players', where: { and: [{ id: { in: ids } }, { 'team.club': { equals: club } }] }, depth: 0, limit: ids.length })
+      if (club == null || ok.docs.length !== new Set(ids).size) {
+        return Response.json({ error: 'Een aangeduide speler hoort niet bij die club.' }, { status: 400 })
       }
     }
 

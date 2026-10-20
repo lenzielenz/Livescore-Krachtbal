@@ -21,6 +21,7 @@ const TOOLGROEPEN: { titel: string; tools: { href: string; icoon: string; label:
       { href: '/beheer/kalender', icoon: '🗓️', label: 'Kalender opmaken', uitleg: 'Per reeks heen en terug, met vrije weekends.' },
       { href: '/beheer/wedstrijden', icoon: '🔁', label: 'Wedstrijden verplaatsen', uitleg: 'Datum en uur aanpassen; clubs krijgen een melding.' },
       { href: '/beheer/planning', icoon: '📅', label: 'Planning importeren', uitleg: 'Kalender of reeksindeling uit een bestand.' },
+      { href: '/federatie/reglement', icoon: '📖', label: 'Reglement & regels', uitleg: 'Versies, verslagen, vastspelen en eindrondes.' },
     ],
   },
   {

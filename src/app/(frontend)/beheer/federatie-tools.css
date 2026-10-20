@@ -72,3 +72,11 @@
   .ft-lijst { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: 8px; }
   .ft-balk { padding: 10px 0; }
 }
+
+/* Reglementbeheer: lijst links, formulier rechts op een laptop. */
+.rb-kolommen { display: flex; flex-direction: column; gap: 14px; }
+.rb-tekst { width: 100%; min-height: 160px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--txt); font: 0.86rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
+@media (min-width: 1100px) {
+  .rb-kolommen { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: start; gap: 20px; }
+  .rb-kolommen > .ft-kaart { position: sticky; top: 70px; }
+}

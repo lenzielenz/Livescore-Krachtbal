@@ -35,6 +35,8 @@ export type ClubLid = {
   login: { id: number; email: string } | null
   /** Ligt er een aanvraag voor een medische kaart bij de federatie? */
   kaartOpen: boolean
+  /** Vastspelen: hoe vaak hoger gespeeld, of vast in een hogere reeks (lib/competitieregels.ts). */
+  knipjes: string | null
 }
 
 type Team = { id: number; naam: string; reeks: string }
@@ -419,6 +421,7 @@ export function ClubLeden({
                             ? ` — ${l.afkeurReden}`
                             : ''}
                         </span>
+                        {l.knipjes && <span className="cl-sub">{l.knipjes}</span>}
                       </span>
                       {l.attestUrl && (
                         <a

@@ -29,6 +29,7 @@ import { Kampioenen } from './collections/Kampioenen'
 import { Bekerwinnaars } from './collections/Bekerwinnaars'
 import { ReferendumAwards } from './collections/ReferendumAwards'
 import { ReferendumRondes, ReferendumStemmen } from './collections/Referendum'
+import { Competitieregels, Eindrondes, Reglementen, ReglementVerslagen } from './collections/Reglement'
 import { Sanctions } from './collections/Sanctions'
 import { Tournaments } from './collections/Tournaments'
 import { TournamentMatches } from './collections/TournamentMatches'
@@ -131,6 +132,10 @@ export default buildConfig({
     ReferendumAwards,
     ReferendumRondes,
     ReferendumStemmen,
+    Reglementen,
+    ReglementVerslagen,
+    Competitieregels,
+    Eindrondes,
     Sanctions,
     Tournaments,
     TournamentMatches,

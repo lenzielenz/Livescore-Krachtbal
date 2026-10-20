@@ -84,6 +84,10 @@ export interface Config {
     'referendum-awards': ReferendumAward;
     'referendum-rondes': ReferendumRonde;
     'referendum-stemmen': ReferendumStemman;
+    reglementen: Reglementen;
+    'reglement-verslagen': ReglementVerslagen;
+    competitieregels: Competitieregel;
+    eindrondes: Eindronde;
     sanctions: Sanction;
     tournaments: Tournament;
     'tournament-matches': TournamentMatch;
@@ -138,6 +142,10 @@ export interface Config {
     'referendum-awards': ReferendumAwardsSelect<false> | ReferendumAwardsSelect<true>;
     'referendum-rondes': ReferendumRondesSelect<false> | ReferendumRondesSelect<true>;
     'referendum-stemmen': ReferendumStemmenSelect<false> | ReferendumStemmenSelect<true>;
+    reglementen: ReglementenSelect<false> | ReglementenSelect<true>;
+    'reglement-verslagen': ReglementVerslagenSelect<false> | ReglementVerslagenSelect<true>;
+    competitieregels: CompetitieregelsSelect<false> | CompetitieregelsSelect<true>;
+    eindrondes: EindrondesSelect<false> | EindrondesSelect<true>;
     sanctions: SanctionsSelect<false> | SanctionsSelect<true>;
     tournaments: TournamentsSelect<false> | TournamentsSelect<true>;
     'tournament-matches': TournamentMatchesSelect<false> | TournamentMatchesSelect<true>;
@@ -860,7 +868,12 @@ export interface Match {
     | 'U12B'
     | 'recreatief'
     | 'beker'
-    | 'andere';
+    | 'andere'
+    | 'EINDR';
+  /**
+   * Aangemaakt uit een eindronde-regel.
+   */
+  eindronde?: (number | null) | Eindronde;
   /**
    * Bv. 2025-2026. Leeg laten = automatisch afgeleid uit de datum (juli–juni).
    */
@@ -1009,6 +1022,108 @@ export interface Match {
    * Automatisch gezet bij het beëindigen. Bepaalt het 1u-navenster van de live tribune.
    */
   finishedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "eindrondes".
+ */
+export interface Eindronde {
+  id: number;
+  naam: string;
+  seizoen: string;
+  regel: number | Competitieregel;
+  categorie?: ('U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren') | null;
+  ploegen?: (number | Team)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "competitieregels".
+ */
+export interface Competitieregel {
+  id: number;
+  naam: string;
+  soort: 'vastspelen' | 'eindronde';
+  actief?: boolean | null;
+  reglement?: (number | null) | Reglementen;
+  verslag?: (number | null) | ReglementVerslagen;
+  artikel?: string | null;
+  maxKeerHoger?: number | null;
+  categorie?: ('alle' | 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren') | null;
+  bronReeksen?:
+    | (
+        | '1NAH'
+        | '1NAHB'
+        | '1NAD'
+        | '2NAH'
+        | '2NAHB'
+        | 'LH'
+        | 'LD'
+        | 'RHA'
+        | 'RHB'
+        | 'RHC'
+        | 'RDA'
+        | 'RDB'
+        | 'U18J'
+        | 'U18M'
+        | 'U16J'
+        | 'U16M'
+        | 'U16MA'
+        | 'U16MB'
+        | 'U14J'
+        | 'U14JA'
+        | 'U14JB'
+        | 'U14M'
+        | 'U12'
+        | 'U12A'
+        | 'U12B'
+        | 'recreatief'
+        | 'beker'
+        | 'andere'
+      )[]
+    | null;
+  topPerReeks?: number | null;
+  eindrondeNaam?: string | null;
+  heenEnTerug?: boolean | null;
+  dagenNaEinde?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglementen".
+ */
+export interface Reglementen {
+  id: number;
+  /**
+   * Bv. "RCVK 2026".
+   */
+  titel: string;
+  geldigVanaf: string;
+  status: 'concept' | 'actief' | 'archief';
+  bron?: string | null;
+  inhoud: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglement-verslagen".
+ */
+export interface ReglementVerslagen {
+  id: number;
+  titel: string;
+  datum: string;
+  reglement: number | Reglementen;
+  /**
+   * Welk artikel wijzigt of vult het aan, bv. "art. 34".
+   */
+  artikel?: string | null;
+  status: 'actief' | 'ingetrokken';
+  inhoud: string;
   updatedAt: string;
   createdAt: string;
 }
@@ -2413,6 +2528,22 @@ export interface PayloadLockedDocument {
         value: number | ReferendumStemman;
       } | null)
     | ({
+        relationTo: 'reglementen';
+        value: number | Reglementen;
+      } | null)
+    | ({
+        relationTo: 'reglement-verslagen';
+        value: number | ReglementVerslagen;
+      } | null)
+    | ({
+        relationTo: 'competitieregels';
+        value: number | Competitieregel;
+      } | null)
+    | ({
+        relationTo: 'eindrondes';
+        value: number | Eindronde;
+      } | null)
+    | ({
         relationTo: 'sanctions';
         value: number | Sanction;
       } | null)
@@ -2727,6 +2858,7 @@ export interface MatchesSelect<T extends boolean = true> {
   cvAnalyse?: T;
   cvFysiek?: T;
   reeks?: T;
+  eindronde?: T;
   seizoen?: T;
   homeTeam?: T;
   awayTeam?: T;
@@ -3062,6 +3194,67 @@ export interface ReferendumStemmenSelect<T extends boolean = true> {
         punten?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglementen_select".
+ */
+export interface ReglementenSelect<T extends boolean = true> {
+  titel?: T;
+  geldigVanaf?: T;
+  status?: T;
+  bron?: T;
+  inhoud?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglement-verslagen_select".
+ */
+export interface ReglementVerslagenSelect<T extends boolean = true> {
+  titel?: T;
+  datum?: T;
+  reglement?: T;
+  artikel?: T;
+  status?: T;
+  inhoud?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "competitieregels_select".
+ */
+export interface CompetitieregelsSelect<T extends boolean = true> {
+  naam?: T;
+  soort?: T;
+  actief?: T;
+  reglement?: T;
+  verslag?: T;
+  artikel?: T;
+  maxKeerHoger?: T;
+  categorie?: T;
+  bronReeksen?: T;
+  topPerReeks?: T;
+  eindrondeNaam?: T;
+  heenEnTerug?: T;
+  dagenNaEinde?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "eindrondes_select".
+ */
+export interface EindrondesSelect<T extends boolean = true> {
+  naam?: T;
+  seizoen?: T;
+  regel?: T;
+  categorie?: T;
+  ploegen?: T;
   updatedAt?: T;
   createdAt?: T;
 }

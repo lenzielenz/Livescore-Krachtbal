@@ -76,3 +76,24 @@ Spelers stemmen op `/referendum`.
 
 Regels: `src/lib/referendum.ts`. "Gespeeld" = bevestigd door de scheidsrechter; voor wedstrijden
 zonder bevestiging telt een wedstrijd waarin de speler een worp had.
+
+## 8. Reglement en regels — federatie
+
+`/federatie/reglement`: het reglement is heilig.
+- **Reglement:** nieuwe versie als concept, daarna "laten gelden" (de vorige gaat naar het archief).
+  `/reglement` toont altijd de geldende versie.
+- **Verslagen:** kleine wijzigingen, vastgehangen aan een reglementversie; toevoegen, bewerken,
+  intrekken of verwijderen.
+- **Regels als bouwstenen**, elk met hun bron (reglement of verslag):
+  - *Vastspelen*: na X keer hoger spelen zit een speler vast in die reeks. Speler, club en coach zien
+    de teller (🎟️ 2/3), de selectie blokkeert hem in een lagere ploeg.
+  - *Eindronde*: zodra de gekozen reeksen uitgespeeld zijn, maakt het systeem zelf de eindronde aan
+    met kalender (`/eindronde/[id]`); de federatie krijgt een melding en kan verplaatsen.
+
+Details en aannames: [REGELS-CONFORMITEIT.md §6](REGELS-CONFORMITEIT.md).
+
+## 9. E-mail, login en medische kaart
+
+- Elk lid vanaf 13 jaar (instelbaar) heeft een e-mailadres. Na goedkeuring krijgt het een eigen login.
+- Het lid vraagt zijn medische kaart aan vanuit *Mijn profiel*; de club kan het ook voor het lid doen.
+  De aanvraag gaat naar de federatie (`/beheer/leden`); de andere partij krijgt een melding (🔔).
