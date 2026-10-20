@@ -9,7 +9,8 @@ type Tegel = { href: string; icoon: string; label: string; staf?: boolean; behee
 
 // Eerst wat nodig is om wedstrijden te spelen en te regelen: wie mag spelen, nieuwe spelers,
 // blessures, wie wat mag in de club, boetes en de inschrijving. De rest (schermen, pronostiek,
-// referendum, aanwezigheid) staat ingeklapt onder "Meer".
+// referendum, aanwezigheid) staat ingeklapt onder "Meer". De schermen en de clubpronostiek zijn
+// clubwerk: een coach ziet ze niet.
 const NODIG: Tegel[] = [
   { href: '/club/leden', icoon: '🪪', label: 'Leden — wie mag spelen', staf: true },
   { href: '/beheer/spelers', icoon: '➕', label: 'Speler toevoegen', staf: true },
@@ -19,10 +20,10 @@ const NODIG: Tegel[] = [
   { href: '/club/inschrijving', icoon: '📝', label: 'Inschrijving seizoen', staf: true },
 ]
 const MEER: Tegel[] = [
-  { href: '/club/veldscherm', icoon: '🏟️', label: 'Veldscherm' },
-  { href: '/kantine', icoon: '🍻', label: 'Kantinescherm' },
-  { href: '/cast', icoon: '📺', label: 'Naar tv' },
-  { href: '/club/voorspel', icoon: '🔮', label: 'Pronostiek' },
+  { href: '/club/veldscherm', icoon: '🏟️', label: 'Veldscherm', staf: true },
+  { href: '/kantine', icoon: '🍻', label: 'Kantinescherm', staf: true },
+  { href: '/cast', icoon: '📺', label: 'Naar tv', staf: true },
+  { href: '/club/voorspel', icoon: '🔮', label: 'Pronostiek', staf: true },
   { href: '/referendum', icoon: '🏅', label: 'Referendum' },
   { href: '/beheer/training/aanwezigheid', icoon: '✅', label: 'Aanwezigheid' },
 ]

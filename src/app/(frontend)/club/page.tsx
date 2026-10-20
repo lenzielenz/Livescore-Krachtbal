@@ -18,9 +18,15 @@ import { claimHeld, sanitizeTrust } from '@/lib/score-trust'
 import { clubActies, primaireActie } from '@/lib/wedstrijddag-acties'
 import { ClaimButton } from './ClaimButton'
 import { MyTeamsPicker } from './MyTeamsPicker'
+import { ClubDashboard } from './ClubDashboard'
 import { ClubMenu } from './ClubMenu'
 import { InstagramWeekendCard } from './InstagramWeekendCard'
 import { formatDateBE } from '@/lib/datetime'
+import { OPEN_STATUSSEN } from '@/lib/boetes'
+import { clubOverzicht, type LidToon } from '@/lib/club-overzicht'
+import { clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
+import { registratieIcoon } from '@/lib/registratie'
+import { emailVanaf } from '@/lib/registratie-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -282,8 +288,78 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
   }
   champs.sort((a, b) => Number(b.clinched) - Number(a.clinched))
 
+  // Clubdashboard (enkel voor de clubstaf): ledenbestand per ploeg, blessures, boetes en de
+  // opstellingen die nog moeten gebeuren. Alles afgeleid, niets apart bijgehouden.
+  let dashboard: React.ReactNode = null
+  if (clubStaf) {
+    const tweeWeken = Date.now() + 14 * 86_400_000
+    const [spelers, blessures, boetes, vanaf, seizoen] = await Promise.all([
+      payload.find({ collection: 'players', where: { team: { in: teamIds } }, depth: 0, limit: 3000, pagination: false, overrideAccess: true }),
+      payload.find({ collection: 'accidents', where: { and: [{ club: { equals: clubId } }, { status: { in: ['gemeld', 'ingediend'] } }] }, depth: 0, limit: 500, pagination: false, overrideAccess: true }).catch(() => ({ docs: [] as { status?: unknown }[] })),
+      payload.find({ collection: 'boetes', where: { and: [{ club: { equals: clubId } }, { status: { in: [...OPEN_STATUSSEN] } }] }, depth: 0, limit: 500, pagination: false, overrideAccess: true }).catch(() => ({ docs: [] as { status?: unknown; bedrag?: unknown }[] })),
+      emailVanaf(payload),
+      payload.findGlobal({ slug: 'season' }).catch(() => null),
+    ])
+    const toonPerPloeg = new Map<number, LidToon[]>()
+    for (const p of spelers.docs) {
+      const tid = Number(typeof p.team === 'object' && p.team ? (p.team as { id?: unknown }).id : p.team)
+      const toon = registratieIcoon(
+        {
+          voornaam: String(p.voornaam ?? ''),
+          achternaam: String(p.achternaam ?? ''),
+          birthDate: p.birthDate ? String(p.birthDate).slice(0, 10) : '',
+          geslacht: String(p.geslacht ?? ''),
+          soortLid: String(p.soortLid ?? 'speler'),
+          medischeKeuringOp: p.medischeKeuringOp ? String(p.medischeKeuringOp).slice(0, 10) : '',
+          email: String(p.email ?? ''),
+          heeftAttest: Boolean(p.medischAttestBestand),
+          registratieStatus: String(p.registratieStatus ?? ''),
+          vergunningsstatus: String(p.vergunningsstatus ?? 'geen'),
+          medischAttest: Boolean(p.medischAttest),
+          actief: p.actief !== false,
+        },
+        undefined,
+        vanaf,
+      ).toon as LidToon
+      const arr = toonPerPloeg.get(tid) ?? []
+      arr.push(toon)
+      toonPerPloeg.set(tid, arr)
+    }
+    const ov = clubOverzicht({
+      ploegen: teams.docs.map((t) => ({
+        id: Number(t.id),
+        naam: String((t as { name?: unknown }).name ?? '—'),
+        reeks: (t as { reeks?: unknown }).reeks ? reeksNaam((t as { reeks: string }).reeks as Parameters<typeof reeksNaam>[0]) : String((t as { category?: unknown }).category ?? ''),
+        toon: toonPerPloeg.get(Number(t.id)) ?? [],
+      })),
+      blessures: {
+        teBezorgen: blessures.docs.filter((b) => b.status === 'gemeld').length,
+        bijFederatie: blessures.docs.filter((b) => b.status === 'ingediend').length,
+      },
+      boetes: {
+        aantal: boetes.docs.length,
+        bedrag: boetes.docs.reduce((som, b) => som + (Number(b.bedrag) || 0), 0),
+        teBetalen: boetes.docs.filter((b) => b.status === 'opgelegd').length,
+      },
+      opstellingenTeDoen: supportersMode
+        ? 0
+        : rows.filter((r) => !r.ownReady && !r.afgelast && r.status === 'scheduled' && new Date(String(r.date)).getTime() <= tweeWeken).length,
+    })
+    const start = Number((seizoen as { startYear?: unknown } | null)?.startYear)
+    dashboard = (
+      <ClubDashboard
+        club={{ naam: String(club?.name ?? ''), logoUrl: clubLogoUrl({ club }), logoFit: clubLogoFit({ club }) }}
+        seizoen={Number.isFinite(start) && start > 0 ? `${start}–${start + 1}` : null}
+        kerncijfers={ov.kerncijfers}
+        teDoen={ov.teDoen}
+        ploegen={ov.ploegen}
+      />
+    )
+  }
+
   return (
-    <Shell menu={<ClubMenu staf={clubStaf} beheerder={isBeheerder || isFederationLevel(user)} />}>
+    <Shell menu={<>{dashboard}<ClubMenu staf={clubStaf} beheerder={isBeheerder || isFederationLevel(user)} /></>}>
+      <span id="wedstrijden" />
       <h2 className="cmenu-titel cmenu-titel-wedstrijden">Wedstrijden</h2>
       <MyTeamsPicker teams={allTeams} initial={myTeams} />
 

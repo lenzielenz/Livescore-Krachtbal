@@ -12,6 +12,8 @@ export type NavAuth = {
   canTraining: boolean
   // Rolvlaggen voor het op-rol tonen van de profiel-ingangen (club/scheids/federatie).
   isClub: boolean
+  /** Coach, trainer of jeugdverantwoordelijke (club-functie): ziet "Mijn club" en training. */
+  isCoach?: boolean
   isReferee: boolean
   isFed: boolean
 }

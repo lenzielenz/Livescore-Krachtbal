@@ -1802,3 +1802,62 @@ body.kb-scherm .site-foot { display: none; }
 .cmenu-extra > summary { cursor: pointer; font-weight: 700; color: var(--dim); }
 .cmenu-extra[open] > summary { margin-bottom: 12px; }
 
+
+/* ── Mijn club: clubdashboard (ClubDashboard.tsx) ── */
+.cdash { display: grid; gap: 18px; margin: 0 0 22px; }
+.cdash-kop { display: flex; align-items: center; gap: 14px; }
+.cdash-kop-tekst { display: grid; gap: 2px; min-width: 0; }
+.cdash-naam { margin: 0; font-size: 1.25rem; font-weight: 800; }
+.cdash-sub { font-size: 0.82rem; color: var(--dim); }
+.cdash-cijfers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 900px) { .cdash-cijfers { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.cdash-cijfer {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  text-decoration: none;
+  border-top: 3px solid var(--line);
+}
+.cdash-cijfer:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.cdash-cijfer.toon-goed { border-top-color: #2ec27e; }
+.cdash-cijfer.toon-let-op { border-top-color: #f0b04a; }
+.cdash-cijfer.toon-actie { border-top-color: #ff6b6b; }
+.cdash-waarde { font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.cdash-label { font-size: 0.74rem; color: var(--dim); line-height: 1.25; }
+.cdash-blok { display: grid; gap: 4px; }
+.cdash-blok-kop { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.cdash-knop { color: var(--accent); font-weight: 700; font-size: 0.85rem; text-decoration: none; }
+.cdash-rust { margin: 0; color: #2ec27e; font-weight: 600; font-size: 0.9rem; }
+.cdash-taken { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.cdash-taak {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.cdash-taak:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.cdash-taak-tekst { flex: 1; min-width: 0; }
+.cdash-bol { width: 8px; height: 8px; border-radius: 50%; background: #f0b04a; flex: 0 0 auto; }
+.cdash-taak.dringend .cdash-bol { background: #ff6b6b; }
+.cdash-tabel-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.cdash-tabel { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.cdash-tabel th, .cdash-tabel td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+.cdash-tabel tbody tr:last-child > * { border-bottom: none; }
+.cdash-tabel thead th { font-size: 0.72rem; color: var(--dim); font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+.cdash-tabel .getal { text-align: right; font-variant-numeric: tabular-nums; width: 3.2em; }
+.cdash-tabel td.let-op { color: #f0b04a; font-weight: 700; }
+.cdash-tabel td.actie { color: #ff8a8a; font-weight: 700; }
+.cdash-tabel tbody th { font-weight: 700; }
+.cdash-ploeg { display: block; }
+.cdash-reeks { display: block; font-size: 0.74rem; color: var(--dim); font-weight: 500; }
