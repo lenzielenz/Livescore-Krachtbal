@@ -433,7 +433,7 @@ export function RefereePanel({
         </button>
       </section>
 
-      <section className="wb-card">
+      <section className="wb-card" id="officials">
         <h2>Officials</h2>
         {officialsHint && <p className="wb-sub">{officialsHint}</p>}
         {/* Eén oogopslag: alles geldig → groen. Wat schort, staat bij het veld zelf. */}

@@ -63,7 +63,9 @@ export function draaiboek(ids: DemoIds): Hoofdstuk[] {
       titel: 'Blessure, aftekenen en indienen',
       verhaal: 'Zandberg – Baasrode is gedaan. Jens Aerts verzwikte zijn enkel: dat staat op het blad, de verzekeringsaangifte is klaar en hij vindt de documenten op zijn profiel.',
       stappen: [
+        { rol: 'scheidsrechter', href: m(ids.afgelopen, (id) => `/scheidsrechter/${id}#deelname`), tekst: 'Scheidsrechter: bevestigen wie er speelde' },
         { rol: 'scheidsrechter', href: m(ids.afgelopen, (id) => `/aftekenen/${id}`), tekst: 'Kapiteins en scheidsrechter tekenen af, dan indienen' },
+        { rol: 'speler', href: m(ids.afgelopen, (id) => `/api/matchsheet/${id}/pdf`), tekst: 'Het wedstrijdblad als PDF, om te printen' },
         { rol: 'speler', href: '/profiel', tekst: 'De speler: aangifte en getuigschrift invullen en terugsturen' },
         { rol: 'federatie', href: '/ongevallen', tekst: 'Federatie: ongevallendossiers' },
       ],

@@ -14,6 +14,7 @@ import { kaartAanvragen } from '../medische-kaart'
 import { SYSTEEM_STATUS, volgBladStatus } from '../blad-status'
 import { advanceSimpleHalf, recordSimpleGoal } from '../simple-match-engine'
 import { verplaatsingAanvragen, verplaatsingBeantwoorden } from '../verplaatsing'
+import { demoHandtekening } from './handtekening'
 import { demoReferendumKlaarzetten } from './referendum'
 import { DEMO_ROLLEN, demoEmail, isDemoAccount } from './rollen'
 
@@ -353,13 +354,16 @@ export async function demoKlaarzetten(payload: Payload, opties: { forceer?: bool
         data: {
           status: 'finished',
           currentHalf: 2,
+          // De eerste van elke selectie is kapitein: die tekent af (en staat zo op het blad).
+          homeCaptain: thuisSp[0].id,
+          awayCaptain: forfait ? null : uitSp[0].id,
           clockRunning: false,
           finishedAt: new Date(datum.getTime() + 105 * 60_000).toISOString(),
           simpleScore: { goals: forfait ? Array.from({ length: 30 }, (_, k) => ({ side: 'home', points: 1, half: 1, clock: 0, ts: k })) : goals, crosses: { home: 0, away: 0 } },
         } as never,
         overrideAccess: true,
       })
-      const sig = (n: string) => ({ naam: n, akkoord: true, tijdstip: new Date(datum.getTime() + 110 * 60_000).toISOString(), handtekening: 'data:image/png;base64,iVBORw0KGgo=' })
+      const sig = (n: string) => ({ naam: n, akkoord: true, tijdstip: new Date(datum.getTime() + 110 * 60_000).toISOString(), handtekening: demoHandtekening(n) })
       verleden.push(Number(m.id))
       // Het laatste gespeelde weekend: één blad blijft "af te tekenen" (federatie ziet het, boetevoorstel).
       const nietIngediend = verleden.length === 3
@@ -370,7 +374,7 @@ export async function demoKlaarzetten(payload: Payload, opties: { forceer?: bool
           ? { status: 'af_te_tekenen' }
           : forfait
             ? { status: 'ingediend', forfait: { uitslag: 'uit', km: 24 }, awayLineup: [], kapiteinThuis: sig(thuisSp[0].naam), scheidsrechter: sig('Karel Fluit'), keuringBevestigd: true }
-            : { status: 'ingediend', kapiteinThuis: sig(thuisSp[0].naam), kapiteinUit: sig(uitSp[0].naam), scheidsrechter: sig('Karel Fluit'), keuringBevestigd: true },
+            : { status: 'ingediend', kapiteinThuis: sig(thuisSp[0].naam), kapiteinUit: sig(uitSp[0].naam), scheidsrechter: sig('Karel Fluit'), keuringBevestigd: true, wedstrijdeinde: { akkoord: true, naam: 'Karel Fluit', tijdstip: new Date(datum.getTime() + 106 * 60_000).toISOString() } },
         overrideAccess: true,
         context: { [SYSTEEM_STATUS]: true },
       } as never)
@@ -536,6 +540,15 @@ export async function demoKlaarzetten(payload: Payload, opties: { forceer?: bool
     // ── Medische kaart door de ouder ───────────────────────────────────────────────────────────
     await kaartAanvragen(payload, gebruiker.ouder, spelers['SM-U14'][1].id).catch(() => null)
     stap('Medische kaart aangevraagd door de ouder van Robbe Peeters')
+
+    // ── Officials op elk blad (het reglement vraagt ze per reeks; zonder kan er niet ingediend worden) ──
+    await payload.update({
+      collection: 'matchsheets',
+      where: { status: { not_equals: 'ingediend' } },
+      data: { officials: { aantekenaar: 'Tina Tafel', tijdopnemer: 'Marc Peeters', grensrechterThuis: 'Jan Claes', grensrechterUit: 'Piet Maes', terreinafgevaardigde: 'Luc Wouters', coachThuis: 'Chris Coeck', coachUit: 'Bart Aerts' } } as never,
+      overrideAccess: true,
+      context: { [SYSTEEM_STATUS]: true },
+    } as never)
 
     // ── Referendum: open stemronde, de demo-speler mag stemmen ─────────────────────────────────
     stap(await demoReferendumKlaarzetten(payload))

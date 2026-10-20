@@ -1,6 +1,7 @@
 import { authUser, hasRole, isFederationLevel, mayScoreMatch } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { renderMatchSheetPdf, renderNoodbladPdf } from '@/lib/submit'
+import { magWedstrijdbladZien } from '@/lib/wedstrijdblad-toegang'
 
 // Her-export van het officiële wedstrijdblad als PDF (archief / geschillen). Regenereert uit de
 // (na indienen bevroren) gegevens, zodat een afgewerkt blad altijd opnieuw beschikbaar is.
@@ -14,7 +15,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ matchId:
     // aantekenaar van deze wedstrijd afdrukken (hij zit aan de tafel als het toestel uitvalt).
     const nood = new URL(req.url).searchParams.get('nood') === '1'
     const magNood = nood && (await mayScoreMatch(payload, user, Number(matchId)))
-    if (!(magNood || isFederationLevel(user) || hasRole(user, 'scheidsrechter', 'club-beheerder'))) {
+    // Het gewone blad: iedereen die bij de wedstrijd betrokken is (lib/wedstrijdblad-toegang.ts).
+    const magBlad = !nood && (await magWedstrijdbladZien(payload, user, matchId))
+    if (!(magNood || magBlad || isFederationLevel(user) || (nood && hasRole(user, 'scheidsrechter', 'club-beheerder')))) {
       return Response.json({ error: 'Geen rechten.' }, { status: 403 })
     }
 
@@ -24,7 +27,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ matchId:
     return new Response(Buffer.from(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `${nood ? 'inline' : 'attachment'}; filename="${nood ? 'noodblad' : 'wedstrijdblad'}-${matchId}.pdf"`,
+        'Content-Disposition': `${new URL(req.url).searchParams.get('download') === '1' ? 'attachment' : 'inline'}; filename="${nood ? 'noodblad' : 'wedstrijdblad'}-${matchId}.pdf"`,
       },
     })
   } catch (err) {

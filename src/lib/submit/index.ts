@@ -7,6 +7,7 @@ import type { Payload } from 'payload'
 import type { User } from '@/payload-types'
 import { buildMatchSheet } from '../match-engine'
 import { KEURING_ITEMS } from '../keuring'
+import { MATCHSHEET_STATUS_OPTIONS } from '../matchsheet-workflow'
 import { OFFICIAL_FUNCTIE_KEYS, OFFICIAL_LABELS, validateOfficials } from '../officials-rules'
 import type { Reeks } from '../reeksen'
 import { federationUpload } from './federation'
@@ -34,14 +35,28 @@ const fmtDate = (v?: string): string | undefined => {
   return Number.isNaN(d.getTime()) ? v : formatDateTimeBE(d)
 }
 
-const lineupRows = (rows: unknown): PdfLineupRow[] =>
-  ((rows ?? []) as { rugnummer?: number; player?: { name?: string } | number; deelgenomen?: boolean }[]).map(
+const relId = (v: unknown): number | null => {
+  const id = v && typeof v === 'object' ? (v as { id?: unknown }).id : v
+  return id == null || !Number.isFinite(Number(id)) ? null : Number(id)
+}
+
+const lineupRows = (rows: unknown, kapitein: number | null = null): PdfLineupRow[] =>
+  ((rows ?? []) as { rugnummer?: number; player?: { id?: number; name?: string } | number; deelgenomen?: boolean }[]).map(
     (r) => ({
       rugnummer: r.rugnummer,
       name: typeof r.player === 'object' ? (r.player?.name ?? '—') : `#${r.player}`,
       deelgenomen: r.deelgenomen,
+      kapitein: kapitein != null && relId(r.player) === kapitein,
     }),
   )
+
+// Een handtekening voor de PDF: het tijdstip leesbaar (nl-BE) in plaats van de ruwe ISO-datum.
+const sigVoorPdf = (group: unknown) => {
+  const s = sigOf(group)
+  return { ...s, tijdstip: fmtDate(s.tijdstip) }
+}
+
+const STATUS_LABEL: Record<string, string> = Object.fromEntries(MATCHSHEET_STATUS_OPTIONS.map((o) => [o.value, o.label]))
 
 /**
  * Bouwt de PDF-data voor een wedstrijdblad uit de huidige (bij 'ingediend': bevroren) gegevens.
@@ -60,14 +75,27 @@ export async function buildMatchSheetPdfData(
   const reeks = match?.reeks as Reeks | undefined
   const officials = ((sheet?.officials ?? {}) as Record<string, string>) || {}
   const keuring = (sheet?.keuring ?? {}) as Record<string, string>
-  const refSig = sigOf(sheet?.scheidsrechter)
+  const refSig = sigVoorPdf(sheet?.scheidsrechter)
+  const homeClub = match?.homeTeam && typeof match.homeTeam === 'object' ? (match.homeTeam as { club?: unknown }).club : null
+  const terrein = homeClub && typeof homeClub === 'object' ? String((homeClub as { accommodatie?: unknown; name?: unknown }).accommodatie || (homeClub as { name?: unknown }).name || '') : ''
+  const status = String(sheet?.status ?? 'concept')
+  // Forfait: wie niet opdaagde, tekent niet (er was niemand) — dat staat zo op het blad.
+  const ff = String((sheet?.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen')
+  const forfait =
+    ff === 'thuis' ? `${built.teams.home.name} niet opgedaagd` : ff === 'uit' ? `${built.teams.away.name} niet opgedaagd` : ff === 'dubbel' ? 'beide ploegen niet opgedaagd' : undefined
+  const nvt = (afwezig: boolean) => (afwezig ? { nvt: 'Niet van toepassing (forfait)' } : {})
+  const aangeduid = sheet?.assignedReferee && typeof sheet.assignedReferee === 'object' ? String((sheet.assignedReferee as { name?: unknown }).name ?? '') : ''
   const eind = (sheet?.wedstrijdeinde ?? {}) as { akkoord?: boolean; naam?: string; tijdstip?: string }
   return {
     titel: String(sheet?.titel ?? built.match.title ?? `Wedstrijd ${matchId}`),
     datum: formatDateTimeBE(new Date(built.match.date)),
     categorie: built.match.category ?? '',
     reeks: reeks ?? undefined,
-    scheidsrechter: refSig.naam || undefined,
+    terrein: terrein || undefined,
+    wedstrijdNr: String(matchId),
+    status: { label: STATUS_LABEL[status] ?? status, op: status === 'ingediend' ? fmtDate((sheet as { ingediendOp?: string } | undefined)?.ingediendOp ?? String(sheet?.updatedAt ?? '')) : undefined },
+    scheidsrechter: refSig.naam || aangeduid || undefined,
+    forfait,
     score: built.totals,
     eindscoreBevestiging: { akkoord: Boolean(eind.akkoord), naam: eind.naam || undefined, tijdstip: fmtDate(eind.tijdstip) },
     halfScores: built.halfScores,
@@ -77,17 +105,17 @@ export async function buildMatchSheetPdfData(
     substitutions: built.substitutions.map((s) => ({ half: s.half, gameClock: s.gameClock, side: s.side, wissel: s.wissel })),
     homeTeam: built.teams.home.name,
     awayTeam: built.teams.away.name,
-    homeLineup: lineupRows(sheet?.homeLineup),
-    awayLineup: lineupRows(sheet?.awayLineup),
+    homeLineup: lineupRows(sheet?.homeLineup, relId(match?.homeCaptain)),
+    awayLineup: lineupRows(sheet?.awayLineup, relId(match?.awayCaptain)),
     officials: OFFICIAL_FUNCTIE_KEYS.map((key) => ({ label: OFFICIAL_LABELS[key], naam: officials[key] ?? '' })),
     keuring: KEURING_ITEMS.map((k) => ({ label: k.label, waarde: keuring[k.name] ?? 'ok' })),
     uitsluitingen: ((sheet?.uitsluitingen ?? []) as { naam?: string; reden?: string }[]).map((u) => `${u.naam ?? '—'} — ${u.reden ?? ''}`),
     voorbehoud: ((sheet?.voorbehoud ?? []) as { naam?: string; reden?: string }[]).map((v) => `${v.naam ?? '—'} — ${v.reden ?? ''}`),
     opmerkingen: (sheet?.opmerkingen as string) ?? undefined,
     handtekeningen: [
-      { label: 'Kapitein thuis', sig: sigOf(sheet?.kapiteinThuis) },
-      { label: 'Kapitein uit', sig: sigOf(sheet?.kapiteinUit) },
-      { label: 'Scheidsrechter', sig: refSig },
+      { label: 'Kapitein thuis', sig: { ...sigVoorPdf(sheet?.kapiteinThuis), ...nvt(ff === 'thuis' || ff === 'dubbel') } },
+      { label: 'Kapitein uit', sig: { ...sigVoorPdf(sheet?.kapiteinUit), ...nvt(ff === 'uit' || ff === 'dubbel') } },
+      { label: 'Scheidsrechter', sig: { ...refSig, naam: refSig.naam || aangeduid || undefined } },
     ],
   }
 }
