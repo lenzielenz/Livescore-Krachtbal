@@ -8,6 +8,8 @@ import {
   emptyTrust,
   markSettled,
   needsSettling,
+  noteAanwezig,
+  overneemWeigering,
   recordContribution,
   sanitizeTrust,
   sanitizeUserTrust,
@@ -168,5 +170,43 @@ async function run(matchId: number, user: { id: number; name: string }): Promise
       trust = claimScorer(trust, { ...user, trust: await userTrustScore(payload, user.id) })
     }
     await writeMatchTrust(payload, matchId, recordContribution(trust, user))
+  })
+}
+
+/**
+ * Hartslag van het aantekenscherm: de houder is er nog (ook als er even niet gescoord wordt).
+ * Zonder dit zou een rustige fase in de wedstrijd lijken op een uitgevallen toestel.
+ */
+export async function aanwezigMelden(payload: Payload, matchId: number, userId: number): Promise<void> {
+  const { withLock } = await import('./async-mutex')
+  await withLock(`trust:${matchId}`, async () => {
+    const trust = await readMatchTrust(payload, matchId)
+    if (trust.scorerId !== userId) return
+    await writeMatchTrust(payload, matchId, noteAanwezig(trust, userId))
+  })
+}
+
+/**
+ * Neem een lopende wedstrijd over (zie overneemWeigering in score-trust.ts). Geeft `null` bij
+ * succes, anders de reden. De vorige houder krijgt bij zijn volgende tik de gewone blokkade
+ * ("X tekent deze wedstrijd al aan"), zodat er nooit twee tafels door elkaar scoren.
+ */
+export async function wedstrijdOvernemen(
+  payload: Payload,
+  matchId: number,
+  user: { id: number; name: string },
+  rol: { scheidsrechter: boolean; federatie: boolean },
+): Promise<string | null> {
+  const { withLock } = await import('./async-mutex')
+  return withLock(`trust:${matchId}`, async () => {
+    const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0, overrideAccess: true }).catch(() => null)
+    if (!match) return 'Wedstrijd niet gevonden.'
+    const trust = sanitizeTrust((match as { scoreTrust?: unknown }).scoreTrust)
+    const weigering = overneemWeigering(trust, { userId: user.id, live: match.status === 'live', ...rol })
+    if (weigering) return weigering
+    if (trust.scorerId === user.id) return null
+    console.info(`aantekenen overgenomen: wedstrijd ${matchId}, van ${trust.scorerName ?? '—'} (${trust.scorerId ?? '—'}) naar ${user.name} (${user.id})`)
+    await writeMatchTrust(payload, matchId, claimScorer(trust, { ...user, trust: await userTrustScore(payload, user.id) }))
+    return null
   })
 }

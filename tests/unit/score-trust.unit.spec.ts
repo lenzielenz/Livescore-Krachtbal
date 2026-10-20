@@ -15,6 +15,9 @@ import {
   mayClaim,
   mayVote,
   needsSettling,
+  noteAanwezig,
+  OVERNEEM_STIL_MS,
+  overneemWeigering,
   recordContribution,
   releaseScorer,
   sanitizeTrust,
@@ -265,5 +268,34 @@ describe('aantekenClaim — één aantekenaar per lopende wedstrijd', () => {
     expect(aantekenClaim({ ...basis, trust: houder, userId: 9, federatie: true })).toBe('vrij')
     expect(aantekenClaim({ ...basis, trust: houder, userId: 9, vrijeWedstrijd: true })).toBe('vrij')
     expect(aantekenClaim({ ...basis, trust: houder, userId: 9, action: 'reset' })).toBe('vrij')
+  })
+})
+
+describe('overneemWeigering (toestel van de aantekenaar valt uit)', () => {
+  const t0 = 1_000_000_000
+  const houder = claimScorer(emptyTrust(), { id: 1, name: 'An', trust: 0.5 }, t0)
+
+  it('weigert binnen 3 minuten na het laatste teken van leven', () => {
+    const r = overneemWeigering(houder, { userId: 2, live: true, scheidsrechter: false, federatie: false, now: t0 + 60_000 })
+    expect(r).toMatch(/An is nog actief/)
+  })
+
+  it('laat overnemen na 3 minuten stilte', () => {
+    expect(overneemWeigering(houder, { userId: 2, live: true, scheidsrechter: false, federatie: false, now: t0 + OVERNEEM_STIL_MS })).toBeNull()
+  })
+
+  it('de scheidsrechter of de federatie mag meteen', () => {
+    expect(overneemWeigering(houder, { userId: 2, live: true, scheidsrechter: true, federatie: false, now: t0 + 1 })).toBeNull()
+    expect(overneemWeigering(houder, { userId: 2, live: true, scheidsrechter: false, federatie: true, now: t0 + 1 })).toBeNull()
+  })
+
+  it('de hartslag houdt de claim warm, enkel voor de houder', () => {
+    const warm = noteAanwezig(houder, 1, t0 + 170_000)
+    expect(overneemWeigering(warm, { userId: 2, live: true, scheidsrechter: false, federatie: false, now: t0 + OVERNEEM_STIL_MS + 1 })).not.toBeNull()
+    expect(noteAanwezig(houder, 2, t0 + 170_000)).toBe(houder)
+  })
+
+  it('geen overname nodig als de wedstrijd niet loopt', () => {
+    expect(overneemWeigering(houder, { userId: 2, live: false, scheidsrechter: true, federatie: false, now: t0 })).toMatch(/loopt niet/)
   })
 })

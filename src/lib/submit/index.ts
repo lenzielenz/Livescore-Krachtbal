@@ -99,6 +99,15 @@ export async function renderMatchSheetPdf(payload: Payload, matchId: number | st
   return generateMatchSheetPdf(data)
 }
 
+/** Het noodblad (verder op papier als het toestel uitvalt), vooraf ingevuld met de huidige stand. */
+export async function renderNoodbladPdf(payload: Payload, matchId: number | string): Promise<Uint8Array | null> {
+  const data = await buildMatchSheetPdfData(payload, matchId)
+  if (!data) return null
+  const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
+  const { generateNoodbladPdf } = await import('./pdf-noodblad')
+  return generateNoodbladPdf(data, { half: match?.currentHalf ?? 1, status: String(match?.status ?? 'scheduled') })
+}
+
 export async function submitMatchSheet(
   payload: Payload,
   matchId: number | string,

@@ -1,5 +1,5 @@
 import { isFederationLevel } from '@/lib/access'
-import { authUser, correctionBlockedReason, mayCorrectMatch, mayScoreMatch } from '@/lib/api-auth'
+import { authUser, correctionBlockedReason, mayCorrectMatch, mayScoreMatch, refereeMayHandleMatch } from '@/lib/api-auth'
 import { beoordeelReset } from '@/lib/match-reset-policy'
 import { withLock } from '@/lib/async-mutex'
 import { withDbLock } from '@/lib/db-lock'
@@ -31,12 +31,13 @@ import { matchStartBlockedReason } from '@/lib/match-start-window'
 import { getPayloadClient } from '@/lib/payload-client'
 import { isSupportersMode } from '@/lib/score-mode'
 import { aantekenClaim, claimScorer, sanitizeTrust } from '@/lib/score-trust'
-import { noteContribution, userTrustScore, writeMatchTrust } from '@/lib/score-trust-store'
+import { aanwezigMelden, noteContribution, userTrustScore, wedstrijdOvernemen, writeMatchTrust } from '@/lib/score-trust-store'
 import {
   adjustRefereeStop,
   adjustSimpleCross,
   adjustSimpleTimeout,
   advanceSimpleHalf,
+  papierenUitslag,
   recordSimpleGoal,
   reportFinalResult,
   startSimpleMatch,
@@ -44,7 +45,7 @@ import {
 } from '@/lib/simple-match-engine'
 
 /** Acties die de wedstrijd live zetten, afsluiten, heropenen of terugzetten. */
-const STATUS_ACTIES = new Set(['start', 'finish', 'reopen', 'reset', 'simplestart', 'simplegoal', 'simplehalf', 'half', 'reportresult'])
+const STATUS_ACTIES = new Set(['start', 'finish', 'reopen', 'reset', 'simplestart', 'simplegoal', 'simplehalf', 'half', 'reportresult', 'papierenuitslag'])
 
 // Eén POST-endpoint dat aantekenaar-acties dispatcht op het veld `action`.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -73,6 +74,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         { error: user ? 'Geen rechten om deze wedstrijd aan te tekenen.' : 'Niet ingelogd.' },
         { status: user ? 403 : 401 },
       )
+    }
+
+    // Hartslag en overnemen raken de wedstrijd zelf niet (enkel wie aantekent): buiten het
+    // wedstrijdslot en de opId-administratie. Zie overneemWeigering in score-trust.ts.
+    if (action === 'aanwezig' || action === 'overnemen') {
+      const uid = typeof user?.id === 'number' ? user.id : null
+      if (uid == null) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
+      if (action === 'aanwezig') {
+        await aanwezigMelden(payload, matchId, uid)
+        return Response.json({ ok: true })
+      }
+      const weigering = await wedstrijdOvernemen(
+        payload,
+        matchId,
+        { id: uid, name: String((user as { name?: unknown })?.name ?? '').trim() || 'Aantekenaar' },
+        { scheidsrechter: await refereeMayHandleMatch(payload, user, matchId), federatie: isFederationLevel(user) },
+      )
+      if (weigering) return Response.json({ error: weigering }, { status: 409 })
+      return Response.json({ ok: true })
     }
 
     // Serialiseer alle mutaties op dezelfde wedstrijd: in-process mutex (zelfde instance) +
@@ -256,7 +276,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           id: Number(body.playerId),
           number: body.shirtNumber !== undefined ? Number(body.shirtNumber) : undefined,
           name: typeof body.playerName === 'string' ? body.playerName : undefined,
-        })
+        }, typeof body.at === 'number' ? body.at : undefined)
         notifyGoalScored({ matchId, side: goalSide })
         result = res
         break
@@ -292,6 +312,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           return Response.json({ error: 'In de federatieflow komt de uitslag uit het wedstrijdblad, niet uit een losse melding.' }, { status: 403 })
         }
         result = await reportFinalResult(payload, matchId, Number(body.home), Number(body.away))
+        break
+      // Eindstand van het noodblad (papier), ook op een half aangetekende wedstrijd: enkel de
+      // federatie — dat is het officiële record (zie papierenUitslag).
+      case 'papierenuitslag':
+        if (!isFederationLevel(user)) {
+          return Response.json({ error: 'Enkel de federatie kan een uitslag van papier ingeven.' }, { status: 403 })
+        }
+        result = await papierenUitslag(payload, matchId, Number(body.home), Number(body.away), body.vervang === true)
         break
       default:
         return Response.json({ error: `Onbekende actie: ${action}` }, { status: 400 })
@@ -365,7 +393,7 @@ async function liveClaim(
   })
   if (besluit === 'blokkeer') {
     return {
-      blokkade: `${trust.scorerName ?? 'Iemand anders'} tekent deze wedstrijd al aan. Er kan maar één persoon tegelijk aantekenen; pas als die "Wedstrijd was nog niet bezig" kiest, kan iemand anders overnemen.`,
+      blokkade: `${trust.scorerName ?? 'Iemand anders'} tekent deze wedstrijd al aan. Er kan maar één persoon tegelijk aantekenen. Valt dat toestel uit, kies dan "Overnemen".`,
       vastleggen: async () => {},
     }
   }

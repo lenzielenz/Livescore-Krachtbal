@@ -536,7 +536,10 @@ export async function setClock(
 
 /** Naar de tweede helft: klok terug op 0, gepauzeerd. */
 export async function advanceHalf(payload: Payload, matchId: number): Promise<void> {
-  eisNietAfgelopen(await getMatch(payload, matchId))
+  const m = await getMatch(payload, matchId)
+  eisNietAfgelopen(m)
+  // Een dubbele tik (of een heruitzending) mag de lopende 2e helft niet terug op 0 zetten.
+  if ((m.currentHalf ?? 1) >= 2) return
   await update(payload, matchId, {
     currentHalf: 2,
     clockSeconds: 0,

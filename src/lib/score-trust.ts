@@ -222,6 +222,36 @@ export function claimHeld(t: MatchTrust, live: boolean, now: number = Date.now()
   return live || claimActive(t, now)
 }
 
+/**
+ * Overnemen van een lopende wedstrijd (faalanalyse wedstrijddag): de batterij van het toestel van de
+ * aantekenaar valt leeg, of de gsm crasht. Wie dan verder wil, mag overnemen
+ *  • meteen als scheidsrechter van de wedstrijd of als federatie;
+ *  • anders pas na OVERNEEM_STIL_MS zonder teken van leven van de houder (een tik of de hartslag
+ *    die het aantekenscherm elke minuut stuurt) — zo neemt niemand een werkende tafel over.
+ * Geeft `null` als het mag, anders de reden in mensentaal.
+ */
+export const OVERNEEM_STIL_MS = 3 * 60 * 1000
+
+export function overneemWeigering(
+  t: MatchTrust,
+  o: { userId: number; live: boolean; scheidsrechter: boolean; federatie: boolean; now?: number },
+): string | null {
+  if (!o.live) return 'De wedstrijd loopt niet: start ze gewoon zelf.'
+  if (t.scorerId == null || t.scorerId === o.userId) return null
+  if (o.scheidsrechter || o.federatie) return null
+  const now = o.now ?? Date.now()
+  const stil = now - (t.lastActiveAt ?? t.claimedAt ?? 0)
+  if (stil >= OVERNEEM_STIL_MS) return null
+  const nog = Math.ceil((OVERNEEM_STIL_MS - stil) / 1000)
+  return `${t.scorerName ?? 'De aantekenaar'} is nog actief. Valt het toestel stil, dan kan je over ${nog} s overnemen — of laat de scheidsrechter het meteen doen.`
+}
+
+/** Teken van leven van de houder (hartslag): houdt de claim warm zonder een bijdrage te tellen. */
+export function noteAanwezig(t: MatchTrust, userId: number, now: number = Date.now()): MatchTrust {
+  if (t.scorerId !== userId) return t
+  return { ...t, lastActiveAt: now }
+}
+
 /** Acties die een wedstrijd live zetten — wie die doet, wordt de aantekenaar. */
 const START_ACTIES = new Set(['start', 'simplestart', 'simplegoal'])
 
@@ -428,6 +458,8 @@ export interface TrustView {
   scorerName: string | null
   /** Leeft de claim nog? Zo niet, dan mag iemand anders overnemen. */
   claimActive: boolean
+  /** Laatste teken van leven van de houder (ms): voor de knop "Overnemen". */
+  laatstActief: number | null
   confirms: number
   disputes: number
 }
@@ -444,6 +476,7 @@ export function trustView(t: MatchTrust, opts: { official: boolean; now?: number
     scorerId: t.scorerId,
     scorerName: t.scorerName,
     claimActive: claimHeld(t, opts.live ?? false, now),
+    laatstActief: t.lastActiveAt ?? t.claimedAt ?? null,
     confirms: t.confirms.length,
     disputes: t.disputes.length,
   }

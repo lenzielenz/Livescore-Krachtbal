@@ -38,6 +38,7 @@ import { LiveStream } from './LiveStream'
 import { MatchScorers } from './MatchScorers'
 import { MatchActivitySummary } from './MatchActivitySummary'
 import { PronostiekWidget } from './PronostiekWidget'
+import { PapierenUitslag } from './PapierenUitslag'
 import { ReportResult } from './ReportResult'
 import { ScoreTrust } from './ScoreTrust'
 import { ToekomstigeWedstrijd } from './ToekomstigeWedstrijd'
@@ -439,6 +440,17 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             loggedIn={Boolean(me)}
             homeName={state.teams.home.name}
             awayName={state.teams.away.name}
+          />
+        )}
+      {/* Federatie: toestel uitgevallen en op papier verder gegaan → eindstand van het noodblad. */}
+      {magBeheren &&
+        state.match.status !== 'finished' &&
+        (state.match.status === 'live' || (matchDoc?.date && Date.now() >= new Date(matchDoc.date as string).getTime())) && (
+          <PapierenUitslag
+            matchId={matchId}
+            homeName={state.teams.home.name}
+            awayName={state.teams.away.name}
+            huidig={{ home: state.score.home, away: state.score.away }}
           />
         )}
       {/* Match-context als kop bovenaan (reeks · datum · locatie · scheidsrechter), zodat

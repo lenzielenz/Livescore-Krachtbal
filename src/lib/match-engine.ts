@@ -823,6 +823,8 @@ export async function endHalf(payload: Payload, matchId: number) {
 export async function startNextHalf(payload: Payload, matchId: number) {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
   assertNietAfgelopen(match, 'een volgende helft te starten')
+  // Krachtbal kent twee helften: een dubbele tik mag geen 3e helft aanmaken.
+  if ((match.currentHalf ?? 1) >= 2) throw new Error('De 2e helft loopt al — beëindig de wedstrijd met "Einde".')
   const nextHalf = (match.currentHalf ?? 1) + 1
 
   // Bleef er nog een vrije worp openstaan uit de vorige helft (zie endHalf, §8)? Dan is ze niet
@@ -884,6 +886,10 @@ export async function startNextHalf(payload: Payload, matchId: number) {
 
 /** Beëindig de huidige helft én start meteen de volgende (combinatie). */
 export async function advanceHalf(payload: Payload, matchId: number) {
+  // Eerst controleren, anders sloot een dubbele tik de 2e helft al af vóór de weigering.
+  const { match } = await loadMatch(payload, matchId)
+  assertNietAfgelopen(match, 'een volgende helft te starten')
+  if ((match.currentHalf ?? 1) >= 2) throw new Error('De 2e helft loopt al — beëindig de wedstrijd met "Einde".')
   await endHalf(payload, matchId)
   return startNextHalf(payload, matchId)
 }

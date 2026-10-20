@@ -227,6 +227,16 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
         <DeelnameBevestigen matchId={matchId} kanten={deelnameKanten} vergrendeld={sheet?.status === 'ingediend'} />
       )}
 
+      {liveState && liveState.match.status !== 'finished' && (
+        <p className="empty" style={{ marginTop: 16 }}>
+          Valt het aantekentoestel uit en kan niemand overnemen?{' '}
+          <a href={`/api/matchsheet/${matchId}/pdf?nood=1`} target="_blank" rel="noreferrer">
+            📝 Druk het noodblad af
+          </a>{' '}
+          — vooraf ingevuld met de stand en de spelers — en noteer verder op papier. De federatie geeft de eindstand nadien in.
+        </p>
+      )}
+
       {blessureKantenLijst.length > 0 && (
         <div style={{ marginTop: 16 }}>
           <BlessureMelden matchId={matchId} kanten={blessureKantenLijst} />

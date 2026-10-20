@@ -16,6 +16,7 @@ import { useActionQueue } from '@/lib/use-action-queue'
 import { fmtClock, useLiveClock } from '@/lib/use-live-clock'
 import { useLiveStream } from '@/lib/use-live-stream'
 import { DemoTutorial } from './DemoTutorial'
+import { WachtrijMeldingen } from './WachtrijMeldingen'
 
 interface RosterPlayer {
   id: number
@@ -224,7 +225,7 @@ export function Scorekeeper({
   // Offline-bestendigheid (ROADMAP 1b): dezelfde wachtrij als de snelscoremodus. Valt het netwerk
   // weg, dan gaat een worp niet meer verloren met een foutmelding — hij wordt bewaard (localStorage)
   // en in volgorde nagestuurd (met vaste opId, dus nooit dubbel) zodra er weer verbinding is.
-  const { send, pendingCount, offline } = useActionQueue(matchId, (data) => {
+  const { send, pendingCount, offline, geweigerd, opnieuw, weggooien, oudeWachtrij, oudeVersturen, oudeWeggooien } = useActionQueue(matchId, (data) => {
     const d = data as { state?: MatchState }
     setState(d.state ?? (data as MatchState))
   })
@@ -1242,6 +1243,14 @@ export function Scorekeeper({
         </button>
       </div>
 
+      <WachtrijMeldingen
+        geweigerd={geweigerd}
+        opnieuw={opnieuw}
+        weggooien={weggooien}
+        oudeWachtrij={oudeWachtrij}
+        oudeVersturen={oudeVersturen}
+        oudeWeggooien={oudeWeggooien}
+      />
       {(offline || pendingCount > 0) && (
         <div className="sk-offline" role="status">
           📴 Offline — je blijft aantekenen; {pendingCount > 0 ? `${pendingCount} worp${pendingCount === 1 ? '' : 'en'}/actie${pendingCount === 1 ? '' : 's'} word${pendingCount === 1 ? 't' : 'en'} bewaard` : 'alles wordt bewaard'} en automatisch gesynct zodra je weer verbinding hebt.

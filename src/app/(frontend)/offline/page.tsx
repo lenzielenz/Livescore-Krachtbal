@@ -12,9 +12,9 @@ export default function OfflinePage() {
       <div className="site">
         <h1 className="page-title"><span className="brand">Offline</span></h1>
         <p className="empty">
-          📴 Je bent even offline. Eerder bezochte pagina&apos;s blijven beschikbaar, en als je aan het
-          aantekenen bent loopt de score gewoon door — alles wordt automatisch gesynct zodra je weer
-          verbinding hebt.
+          📴 Je bent even offline. Eerder bezochte pagina&apos;s blijven beschikbaar. Was je aan het
+          aantekenen? Ga dan terug naar het aantekenscherm: tikken worden op dit toestel bewaard en
+          vanzelf verstuurd zodra er weer verbinding is.
         </p>
         {/* Dit scherm verschijnt ook tijdens een update van de site, en dan is dít de vraag die
             iedereen zich stelt. Zonder dat zinnetje lijkt een halve minuut onderhoud op een

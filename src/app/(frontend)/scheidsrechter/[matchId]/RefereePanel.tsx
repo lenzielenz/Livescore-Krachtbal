@@ -209,14 +209,22 @@ export function RefereePanel({
   const post = async (body: Record<string, unknown>) => {
     setBusy(true)
     setMsg(null)
-    const res = await fetch(`/api/matchsheet/${matchId}/referee`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    const json = await res.json()
-    setBusy(false)
-    return { ok: res.ok, json }
+    // Een slechte lijn aan het veld (of een herstartende server) mag de knoppen niet laten
+    // hangen op "bezig": een netwerkfout wordt een gewone foutmelding.
+    try {
+      const res = await fetch(`/api/matchsheet/${matchId}/referee`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const json = await res.json().catch(() => ({ error: 'Onverwacht antwoord van de server — probeer opnieuw.' }))
+      return { ok: res.ok, json }
+    } catch {
+      const json: Awaited<ReturnType<Response['json']>> = { error: 'Geen verbinding — controleer het internet en probeer opnieuw.' }
+      return { ok: false, json }
+    } finally {
+      setBusy(false)
+    }
   }
 
   // `confirm`: undefined laat de bevestiging ongemoeid; true vergrendelt, false ontgrendelt.

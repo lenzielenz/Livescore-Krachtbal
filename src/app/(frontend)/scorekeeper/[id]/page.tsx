@@ -9,11 +9,12 @@ import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchState } from '@/lib/match-engine'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { missingSteps } from '@/lib/match-readiness'
-import { mayScoreMatch, type AuthedUser } from '@/lib/api-auth'
+import { mayScoreMatch, refereeMayHandleMatch, type AuthedUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { isSupportersMode } from '@/lib/score-mode'
 import { wedstrijdSelectie } from '@/lib/wedstrijd-selectie'
+import { Overnemen } from './Overnemen'
 import { Scorekeeper } from './Scorekeeper'
 import { SimpleScorekeeper } from './SimpleScorekeeper'
 import './scorekeeper.css'
@@ -171,11 +172,17 @@ export default async function ScorekeeperPage({
           <p className="empty">
             <b>{trust.scorerName ?? 'Iemand anders'}</b> tekent deze wedstrijd al aan. Om te vermijden
             dat twee mensen door elkaar scoren, kan er maar één tegelijk aantekenen.
-            {state.match.status === 'live'
-              ? ' Pas als die de wedstrijd terugzet met “Wedstrijd was nog niet bezig”, kan iemand anders overnemen.'
-              : ' Valt die stil vóór de aftrap, dan kan jij het na een tijdje overnemen.'}
+            {state.match.status === 'live' ? '' : ' Valt die stil vóór de aftrap, dan kan jij het na een tijdje overnemen.'}
             {supportersMode ? ' Volg intussen mee en bevestig of betwist de stand op de wedstrijdpagina.' : ' Volg intussen mee op de wedstrijdpagina.'}
           </p>
+          {state.match.status === 'live' && (
+            <Overnemen
+              matchId={matchId}
+              scorerName={trust.scorerName ?? 'de aantekenaar'}
+              laatstActief={trust.laatstActief}
+              direct={await refereeMayHandleMatch(payload, user as AuthedUser | null, matchId)}
+            />
+          )}
           <p className="sk-login-actions">
             <Link href={`/match/${matchId}`} className="match-score-cta">
               <span aria-hidden>📺</span>

@@ -52,7 +52,7 @@ export type MatchSheetPdfData = {
 // pdf-lib's StandardFonts (Helvetica) gebruiken WinAnsi-encoding en CRASHEN op glyphs die daar
 // niet in zitten (bv. ✓ U+2713). Flemish namen (é, ë, ï, à …) zitten wél in WinAnsi (Latin-1).
 // We mappen de bekende "mooie" Unicode-tekens en strippen al de rest, zodat genereren nooit faalt.
-function safe(text: string): string {
+export function safe(text: string): string {
   return String(text)
     .replace(/[–—]/g, '-') // – —
     .replace(/[‘’′]/g, "'") // ' ' ′
