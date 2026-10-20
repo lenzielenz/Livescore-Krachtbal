@@ -6,7 +6,10 @@ import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
+import { alleLeden, laatstHerinnerd, ontvangersVan } from '@/lib/leden-overzicht-server'
+import { herinneringVoor, ledenPerClub } from '@/lib/leden-overzicht'
 import { LedenManager, type Lid } from './LedenManager'
+import { LedenOverzicht, type OverzichtClub } from './LedenOverzicht'
 import { KaartAanvragenLijst, type KaartAanvraag } from './KaartAanvragenLijst'
 import { RegistratieWachtrij, type Aanvraag } from './RegistratieWachtrij'
 import '../../club/leden/club-leden.css'
@@ -113,6 +116,28 @@ export default async function LedenPage() {
     }
   })
 
+  // Overzicht per club + de herinnering die de federatie kan sturen (lib/leden-overzicht.ts).
+  const overzicht = ledenPerClub(await alleLeden(payload))
+  const overzichtClubs: OverzichtClub[] = await Promise.all(
+    overzicht.clubs.map(async (c) => {
+      const aan = await ontvangersVan(payload, c.clubId)
+      const h = herinneringVoor(c)
+      return {
+        clubId: c.clubId,
+        clubNaam: c.clubNaam,
+        totaal: c.totaal,
+        ok: c.ok,
+        wacht: c.wacht,
+        todo: c.todo,
+        afgekeurd: c.afgekeurd,
+        keuringVerloopt: c.keuringVerloopt,
+        herinnering: h ? { titel: h.titel, tekst: h.tekst, regels: h.regels } : null,
+        aan: aan.map((o) => ({ naam: o.naam, rol: o.rol })),
+        laatst: await laatstHerinnerd(payload, aan.map((o) => o.id)),
+      }
+    }),
+  )
+
   return (
     <>
       <SiteHeader active="federatie" />
@@ -123,6 +148,7 @@ export default async function LedenPage() {
           medisch gekeurd is en mag spelen — een groene bol = speelgerechtigd. Dit werkt meteen door in de opstelling
           en bij de scheidsrechter: enkel gekeurde, vergunde leden kunnen opgesteld worden.
         </p>
+        <LedenOverzicht clubs={overzichtClubs} totaal={overzicht.totaal} />
         <RegistratieWachtrij aanvragen={aanvragen} />
         <KaartAanvragenLijst aanvragen={kaarten} />
         <LedenManager leden={leden} />

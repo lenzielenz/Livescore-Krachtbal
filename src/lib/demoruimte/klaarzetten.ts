@@ -229,7 +229,25 @@ export async function demoKlaarzetten(payload: Payload, opties: { forceer?: bool
         overrideAccess: true,
       })
     }
-    stap(`${Object.values(spelers).flat().length} spelers, 2 nieuwe leden wachten op de federatie`)
+    // Niet iedereen is in orde — zodat de federatie per club iets te herinneren heeft. Enkel
+    // reservespelers (de zevende), die in geen enkele klaargezette selectie staan.
+    const zet = (id: number, data: Record<string, unknown>) => payload.update({ collection: 'players', id, data: data as never, overrideAccess: true })
+    const keuringOver = (dagen: number) => new Date(Date.now() - (365 - dagen) * DAG).toISOString()
+    await zet(spelers['SM-D'][6].id, { medischeKeuringOp: keuringOver(12) })
+    await zet(spelers['BA-D'][6].id, { registratieStatus: 'afgekeurd', vergunningsstatus: 'geen', medischAttest: false, afkeurReden: 'doktersattest onleesbaar — laad een nieuw op' })
+    await zet(spelers['OP-H'][6].id, { medischeKeuringOp: keuringOver(5) })
+    await zet(spelers['ZB-D'][6].id, { registratieStatus: 'concept', vergunningsstatus: 'geen', medischAttest: false, medischeKeuringOp: null })
+    await zet(spelers['LE-H'][6].id, { registratieStatus: 'concept', vergunningsstatus: 'geen', medischAttest: false, medischeKeuringOp: null })
+    // Een nieuw lid van Sint-Michiels dat de club nog moet aanvullen (keuring ontbreekt).
+    await payload.create({
+      collection: 'players',
+      data: {
+        name: 'Kobe Hermans', voornaam: 'Kobe', achternaam: 'Hermans', geslacht: 'm', team: ploeg['SM-H'], shirtNumber: 23, soortLid: 'speler', birthDate: '2005-05-19',
+        vergunningsstatus: 'geen', registratieStatus: 'concept', email: 'kobe@voorbeeld.be',
+      } as never,
+      overrideAccess: true,
+    })
+    stap(`${Object.values(spelers).flat().length + 1} spelers, 2 nieuwe leden wachten op de federatie; 6 leden niet in orde (aan te vullen, afgekeurd, keuring verloopt)`)
 
     // ── Officials en demo-accounts ─────────────────────────────────────────────────────────────
     const official: Record<string, number> = {}

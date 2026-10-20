@@ -45,6 +45,12 @@ klaarzetten, toegang), `src/app/(frontend)/demoruimte/`, `src/app/api/demoruimte
 - Inschrijvingen voor volgend seizoen: Baasrode en Zandberg ingediend (Baasrode met een kermisweekend),
   Lebbeke in concept, Sint-Michiels nog niets (dat toon je zelf).
 - Een medische kaart, aangevraagd door de ouder van een U14-speler.
+- Leden die **niet in orde** zijn, verspreid over de clubs: een nieuw lid zonder keuring
+  (Sint-Michiels), een afgekeurd lid (Baasrode), leden in concept (Lebbeke, Zandberg) en keuringen die
+  binnen 30 dagen verlopen. De federatie ziet op `/beheer/leden` per club hoeveel spelers er zijn, wie
+  goedgekeurd is, wie wacht en wie niet in orde is, bekijkt de **herinnering** vooraf (tekst en
+  ontvangers) en verstuurt ze. Ze gaat naar de clubbeheerders en -medewerkers (🔔 meldingen + push);
+  clubs zonder beheerder met een account krijgen niets — dat staat er ook bij.
 - Een open **referendum** (RHA/RDA, minimum 3 wedstrijden): 16 spelers stemden al, de demo-speler
   (Jens Aerts) mag nog stemmen. De federatie ziet de tussenstand, sluit en maakt bekend (erelijst).
   **↻ Referendum resetten** (in dat hoofdstuk van het draaiboek) wist enkel de stemmen en de uitslag

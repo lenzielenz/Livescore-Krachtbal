@@ -44,7 +44,7 @@ export function MeldingenLijst() {
               {!m.gelezen && <span style={{ color: '#e0533d' }}>● </span>}
               {m.titel}
             </strong>
-            {m.tekst && <span style={{ display: 'block', color: 'var(--dim)', fontSize: '0.86rem' }}>{m.tekst}</span>}
+            {m.tekst && <span style={{ display: 'block', color: 'var(--dim)', fontSize: '0.86rem', whiteSpace: 'pre-line' }}>{m.tekst}</span>}
             <small style={{ color: 'var(--dim)' }}>{formatDateTimeBE(m.op)}</small>
           </>
         )
