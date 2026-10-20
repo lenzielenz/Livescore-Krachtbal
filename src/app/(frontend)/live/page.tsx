@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId, userTeamId, userTeamIds } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
+import { aantekenRolVan } from '@/lib/wedstrijddag-acties'
 import { dateStrBE } from '@/lib/datetime'
 import { LIVE_VIEW_COOKIE, type LiveView } from '@/lib/live-view'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -42,7 +43,7 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
       <SiteHeader active="wedstrijden" />
       <div className="lb-page">
         <TournamentLiveStrip />
-        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} view={view} myClubId={myClubId} myTeamId={myTeamId} myTeamIds={myTeamIds} supportersMode={supportersMode} userId={user?.id ?? null} />
+        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} view={view} myClubId={myClubId} myTeamId={myTeamId} myTeamIds={myTeamIds} supportersMode={supportersMode} userId={user?.id ?? null} aantekenRol={aantekenRolVan((user as { roles?: string[] } | null)?.roles)} />
       </div>
     </>
   )

@@ -41,3 +41,9 @@
 .acc-chip.on { background: var(--accent); border-color: var(--accent); color: #06140d; font-weight: 700; }
 .acc-chip.danger-on { background: #e0533d; border-color: #e0533d; color: #fff; font-weight: 700; }
 .acc-msg { font-size: 0.82rem; color: var(--accent); }
+
+/* Laptop/desktop: clubs in kolommen naast elkaar. */
+.led-kolommen { display: flex; flex-direction: column; gap: 16px; }
+@media (min-width: 1100px) {
+  .led-kolommen { display: grid; grid-template-columns: repeat(auto-fill, minmax(600px, 1fr)); align-items: start; gap: 18px; }
+}

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
@@ -13,6 +14,7 @@ import type { SimpleSide } from '@/lib/simple-score'
 import { doelSeconden, extraMinuten, speeltTotMinuut } from '@/lib/speeltijd'
 import { useActionQueue } from '@/lib/use-action-queue'
 import { fmtClock, useLiveClock } from '@/lib/use-live-clock'
+import { WachtrijMeldingen } from './WachtrijMeldingen'
 import { useLiveStream } from '@/lib/use-live-stream'
 import './simple-scorekeeper.css'
 
@@ -38,6 +40,7 @@ export function SimpleScorekeeper({
   reeks,
   exitHref = '/scorekeeper',
   supportersMode = false,
+  startKlaar = null,
 }: {
   matchId: number
   initialState: MatchState
@@ -47,6 +50,9 @@ export function SimpleScorekeeper({
   exitHref?: string
   /** Supporters-modus (vrije livescore): doel is doel — geen scorer kiezen, geen wissel. */
   supportersMode?: boolean
+  /** Federatieflow vóór de aftrap: wat ontbreekt er nog (opstelling, akkoord scheidsrechter)?
+   *  null = startklaar (of niet van toepassing). */
+  startKlaar?: { ontbreekt: string[] } | null
 }) {
   const [state, setState] = useState<MatchState>(initialState)
   const [error, setError] = useState<string | null>(null)
@@ -91,7 +97,7 @@ export function SimpleScorekeeper({
 
   // Offline-bestendigheid: gedeelde wachtrij-hook (localStorage + auto-nasturen + opId-idempotentie,
   // zie use-action-queue.ts). `busy` = er loopt een eigen actie → SSE-updates even negeren.
-  const { send, pendingCount, offline, busyRef: busy } = useActionQueue(matchId, (data) => setState(data as MatchState))
+  const { send, pendingCount, offline, geweigerd, opnieuw, weggooien, oudeWachtrij, oudeVersturen, oudeWeggooien, busyRef: busy } = useActionQueue(matchId, (data) => setState(data as MatchState))
 
   const half = state.match.currentHalf
   const status = state.match.status
@@ -161,8 +167,22 @@ export function SimpleScorekeeper({
   // daar vlak achteraan komt.
   const NA_START_DOOF_MS = 1200
   const startTik = useRef(0)
+  // Nog niet startklaar in de federatieflow: de klok start de wedstrijd niet (de server weigert
+  // het toch) — het scherm toont wat er ontbreekt.
+  const geblokkeerd = !live && !finished && !!startKlaar && startKlaar.ontbreekt.length > 0
+  // Terwijl de tafel wacht op de vrijgave (opstellingen, controle, akkoord van de scheidsrechter):
+  // af en toe herladen, zodat de klok vrijkomt zodra de scheidsrechter klaar is — zonder dat
+  // iemand aan de tafel moet weten dat hij moet verversen.
+  const router = useRouter()
+  useEffect(() => {
+    if (!geblokkeerd) return
+    const t = setInterval(() => {
+      if (document.visibilityState === 'visible') router.refresh()
+    }, 15_000)
+    return () => clearInterval(t)
+  }, [geblokkeerd, router])
   const tikOpKlok = () => {
-    if (finished) return
+    if (finished || geblokkeerd) return
     const nu = Date.now()
     if (nu - startTik.current < NA_START_DOOF_MS) return
     if (!live) {
@@ -314,6 +334,18 @@ export function SimpleScorekeeper({
               📡 {veldPaired ? (veldQueued ? 'In wachtrij voor veldscherm' : 'Veldscherm gekoppeld') : 'Veldscherm koppelen'}
             </button>
           )}
+          {/* Federatieflow: een blessure tijdens de wedstrijd meteen doorgeven (op het blad, aangifte,
+              meldingen). Opent apart, zodat het aantekenen hier gewoon doorloopt. */}
+          {!supportersMode && (
+            <a href={`/aftekenen/${matchId}#blessure`} target="_blank" rel="noreferrer" className="ssk-toplink">
+              🚑 Blessure
+            </a>
+          )}
+          {!supportersMode && (
+            <a href={`/api/matchsheet/${matchId}/pdf?nood=1`} target="_blank" rel="noreferrer" className="ssk-toplink">
+              📝 Noodblad
+            </a>
+          )}
           <Link href={`/veld/${matchId}`} className="ssk-toplink">Veldscherm →</Link>
         </span>
       </header>
@@ -346,6 +378,14 @@ export function SimpleScorekeeper({
         </div>
       )}
 
+      <WachtrijMeldingen
+        geweigerd={geweigerd}
+        opnieuw={opnieuw}
+        weggooien={weggooien}
+        oudeWachtrij={oudeWachtrij}
+        oudeVersturen={oudeVersturen}
+        oudeWeggooien={oudeWeggooien}
+      />
       {(offline || pendingCount > 0) && (
         <div className="ssk-offline" role="status">
           📴 Offline — je blijft aantekenen; {pendingCount > 0 ? `${pendingCount} wijziging${pendingCount === 1 ? '' : 'en'} word${pendingCount === 1 ? 't' : 'en'} bewaard` : 'wijzigingen worden bewaard'} en automatisch gesynct zodra je weer verbinding hebt.
@@ -380,7 +420,9 @@ export function SimpleScorekeeper({
           </span>
           {!finished && (
             <span className="ssk-clock-action">
-              {rust
+              {geblokkeerd
+                ? '🔒 Nog niet startklaar'
+                : rust
                 ? `▶ Tik om de ${half}e helft te starten`
                 : !live || (!state.match.clockRunning && clock < 1)
                   ? '▶ Tik om te starten'
@@ -394,6 +436,17 @@ export function SimpleScorekeeper({
           <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size="clamp(60px, 15vw, 104px)" ringColor={state.teams.away.colors?.primary ?? null} />
         </span>
       </div>
+
+      {geblokkeerd && startKlaar && (
+        <div className="ssk-startklaar" role="status">
+          <strong>Nog niet klaar om te starten</strong>
+          <span>Nog nodig: {startKlaar.ontbreekt.join(', ')}.</span>
+          <span className="ssk-startklaar-links">
+            <Link href={`/opstelling/${matchId}`} className="ssk-btn zacht">📋 Opstelling</Link>
+            <Link href={`/scheidsrechter/${matchId}`} className="ssk-btn zacht">🧑‍⚖️ Scheidsrechter</Link>
+          </span>
+        </div>
+      )}
 
       {live && !finished && (
         <div className="ssk-clockadj" role="group" aria-label="Klok per minuut bijstellen">
@@ -559,6 +612,11 @@ export function SimpleScorekeeper({
         <div className="ssk-done">
           ✅ Afgelopen — eindstand <strong>{state.score.home} – {state.score.away}</strong>
           <div className="ssk-after">
+            {/* Federatieflow: na de laatste worp volgt het aftekenen (stap 4). Zonder deze knop
+                verdween een afgelopen wedstrijd uit Mijn club en wist de tafel niet waar verder. */}
+            {!supportersMode && (
+              <Link href={`/aftekenen/${matchId}`} className="ssk-btn">✍️ Naar aftekenen →</Link>
+            )}
             <Link href={`/match/${matchId}`} className="ssk-btn">Naar wedstrijdpagina</Link>
             {/* Te vroeg op "Einde" gedrukt? Verder doen waar je stond, zonder iets te verliezen. */}
             <button
@@ -771,12 +829,16 @@ export function SimpleScorekeeper({
                             disabled={subOut == null && field[side].length >= 4}
                             onClick={() => {
                               const wasCaptain = subOut != null && subOut === captainId
-                              setField((f) => {
-                                const cur = f[side]
-                                const next = subOut != null ? cur.map((id) => (id === subOut ? p.id : id)) : cur.length < 4 ? [...cur, p.id] : cur
-                                return { ...f, [side]: next }
-                              })
+                              const cur = field[side]
+                              const next = subOut != null ? cur.map((id) => (id === subOut ? p.id : id)) : cur.length < 4 ? [...cur, p.id] : cur
+                              setField((f) => ({ ...f, [side]: next }))
                               setSubOut(null)
+                              // De wissel hoort op het wedstrijdblad (reglement §9: wie eruit, wie erin) en
+                              // moet een refresh of een ander toestel overleven: naar de server, via de
+                              // wachtrij (ook offline). Enkel met een volledig veld — zo verwacht setLineup het.
+                              if (next.length === Math.min(4, teamRosterOf(side).length)) {
+                                void act({ action: 'setlineup', side, playerIds: next })
+                              }
                               // Ging de kapitein eruit, dan moet er meteen een nieuwe aangeduid worden.
                               if (wasCaptain) setNeedCaptain(side)
                             }}

@@ -4,7 +4,9 @@
 import type { Payload } from 'payload'
 
 import type { Category } from './categories'
+import { vastspelenOordeel, vastspelenVoorClub, type VastStatus } from './competitieregels'
 import { playerSelectability, type Selectability } from './lineup'
+import { reeksRang } from './reeksen'
 import { computeReadiness, type Readiness } from './match-readiness'
 import { isKnipjesBlocked, openKnipjes } from './sanctions'
 import { isSupportersMode } from './score-mode'
@@ -148,6 +150,10 @@ export type RosterEntry = {
   vergunningsstatus: string
   selectability: Selectability
   suggested: boolean
+  /** Speler uit een lagere ploeg van de club (speelt hier hoger): naam van zijn eigen ploeg. */
+  geleendVan?: string
+  /** Vastspelen: hoe vaak hij al hoger speelde in deze ploeg, en het maximum (lib/competitieregels.ts). */
+  knipjes?: { keer: number; max: number; vastIn: string | null }
 }
 
 /** Bouwt de selecteerbare roster voor één kant van de wedstrijd. */
@@ -159,7 +165,7 @@ export async function buildRoster(
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 1 }).catch(() => null)
   if (!match) return null
   const team = (side === 'home' ? match.homeTeam : match.awayTeam) as
-    | { id: number; name: string; category: Category; vasteOpstellingIds?: string | null }
+    | { id: number; name: string; category: Category; reeks?: string | null; club?: unknown; vasteOpstellingIds?: string | null }
     | number
     | null
   if (!team || typeof team === 'number') return null
@@ -171,10 +177,33 @@ export async function buildRoster(
     .filter((n) => Number.isFinite(n) && n > 0)
 
   const seasonStartYear = (await getSeasonStartYear(payload)) ?? new Date().getFullYear()
-  const [roster, suggestedIds, settings] = await Promise.all([
-    payload.find({ collection: 'players', where: { team: { equals: team.id } }, limit: 200, depth: 0 }),
+  // Spelers uit LAGERE ploegen van dezelfde club (zelfde categorie) mogen hier hoger spelen —
+  // met hun vastspeel-teller (lib/competitieregels.ts). Wie al vast zit in een hogere reeks, mag
+  // niet meer in een lagere ploeg.
+  const clubId = team.club && typeof team.club === 'object' ? (team.club as { id?: number }).id : (team.club as number | null | undefined)
+  const hierRang = reeksRang(team.reeks)
+  const lagerePloegen =
+    clubId != null && hierRang != null
+      ? (
+          await payload.find({
+            collection: 'teams',
+            where: { and: [{ club: { equals: clubId } }, { category: { equals: team.category } }, { id: { not_equals: team.id } }] },
+            depth: 0,
+            limit: 50,
+          })
+        ).docs.filter((t) => (reeksRang(t.reeks as string) ?? 0) > hierRang)
+      : []
+  const ploegNaam = new Map<number, { naam: string; reeks: string | null }>([
+    [team.id, { naam: team.name, reeks: team.reeks ?? null }],
+    ...lagerePloegen.map((t) => [Number(t.id), { naam: String(t.name ?? ''), reeks: (t.reeks as string | null) ?? null }] as const),
+  ])
+  const [roster, suggestedIds, settings, vast] = await Promise.all([
+    payload.find({ collection: 'players', where: { team: { in: [...ploegNaam.keys()] } }, limit: 500, depth: 0 }),
     lastKnownLineup(payload, team.id, matchId),
     payload.findGlobal({ slug: 'settings', depth: 0 }).catch(() => null),
+    clubId != null
+      ? vastspelenVoorClub(payload, Number(clubId)).catch(() => new Map<number, VastStatus>())
+      : Promise.resolve(new Map<number, VastStatus>()),
   ])
   const usage = await teamLineupUsage(payload, team.id)
   const suggested = new Set(suggestedIds)
@@ -199,32 +228,59 @@ export async function buildRoster(
     }
   }
 
-  const players: RosterEntry[] = roster.docs.map((p) => ({
-    id: p.id as number,
-    name: p.name as string,
-    shirtNumber: (p.shirtNumber as number) ?? 0,
-    vergunningsstatus: (p.vergunningsstatus as string) ?? 'geen',
-    selectability: playerSelectability(
+  const players: RosterEntry[] = roster.docs.map((p) => {
+    const eigenTeam = typeof p.team === 'object' && p.team ? Number(p.team.id) : Number(p.team)
+    const status = vast.get(p.id as number) ?? null
+    const oordeel = vastspelenOordeel(status, ploegNaam.get(eigenTeam)?.reeks ?? null, { id: team.id, reeks: team.reeks ?? null })
+    const basis = playerSelectability(
       {
         vergunningsstatus: p.vergunningsstatus as string,
         birthDate: p.birthDate as string,
         hogerSpelenVerbod: p.hogerSpelenVerbod as boolean,
         medischAttest: p.medischAttest as boolean,
         actief: p.actief as boolean,
+        soortLid: (p as { soortLid?: string | null }).soortLid,
         knipjesGeblokkeerd: isKnipjesBlocked(knipjesPerPlayer.get(p.id as number) ?? 0, drempel),
       },
       team.category,
       seasonStartYear,
-    ),
-    suggested: suggested.has(p.id as number),
-  }))
+    )
+    const rang = { ok: 0, warn: 1, block: 2 } as const
+    const selectability =
+      oordeel.reden != null
+        ? {
+            level: rang[oordeel.level] > rang[basis.level] ? oordeel.level : basis.level,
+            reasons: [...basis.reasons.filter((r) => r !== 'Selecteerbaar.'), oordeel.reden],
+          }
+        : basis
+    const hogerHier = status?.hoger.find((h) => h.teamId === team.id)
+    return {
+      id: p.id as number,
+      name: p.name as string,
+      shirtNumber: (p.shirtNumber as number) ?? 0,
+      vergunningsstatus: (p.vergunningsstatus as string) ?? 'geen',
+      selectability,
+      suggested: suggested.has(p.id as number),
+      ...(eigenTeam !== team.id ? { geleendVan: ploegNaam.get(eigenTeam)?.naam ?? '' } : {}),
+      ...(status ? { knipjes: { keer: hogerHier?.keer ?? 0, max: status.max, vastIn: status.vastIn?.reeks ?? null } } : {}),
+    }
+  })
 
-  // Volgorde: geblokkeerde leden onderaan; daarboven de meest gebruikte spelers eerst (vlotter voor
-  // de coach), bij gelijk gebruik op rugnummer.
+  // Volgorde: geblokkeerde leden onderaan; daarboven de favorieten, dan de meest gebruikte spelers
+  // (vlotter voor de coach), bij gelijk gebruik op rugnummer.
+  const favSet = new Set(favorites)
   players.sort((a, b) => {
     const ba = a.selectability.level === 'block' ? 1 : 0
     const bb = b.selectability.level === 'block' ? 1 : 0
     if (ba !== bb) return ba - bb
+    // ⭐ Favorieten van de coach staan altijd bovenaan.
+    const fa = favSet.has(a.id) ? 0 : 1
+    const fb = favSet.has(b.id) ? 0 : 1
+    if (fa !== fb) return fa - fb
+    // Eigen spelers vóór spelers uit lagere ploegen.
+    const ga = a.geleendVan != null ? 1 : 0
+    const gb = b.geleendVan != null ? 1 : 0
+    if (ga !== gb) return ga - gb
     const ua = usage.get(a.id) ?? 0
     const ub = usage.get(b.id) ?? 0
     if (ua !== ub) return ub - ua

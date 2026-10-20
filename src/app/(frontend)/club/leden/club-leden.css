@@ -1,0 +1,96 @@
+/* Leden & registratie (club) — /club/leden. Zelfde basis als de ledenkeuring (beheer/leden). */
+.cl-club { color: var(--dim); font-weight: 600; font-size: 0.7em; margin-left: 6px; }
+.cl-wrap { display: flex; flex-direction: column; gap: 14px; }
+.cl-tellers { display: flex; gap: 8px; flex-wrap: wrap; }
+.cl-teller {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--dim);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.cl-teller strong { color: var(--txt); margin-right: 4px; }
+.cl-teller.on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+.cl-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.cl-toolbar .acc-search {
+  flex: 1 1 200px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--txt);
+  font: inherit;
+}
+.cl-btn {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cl-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cl-btn-primary { background: var(--accent); border-color: var(--accent); color: #06140d; font-weight: 700; }
+.cl-btn-send { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.cl-btn-danger { border-color: #e0533d; color: #e0533d; }
+.cl-ploeg { display: flex; flex-direction: column; gap: 6px; }
+.cl-ploeg .acc-group-head { font-size: 0.95rem; margin: 6px 0 2px; }
+.cl-ploeg .acc-count { color: var(--dim); font-weight: 600; font-size: 0.82rem; }
+.cl-rij { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 8px 12px; }
+.cl-rij.cl-ok { border-left: 4px solid #0fe0a6; }
+.cl-rij.cl-wacht { border-left: 4px solid #f6c544; }
+.cl-rij.cl-todo { border-left: 4px solid var(--line); }
+.cl-rij.cl-fout { border-left: 4px solid #e0533d; }
+.cl-rij-hoofd { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cl-icoon { font-size: 1.15rem; width: 1.4em; text-align: center; }
+.cl-id { display: flex; flex-direction: column; min-width: 0; flex: 1 1 180px; }
+.cl-naam { font-weight: 800; font-size: 0.92rem; }
+.cl-sub { font-size: 0.76rem; color: var(--dim); }
+.cl-link { font-size: 0.8rem; color: var(--accent); }
+.cl-form { margin-top: 10px; padding: 12px; border: 1px dashed var(--line); border-radius: 10px; display: flex; flex-direction: column; gap: 10px; }
+.cl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.cl-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.76rem; color: var(--dim); }
+.cl-grid input,
+.cl-grid select,
+.cl-reden {
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.88rem;
+}
+.cl-grid .cl-wide { grid-column: 1 / -1; }
+.cl-form-acties { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Federatiewachtrij (beheer/leden) */
+.fw-wrap { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--accent); border-radius: 12px; background: color-mix(in srgb, var(--accent) 6%, var(--panel)); }
+.fw-kop { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.fw-kop h2 { margin: 0; font-size: 1.05rem; }
+.fw-rij { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.fw-gegevens { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fw-gegevens .cl-sub { overflow-wrap: anywhere; }
+.fw-acties { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.fw-afkeur { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+.fw-afkeur .cl-reden { flex: 1 1 220px; }
+.fw-nr { width: 9em; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--txt); font: inherit; font-size: 0.82rem; }
+.fw-warn { color: #e0533d; font-weight: 700; }
+@media (max-width: 560px) {
+  .fw-rij { grid-template-columns: auto 1fr; }
+  .fw-acties { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
+/* Laptop/desktop: ploegen naast elkaar; de federatiewachtrij als brede tabel. */
+.cl-ploegen { display: flex; flex-direction: column; gap: 14px; }
+@media (min-width: 1100px) {
+  .cl-ploegen { display: grid; grid-template-columns: repeat(auto-fill, minmax(560px, 1fr)); align-items: start; gap: 18px; }
+  .fw-rij { grid-template-columns: auto minmax(0, 1fr) auto; padding: 10px 14px; }
+  .cl-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

@@ -7,6 +7,9 @@ import { getAuthUser } from '@/lib/auth-user'
 import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 import { LedenManager, type Lid } from './LedenManager'
+import { KaartAanvragenLijst, type KaartAanvraag } from './KaartAanvragenLijst'
+import { RegistratieWachtrij, type Aanvraag } from './RegistratieWachtrij'
+import '../../club/leden/club-leden.css'
 import './leden.css'
 
 export const dynamic = 'force-dynamic'
@@ -27,7 +30,7 @@ export default async function LedenPage() {
     return (
       <>
         <SiteHeader active="federatie" />
-        <div className="site">
+        <div className="site site-breed">
           <h1 className="page-title"><span className="brand">Ledenkeuring</span></h1>
           <p className="empty">
             Enkel de federatie/admin kan de medische keuring beheren.{' '}
@@ -57,16 +60,71 @@ export default async function LedenPage() {
     }
   })
 
+  // Wachtrij: wat clubs ingediend hebben, oudste eerst (wie eerst indient, wordt eerst bekeken).
+  const dag = (v: unknown) => (v ? new Date(String(v)).toISOString().slice(0, 10) : '')
+  const ingediend = await payload
+    .find({
+      collection: 'players',
+      where: { registratieStatus: { equals: 'ingediend' } },
+      sort: 'ingediendOp',
+      depth: 2,
+      limit: 1000,
+      pagination: false,
+      overrideAccess: true,
+    })
+    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  const aanvragen: Aanvraag[] = ingediend.docs.map((p) => {
+    const r = p as Record<string, unknown>
+    const team = rel(r.team)
+    const club = team.id != null ? rel((r.team as { club?: unknown } | undefined)?.club) : { id: null, name: '—' }
+    const attest = r.medischAttestBestand && typeof r.medischAttestBestand === 'object' ? (r.medischAttestBestand as { filename?: unknown }) : null
+    return {
+      id: Number(r.id),
+      naam: String(r.name ?? '—'),
+      clubNaam: club.name,
+      teamNaam: team.name,
+      birthDate: dag(r.birthDate),
+      geslacht: String(r.geslacht ?? ''),
+      soortLid: String(r.soortLid ?? 'speler'),
+      medischeKeuringOp: dag(r.medischeKeuringOp),
+      attestUrl: attest?.filename ? `/api/medische-attesten/file/${encodeURIComponent(String(attest.filename))}` : null,
+      ingediendOp: dag(r.ingediendOp),
+      vergunningsnummer: String(r.vergunningsnummer ?? ''),
+    }
+  })
+
+  const kaartRes = await payload.find({
+    collection: 'medische-kaart-aanvragen',
+    where: { status: { equals: 'aangevraagd' } },
+    sort: 'createdAt',
+    depth: 2,
+    limit: 500,
+    pagination: false,
+    overrideAccess: true,
+  })
+  const kaarten: KaartAanvraag[] = kaartRes.docs.map((a) => {
+    const speler = a.player && typeof a.player === 'object' ? a.player : null
+    return {
+      id: Number(a.id),
+      naam: String(speler?.name ?? '—'),
+      clubNaam: a.club && typeof a.club === 'object' ? String(a.club.name ?? '—') : '—',
+      via: a.via === 'club' ? 'club' : 'lid',
+      op: String(a.createdAt),
+    }
+  })
+
   return (
     <>
       <SiteHeader active="federatie" />
-      <div className="site">
+      <div className="site site-breed">
         <h1 className="page-title"><span className="brand">Ledenkeuring</span></h1>
         <p className="acc-page-intro">
           Alle leden met hun <strong>vergunning (paspoort)</strong> en <strong>medische keuring</strong>. Duid aan wie
           medisch gekeurd is en mag spelen — een groene bol = speelgerechtigd. Dit werkt meteen door in de opstelling
           en bij de scheidsrechter: enkel gekeurde, vergunde leden kunnen opgesteld worden.
         </p>
+        <RegistratieWachtrij aanvragen={aanvragen} />
+        <KaartAanvragenLijst aanvragen={kaarten} />
         <LedenManager leden={leden} />
       </div>
     </>

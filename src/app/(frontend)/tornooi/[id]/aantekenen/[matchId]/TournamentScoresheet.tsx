@@ -15,6 +15,7 @@ import type { Side } from '@/lib/tournament'
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
 import { useLiveStream } from '@/lib/use-live-stream'
 import { fmtClock, useTicking } from '../../../useTournament'
+import '@/app/(frontend)/scorekeeper/[id]/simple-scorekeeper.css'
 
 function findMatch(state: TournamentState, matchId: number): TMatchState | null {
   for (const r of state.rounds) {
@@ -158,6 +159,18 @@ export function TournamentScoresheet({
             nul staat en niet loopt, terwijl er niets uitlegt waarom. */}
         {rust && <span className="ts-clock-rust">⏸ Rust · eerste helft afgesloten, de tweede moet nog beginnen</span>}
       </div>
+      {/* Klok vergeten te starten of te laat getikt? Per minuut bijstellen, zoals bij de competitie. */}
+      {m.status === 'live' && !finished && (
+        <div className="ssk-clockadj" role="group" aria-label="Klok per minuut bijstellen">
+          <button type="button" className="ssk-clockadj-btn" disabled={clock < 1} onClick={() => act({ action: 'clock', seconds: Math.max(0, Math.floor(clock) - 60) })} aria-label="Eén minuut van de klok af">
+            − 1 min
+          </button>
+          <span className="ssk-clockadj-lbl">klok bijstellen</span>
+          <button type="button" className="ssk-clockadj-btn" onClick={() => act({ action: 'clock', seconds: Math.floor(clock) + 60 })} aria-label="Eén minuut bij de klok">
+            + 1 min
+          </button>
+        </div>
+      )}
 
       {!ready ? (
         <p className="trn-empty">Wacht tot beide ploegen gekend zijn (winnaars van de vorige ronde).</p>

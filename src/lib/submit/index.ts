@@ -99,6 +99,15 @@ export async function renderMatchSheetPdf(payload: Payload, matchId: number | st
   return generateMatchSheetPdf(data)
 }
 
+/** Het noodblad (verder op papier als het toestel uitvalt), vooraf ingevuld met de huidige stand. */
+export async function renderNoodbladPdf(payload: Payload, matchId: number | string): Promise<Uint8Array | null> {
+  const data = await buildMatchSheetPdfData(payload, matchId)
+  if (!data) return null
+  const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
+  const { generateNoodbladPdf } = await import('./pdf-noodblad')
+  return generateNoodbladPdf(data, { half: match?.currentHalf ?? 1, status: String(match?.status ?? 'scheduled') })
+}
+
 export async function submitMatchSheet(
   payload: Payload,
   matchId: number | string,
@@ -114,11 +123,34 @@ export async function submitMatchSheet(
   if (!sheet) return { ok: false, error: 'Geen wedstrijdblad gevonden.' }
   if (sheet.status === 'ingediend') return { ok: false, error: 'Al ingediend (Item 37).' }
 
-  // Beide kapiteins moeten aftekenen.
+  // Pas na het eindsignaal (of een forfait) valt er iets in te dienen.
+  const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
+  const forfaitUitslag = (sheet.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen'
+  const forfait = forfaitUitslag !== 'geen'
+  if (matchDoc?.status !== 'finished' && !forfait) {
+    return { ok: false, error: 'De wedstrijd is nog niet afgelopen.' }
+  }
+
+  // De kapiteins van de ploegen die er waren, én de scheidsrechter, moeten aftekenen. Bij forfait
+  // tekent de afwezige ploeg niet (er is niemand); bij dubbel forfait enkel de scheidsrechter.
   const kapThuis = sigOf(sheet.kapiteinThuis)
   const kapUit = sigOf(sheet.kapiteinUit)
-  if (!kapThuis.akkoord || !kapUit.akkoord) {
-    return { ok: false, error: 'Beide kapiteins moeten eerst aftekenen.' }
+  const thuisAanwezig = forfaitUitslag !== 'thuis' && forfaitUitslag !== 'dubbel'
+  const uitAanwezig = forfaitUitslag !== 'uit' && forfaitUitslag !== 'dubbel'
+  if ((thuisAanwezig && !kapThuis.akkoord) || (uitAanwezig && !kapUit.akkoord)) {
+    return { ok: false, error: forfait ? 'De kapitein van de aanwezige ploeg moet eerst aftekenen.' : 'Beide kapiteins moeten eerst aftekenen.' }
+  }
+  if (!sigOf(sheet.scheidsrechter).akkoord) {
+    return { ok: false, error: 'De scheidsrechter moet eerst aftekenen.' }
+  }
+
+  // Wie speelde (O-markering) telt voor het vastspelen en het referendum: de scheidsrechter
+  // bevestigt het na de wedstrijd. Zonder die bevestiging zou het blad niemand als speler tellen.
+  if (!forfait) {
+    const gespeeld = (rows: unknown) => (Array.isArray(rows) ? rows : []).some((r) => (r as { deelgenomen?: boolean }).deelgenomen)
+    if (!gespeeld(sheet.homeLineup) || !gespeeld(sheet.awayLineup)) {
+      return { ok: false, error: 'Bevestig eerst wie er speelde (scheidsrechterspagina, "Wie speelde").' }
+    }
   }
 
   // Score uit de live-scoring. NIET stil doorgaan bij een fout: een ingediend (onwijzigbaar)

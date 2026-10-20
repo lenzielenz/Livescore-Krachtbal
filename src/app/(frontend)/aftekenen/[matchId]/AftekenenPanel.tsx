@@ -44,7 +44,10 @@ function SignaturePad({
   const drawing = useRef(false)
   // Naam wordt NIET getypt: ze komt uit de wedstrijd (kapitein/SR), of valt server-side terug op
   // het ingelogde account. Aftekenen = gewoon tekenen + bevestigen.
-  const naam = (initial?.naam || defaultNaam || '').trim()
+  const vooraf = (initial?.naam || defaultNaam || '').trim()
+  // Geen kapitein aangeduid in de opstelling? Dan vul je hier de naam in.
+  const [getypt, setGetypt] = useState('')
+  const naam = vooraf || getypt.trim()
   const [msg, setMsg] = useState<string | null>(null)
   const [hasInk, setHasInk] = useState(false)
 
@@ -99,6 +102,7 @@ function SignaturePad({
 
   const save = async () => {
     if (!hasInk) return setMsg('Plaats eerst een handtekening.')
+    if (!naam && who !== 'scheidsrechter') return setMsg('Vul de naam van de kapitein in.')
     const dataUrl = canvasRef.current!.toDataURL('image/png')
     const res = await fetch(`/api/matchsheet/${matchId}/sign`, {
       method: 'POST',
@@ -144,7 +148,17 @@ function SignaturePad({
         </>
       ) : (
         <>
-          {naam && <p className="wb-sign-naam">Tekent: {naam}</p>}
+          {vooraf ? (
+            <p className="wb-sign-naam">Tekent: {vooraf}</p>
+          ) : who !== 'scheidsrechter' ? (
+            <input
+              className="wb-input"
+              placeholder="Naam van de kapitein"
+              value={getypt}
+              onChange={(e) => setGetypt(e.target.value)}
+              style={{ marginBottom: 8 }}
+            />
+          ) : null}
           <canvas
             ref={canvasRef}
             width={300}
@@ -173,6 +187,7 @@ function SignaturePad({
 export function AftekenenPanel({
   matchId,
   initialStatus,
+  afgelopen = true,
   signatures,
   homeTeam,
   awayTeam,
@@ -180,6 +195,8 @@ export function AftekenenPanel({
 }: {
   matchId: string
   initialStatus: string
+  /** Pas na het eindsignaal (of een forfait) kan er afgetekend worden. */
+  afgelopen?: boolean
   signatures?: Partial<Record<Who, SignatureData>>
   homeTeam?: string
   awayTeam?: string
@@ -232,6 +249,7 @@ export function AftekenenPanel({
   if (status === 'ingediend') {
     return <p className="wb-intro">Dit blad is ingediend en kan niet meer gewijzigd worden (Item 37).</p>
   }
+  if (!afgelopen) return null
 
   return (
     <>

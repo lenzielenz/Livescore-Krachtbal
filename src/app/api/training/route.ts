@@ -1,4 +1,5 @@
-import { authUser, hasRole, isFederationLevel, userClubId } from '@/lib/api-auth'
+import { authUser, hasRole, isFederationLevel } from '@/lib/api-auth'
+import { magTrainingVoor } from '@/lib/club-functies'
 import { getPayloadClient } from '@/lib/payload-client'
 import { TRAINING_METRICS } from '@/lib/training-metrics'
 
@@ -36,18 +37,16 @@ export async function POST(req: Request) {
     const payload = await getPayloadClient()
     const user = await authUser(payload, req)
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
-    if (!isFederationLevel(user) && !hasRole(user, 'club-beheerder', 'club-medewerker')) {
-      return Response.json({ error: 'Enkel club-beheerder/federatie.' }, { status: 403 })
-    }
-
-    // Een club-beheerder mag enkel metingen ingeven voor spelers van de eigen club.
+    // Federatie; clubstaf voor spelers van de eigen club; een trainer/coach voor zijn ploegen en de
+    // jeugdverantwoordelijke voor de jeugdploegen (lib/club-functies.ts).
     if (!isFederationLevel(user)) {
-      const clubId = userClubId(user)
-      const speler = await payload.findByID({ collection: 'players', id: spelerId, depth: 2 }).catch(() => null)
+      const speler = await payload.findByID({ collection: 'players', id: spelerId, depth: 1 }).catch(() => null)
       const team = speler && typeof speler.team === 'object' ? speler.team : null
-      const spelerClub = team && typeof team.club === 'object' && team.club ? team.club.id : (team?.club ?? null)
-      if (clubId == null || spelerClub == null || String(spelerClub) !== String(clubId)) {
-        return Response.json({ error: 'Deze speler hoort niet bij jouw club.' }, { status: 403 })
+      if (!team || !magTrainingVoor(user, { id: team.id, club: team.club, category: team.category })) {
+        return Response.json(
+          { error: hasRole(user, 'club-beheerder', 'club-medewerker') ? 'Deze speler hoort niet bij jouw club.' : 'Geen rechten om training in te geven voor deze speler.' },
+          { status: 403 },
+        )
       }
     }
 

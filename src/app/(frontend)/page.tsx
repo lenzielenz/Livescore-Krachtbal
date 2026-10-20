@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId, userTeamId, userTeamIds } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
+import { aantekenRolVan } from '@/lib/wedstrijddag-acties'
 import { dateStrBE } from '@/lib/datetime'
 import { quoteForDay } from '@/lib/krachtbal-quotes'
 import { LIVE_VIEW_COOKIE, type LiveView } from '@/lib/live-view'
@@ -94,7 +95,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         {/* Geen tornooi-wedstrijden op de homepage — wél de snellink met aftelklok naar de
             tornooidag, zodat nieuwe mensen meteen hun weg vinden. */}
         <TornooiTeaser />
-        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} view={view} myClubId={myClubId} myTeamId={myTeamId} supportersMode={supportersMode} userId={me?.id ?? null} />
+        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} view={view} myClubId={myClubId} myTeamId={myTeamId} supportersMode={supportersMode} userId={me?.id ?? null} aantekenRol={aantekenRolVan((me as { roles?: string[] } | null)?.roles)} />
       </div>
     </>
   )

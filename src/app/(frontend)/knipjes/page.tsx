@@ -23,7 +23,7 @@ export default async function KnipjesDashboard() {
     return (
       <>
         <SiteHeader active="federatie" />
-        <div className="site">
+        <div className="site site-breed">
           <h1 className="page-title">Knipjes <span className="brand">·</span> overzicht</h1>
           <p className="wb-intro">
             Enkel de federatie/admin kan het knipjes-overzicht bekijken.{' '}
@@ -73,7 +73,7 @@ export default async function KnipjesDashboard() {
   return (
     <>
       <SiteHeader active="federatie" />
-      <div className="site">
+      <div className="site site-breed">
       <h1 className="page-title">
         Knipjes <span className="brand">·</span> overzicht
       </h1>

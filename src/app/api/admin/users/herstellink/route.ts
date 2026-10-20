@@ -4,7 +4,8 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { HERSTEL_GELDIG_MS, herstelLink, vervaltOp } from '@/lib/wachtwoord-reset'
 
 // Staf/admins beheert de federatie — een club-beheerder raakt die accounts hier niet aan.
-// Zelfde lijst als ClubTeamPage's PROTECTED (beheer/club-team/page.tsx).
+// Strenger dan ClubTeamPage's PROTECTED: een herstellink geeft het account zelf, dus ook een
+// scheidsrechter (die over élke wedstrijd beslist) blijft hier bij de federatie.
 const PROTECTED_ROLES = ['admin', 'federatie', 'scheidsrechter', 'club-beheerder']
 
 const relId = (v: unknown): number | string | null =>
@@ -53,6 +54,13 @@ export async function POST(req: Request) {
     .findByID({ collection: 'users', id: userId, depth: 0, overrideAccess: true })
     .catch(() => null)
   if (!doel) return Response.json({ error: 'Account niet gevonden.' }, { status: 404 })
+
+  const doelRollen = Array.isArray((doel as { roles?: unknown }).roles) ? ((doel as { roles: string[] }).roles) : []
+  // Een federatiemedewerker (geen admin) maakt geen herstellink voor een admin of een collega van
+  // de federatie: daarmee kon hij die accounts overnemen. Enkel een admin mag dat.
+  if (federatie && !hasRole(beheerder, 'admin') && doelRollen.some((r) => r === 'admin' || r === 'federatie')) {
+    return Response.json({ error: 'Enkel een admin kan een herstellink maken voor een admin- of federatieaccount.' }, { status: 403 })
+  }
 
   if (!federatie) {
     // Club-beheerder: enkel voor een lid van de eigen club, en nooit voor staf/admin-rollen.

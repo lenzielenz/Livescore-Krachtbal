@@ -9,7 +9,88 @@ import './club-team.css'
 
 export type TeamRole = 'none' | 'club-lid' | 'club-medewerker'
 export type PlayerOption = { id: number; name: string; shirtNumber: number | null }
-export type Member = { id: number; name: string | null; email: string; role: TeamRole; playerId: number | null }
+export type Member = {
+  id: number
+  name: string | null
+  email: string
+  role: TeamRole
+  playerId: number | null
+  functies: string[]
+  functieTeams: number[]
+}
+export type TeamOption = { id: number; naam: string }
+
+const FUNCTIES: { value: string; label: string }[] = [
+  { value: 'speler', label: 'Speler' },
+  { value: 'coach', label: 'Coach' },
+  { value: 'trainer', label: 'Trainer' },
+  { value: 'jeugdverantwoordelijke', label: 'Jeugdverantwoordelijke' },
+  { value: 'lid', label: 'Lid' },
+]
+
+/**
+ * Functies in de club (meerdere tegelijk) + de ploegen van een coach/trainer. Een coach zet de
+ * opstelling van zijn ploegen; de jeugdverantwoordelijke die van alle jeugdploegen (lib/club-functies.ts).
+ */
+function FunctiesEditor({ userId, initFuncties, initTeams, teams }: { userId: number; initFuncties: string[]; initTeams: number[]; teams: TeamOption[] }) {
+  const [functies, setFuncties] = useState<string[]>(initFuncties)
+  const [ploegen, setPloegen] = useState<number[]>(initTeams)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+
+  const bewaar = async (f: string[], t: number[]) => {
+    const vorig = { f: functies, t: ploegen }
+    setFuncties(f)
+    setPloegen(t)
+    setBusy(true)
+    setMsg(null)
+    const { ok, error } = await postTeam({ userId, clubFuncties: f, functieTeams: t })
+    setBusy(false)
+    if (!ok) {
+      setFuncties(vorig.f)
+      setPloegen(vorig.t)
+      setMsg(error ?? 'Bewaren mislukt.')
+    } else setMsg('✓ Bewaard')
+  }
+  const metPloegen = functies.includes('coach') || functies.includes('trainer')
+
+  return (
+    <div className="ct-functies">
+      <div className="ct-pick" role="group" aria-label="Functies in de club">
+        {FUNCTIES.map((f) => {
+          const aan = functies.includes(f.value)
+          return (
+            <button
+              key={f.value}
+              type="button"
+              disabled={busy}
+              aria-pressed={aan}
+              className={`ct-chip ${aan ? 'on' : ''}`}
+              onClick={() => bewaar(aan ? functies.filter((x) => x !== f.value) : [...functies, f.value], ploegen)}
+            >
+              {aan ? '✓ ' : ''}
+              {f.label}
+            </button>
+          )
+        })}
+      </div>
+      {metPloegen && teams.length > 0 && (
+        <div className="ct-ploegen">
+          <span className="ct-link-lbl">Ploegen</span>
+          {teams.map((t) => {
+            const aan = ploegen.includes(t.id)
+            return (
+              <label key={t.id} className="ct-ploeg">
+                <input type="checkbox" checked={aan} disabled={busy} onChange={() => bewaar(functies, aan ? ploegen.filter((x) => x !== t.id) : [...ploegen, t.id])} /> {t.naam}
+              </label>
+            )
+          })}
+        </div>
+      )}
+      {msg && <span className="ct-msg">{msg}</span>}
+    </div>
+  )
+}
 
 const LABEL: Record<TeamRole, string> = {
   none: 'Supporter',
@@ -35,7 +116,7 @@ async function postTeam(payload: Record<string, unknown>): Promise<{ ok: boolean
 
 const playerLabel = (p: PlayerOption) => `${p.shirtNumber != null ? `#${p.shirtNumber} ` : ''}${p.name}`
 
-function MemberRow({ m, players }: { m: Member; players: PlayerOption[] }) {
+function MemberRow({ m, players, teams }: { m: Member; players: PlayerOption[]; teams: TeamOption[] }) {
   const router = useRouter()
   const [role, setRole] = useState<TeamRole>(m.role)
   const [playerId, setPlayerId] = useState<string>(m.playerId != null ? String(m.playerId) : '')
@@ -134,6 +215,7 @@ function MemberRow({ m, players }: { m: Member; players: PlayerOption[] }) {
           </button>
           {msg && <span className="ct-msg">{msg}</span>}
         </div>
+        <FunctiesEditor userId={m.id} initFuncties={m.functies} initTeams={m.functieTeams} teams={teams} />
       </div>
     </div>
   )
@@ -191,9 +273,24 @@ function AddByEmail() {
   )
 }
 
-export function ClubTeamManager({ members, players }: { members: Member[]; players: PlayerOption[] }) {
+export function ClubTeamManager({
+  members,
+  players,
+  teams,
+  ik,
+}: {
+  members: Member[]
+  players: PlayerOption[]
+  teams: TeamOption[]
+  ik: { id: number; functies: string[]; functieTeams: number[] }
+}) {
   return (
     <>
+      <div className="ct-add">
+        <h2 className="ct-add-title">Jouw eigen functies</h2>
+        <p className="ct-add-hint">Coach of train je zelf een ploeg? Duid het hier aan.</p>
+        <FunctiesEditor userId={ik.id} initFuncties={ik.functies} initTeams={ik.functieTeams} teams={teams} />
+      </div>
       <AddByEmail />
       {members.length === 0 ? (
         <p className="empty">
@@ -203,7 +300,7 @@ export function ClubTeamManager({ members, players }: { members: Member[]; playe
       ) : (
         <div className="ct-list">
           {members.map((m) => (
-            <MemberRow key={m.id} m={m} players={players} />
+            <MemberRow key={m.id} m={m} players={players} teams={teams} />
           ))}
         </div>
       )}

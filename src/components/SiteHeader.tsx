@@ -115,6 +115,33 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
       })
       .catch(() => {})
   }, [])
+  // 🔔 Ongelezen meldingen (lib/meldingen.ts). Hoogstens één keer per minuut opvragen per tab.
+  const [ongelezen, setOngelezen] = useState(0)
+  useEffect(() => {
+    if (!loggedIn) return
+    const KEY = 'kb-meldingen-telling'
+    try {
+      const c = JSON.parse(sessionStorage.getItem(KEY) ?? 'null') as { n: number; t: number } | null
+      if (c && Date.now() - c.t < 60_000) {
+        setOngelezen(c.n)
+        return
+      }
+    } catch {
+      /* geen opslag — gewoon opvragen */
+    }
+    fetch('/api/meldingen?telling=1', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { ongelezen?: number } | null) => {
+        const n = d?.ongelezen ?? 0
+        setOngelezen(n)
+        try {
+          sessionStorage.setItem(KEY, JSON.stringify({ n, t: Date.now() }))
+        } catch {
+          /* idem */
+        }
+      })
+      .catch(() => {})
+  }, [loggedIn])
   const logout = async () => {
     try {
       await fetch('/api/users/logout', { method: 'POST', credentials: 'include' })
@@ -152,6 +179,12 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
               {l.label}
             </Link>
           ))}
+
+          {loggedIn && (
+            <Link href="/meldingen" className="sh-link sh-bel" aria-label={ongelezen ? `${ongelezen} nieuwe meldingen` : 'Meldingen'} title="Meldingen">
+              🔔{ongelezen > 0 && <span className="sh-bel-n">{ongelezen > 9 ? '9+' : ongelezen}</span>}
+            </Link>
+          )}
 
           <div className="sh-more">
             <button

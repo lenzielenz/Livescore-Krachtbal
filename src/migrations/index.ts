@@ -137,6 +137,15 @@ import * as migration_20261015_070000_photobooth_fotos from './20261015_070000_p
 import * as migration_20261016_220000_analyse_notities from './20261016_220000_analyse_notities'
 import * as migration_20261017_090000_analyse_notities_tekening from './20261017_090000_analyse_notities_tekening'
 import * as migration_20261017_120000_virtuele_metingen from './20261017_120000_virtuele_metingen'
+import * as migration_20261020_060000_spelersregistratie from './20261020_060000_spelersregistratie'
+import * as migration_20261020_080000_club_functies from './20261020_080000_club_functies'
+import * as migration_20261020_100000_referendum from './20261020_100000_referendum'
+import * as migration_20261020_120000_meldingen_medische_kaart from './20261020_120000_meldingen_medische_kaart'
+import * as migration_20261020_140000_reglement_regels from './20261020_140000_reglement_regels'
+import * as migration_20261020_160000_ouders from './20261020_160000_ouders'
+import * as migration_20261020_180000_wedstrijddag_blessure_afgelasting from './20261020_180000_wedstrijddag_blessure_afgelasting'
+import * as migration_20261020_200000_aftrap_boetes from './20261020_200000_aftrap_boetes'
+import * as migration_20261020_220000_inschrijving_planning from './20261020_220000_inschrijving_planning'
 
 export const migrations = [
   {
@@ -828,5 +837,50 @@ export const migrations = [
     up: migration_20261017_120000_virtuele_metingen.up,
     down: migration_20261017_120000_virtuele_metingen.down,
     name: '20261017_120000_virtuele_metingen',
+  },
+  {
+    up: migration_20261020_060000_spelersregistratie.up,
+    down: migration_20261020_060000_spelersregistratie.down,
+    name: '20261020_060000_spelersregistratie',
+  },
+  {
+    up: migration_20261020_080000_club_functies.up,
+    down: migration_20261020_080000_club_functies.down,
+    name: '20261020_080000_club_functies',
+  },
+  {
+    up: migration_20261020_100000_referendum.up,
+    down: migration_20261020_100000_referendum.down,
+    name: '20261020_100000_referendum',
+  },
+  {
+    up: migration_20261020_120000_meldingen_medische_kaart.up,
+    down: migration_20261020_120000_meldingen_medische_kaart.down,
+    name: '20261020_120000_meldingen_medische_kaart',
+  },
+  {
+    up: migration_20261020_140000_reglement_regels.up,
+    down: migration_20261020_140000_reglement_regels.down,
+    name: '20261020_140000_reglement_regels',
+  },
+  {
+    up: migration_20261020_160000_ouders.up,
+    down: migration_20261020_160000_ouders.down,
+    name: '20261020_160000_ouders',
+  },
+  {
+    up: migration_20261020_180000_wedstrijddag_blessure_afgelasting.up,
+    down: migration_20261020_180000_wedstrijddag_blessure_afgelasting.down,
+    name: '20261020_180000_wedstrijddag_blessure_afgelasting',
+  },
+  {
+    up: migration_20261020_200000_aftrap_boetes.up,
+    down: migration_20261020_200000_aftrap_boetes.down,
+    name: '20261020_200000_aftrap_boetes',
+  },
+  {
+    up: migration_20261020_220000_inschrijving_planning.up,
+    down: migration_20261020_220000_inschrijving_planning.down,
+    name: '20261020_220000_inschrijving_planning',
   },
 ];

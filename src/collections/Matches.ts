@@ -5,7 +5,7 @@ import { CATEGORY_OPTIONS } from '../lib/categories'
 import { unpairFieldScreensForMatch } from '../lib/field-screens-data'
 import { verwijderMatchKinderen } from '../lib/match-cleanup'
 import { notifyMatchStatusChange } from '../lib/match-notify'
-import { REEKS_OPTIONS, reeksCategorie, type Reeks } from '../lib/reeksen'
+import { EINDRONDE_REEKS, EINDRONDE_REEKS_OPTIE, REEKS_OPTIONS, reeksCategorie, type Reeks } from '../lib/reeksen'
 import { seasonFromDate } from '../lib/seasons'
 
 // Vul het seizoen automatisch in uit de datum wanneer het leeg gelaten wordt (de admin mag het
@@ -67,6 +67,11 @@ export const Matches: CollectionConfig = {
         const status = (doc as { status?: string }).status
         const prevStatus = operation === 'update' ? (previousDoc as { status?: string } | undefined)?.status : null
         if (status === 'finished' && prevStatus !== 'finished') {
+          // Is hiermee een reeks uitgespeeld waarna een eindronde volgt? Dan maakt het systeem die
+          // zelf aan (lib/competitieregels.ts) — losgekoppeld, zodat de actie niet vertraagt.
+          if ((doc as { reeks?: string }).reeks !== EINDRONDE_REEKS && !(doc as { analyseOnly?: boolean }).analyseOnly) {
+            void import('../lib/competitieregels').then((m) => m.controleerEindrondes(req.payload)).catch(() => null)
+          }
           await unpairFieldScreensForMatch(req.payload, (doc as { id: number }).id)
         }
       },
@@ -299,11 +304,22 @@ export const Matches: CollectionConfig = {
       name: 'reeks',
       label: 'Reeks / niveau',
       type: 'select',
-      options: [...REEKS_OPTIONS],
+      // EINDR = een wedstrijd uit een eindronde (collections/Reglement.ts → eindrondes): ploegen uit
+      // verschillende reeksen. Het veld `eindronde` zegt welke; zo blijft de stand van elke gewone
+      // reeks zuiver.
+      options: [...REEKS_OPTIONS, EINDRONDE_REEKS_OPTIE],
       required: true,
       admin: {
         description: 'Kies eerst de reeks. De categorie volgt automatisch en de ploegen worden hierop gefilterd.',
       },
+    },
+    {
+      name: 'eindronde',
+      label: 'Eindronde',
+      type: 'relationship',
+      relationTo: 'eindrondes',
+      index: true,
+      admin: { condition: (d) => d?.reeks === EINDRONDE_REEKS, description: 'Aangemaakt uit een eindronde-regel.' },
     },
     {
       name: 'seizoen',
@@ -332,7 +348,11 @@ export const Matches: CollectionConfig = {
             const other = sd.awayTeam
             const otherId = other && typeof other === 'object' ? (other as { id?: unknown }).id : other
             // Analyse-wedstrijd → enkel analyse-ploegen; competitie-wedstrijd → enkel competitie-ploegen.
-            const and: Where[] = [{ reeks: { equals: sd.reeks } }, { analyseOnly: sd.analyseOnly ? { equals: true } : { not_equals: true } }]
+            // Eindronde: ploegen uit verschillende reeksen — dan niet op reeks filteren.
+            const and: Where[] = [
+              ...(sd.reeks === EINDRONDE_REEKS ? [] : [{ reeks: { equals: sd.reeks } }]),
+              { analyseOnly: sd.analyseOnly ? { equals: true } : { not_equals: true } },
+            ]
             if (otherId != null) and.push({ id: { not_equals: otherId } })
             return { and }
           },
@@ -350,7 +370,11 @@ export const Matches: CollectionConfig = {
             const other = sd.homeTeam
             const otherId = other && typeof other === 'object' ? (other as { id?: unknown }).id : other
             // Analyse-wedstrijd → enkel analyse-ploegen; competitie-wedstrijd → enkel competitie-ploegen.
-            const and: Where[] = [{ reeks: { equals: sd.reeks } }, { analyseOnly: sd.analyseOnly ? { equals: true } : { not_equals: true } }]
+            // Eindronde: ploegen uit verschillende reeksen — dan niet op reeks filteren.
+            const and: Where[] = [
+              ...(sd.reeks === EINDRONDE_REEKS ? [] : [{ reeks: { equals: sd.reeks } }]),
+              { analyseOnly: sd.analyseOnly ? { equals: true } : { not_equals: true } },
+            ]
             if (otherId != null) and.push({ id: { not_equals: otherId } })
             return { and }
           },
@@ -376,6 +400,15 @@ export const Matches: CollectionConfig = {
           options: [...MATCH_STATUS_OPTIONS],
           defaultValue: 'scheduled',
           required: true,
+        },
+        {
+          // Afgelast door de scheidsrechter (terrein, weer): de wedstrijd blijft gepland maar kan niet
+          // starten tot de federatie een nieuwe datum plant (lib/afgelasting.ts, collections/Afgelastingen.ts).
+          name: 'afgelast',
+          label: 'Afgelast — nieuwe datum te plannen',
+          type: 'checkbox',
+          defaultValue: false,
+          access: { update: ({ req }) => isFederationLevel(req.user) },
         },
         {
           name: 'goalAreaDepth',
@@ -508,8 +541,10 @@ export const Matches: CollectionConfig = {
       hooks: {
         beforeChange: [
           ({ siblingData, value }) => {
-            const r = (siblingData as { reeks?: Reeks })?.reeks
-            return r ? reeksCategorie(r) : (value ?? 'senioren')
+            const r = (siblingData as { reeks?: string })?.reeks
+            // Eindronde: de categorie komt van de eindronde zelf (de reeks zegt het niet).
+            if (r === EINDRONDE_REEKS) return value ?? 'senioren'
+            return r ? reeksCategorie(r as Reeks) : (value ?? 'senioren')
           },
         ],
       },

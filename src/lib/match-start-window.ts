@@ -19,10 +19,12 @@ export function elapsedSinceScheduledStart(
  * Demo's blijven altijd bruikbaar voor uitleg en opleiding.
  */
 export function matchStartBlockedReason(
-  match: { date?: unknown; isDemo?: boolean | null },
+  match: { date?: unknown; isDemo?: boolean | null; afgelast?: boolean | null },
   now = new Date(),
 ): string | null {
   if (match.isDemo) return null
+  // Afgelast door de scheidsrechter: pas weer te starten als de federatie een nieuwe datum plant.
+  if (match.afgelast) return 'Deze wedstrijd is afgelast; de federatie plant een nieuwe datum.'
   const scheduledAt = new Date(String(match.date ?? ''))
   if (!Number.isFinite(scheduledAt.getTime())) return 'Deze wedstrijd heeft geen geldig startuur.'
   const opensAt = scheduledAt.getTime() - MATCH_START_EARLY_MS

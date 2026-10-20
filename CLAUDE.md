@@ -32,6 +32,10 @@ UI, comments, commits en documentatie is **Nederlands**.
 - **SSE** (Server-Sent Events) voor live push — geen extra realtime-infra
 - **pnpm** (zie `packageManager` in `package.json`), Node ≥ 24.14
 - Deploy: **GitHub → Railway** (Railpack). Zie `docs/DEPLOY.md`.
+- Twee omgevingen, zelfde code: **live** (aantekenmodus uit de settings, nu supporters) en de
+  **federatie-testomgeving** (eigen databank, altijd federatiemodus, `PLATFORM_OMGEVING=federatie-test`).
+  Zie `src/lib/omgeving.ts` en `docs/TESTOMGEVING.md`. De volledige federatieflow (clubs, registratie,
+  kalender, scheidsrechters, referendum) en wie wat mag: `docs/FEDERATIEFLOW.md`.
 
 ## Commando's
 

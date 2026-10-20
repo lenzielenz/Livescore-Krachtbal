@@ -20,11 +20,14 @@ export function Herstellink({
   userId,
   email,
   chipClassName = 'acc-chip',
+  label,
 }: {
   userId: number
   email: string
   /** Klasse van de gebruikende pagina's eigen knop-look (bv. "acc-chip" of "ct-chip"). */
   chipClassName?: string
+  /** Tekst voor het sleutel-icoon, bv. "👪 ouder" (standaard "Herstellink"). */
+  label?: string
 }) {
   const [link, setLink] = useState<string | null>(null)
   const [vervalt, setVervalt] = useState<string | null>(null)
@@ -69,7 +72,7 @@ export function Herstellink({
   return (
     <div className="herstel">
       <button type="button" className={chipClassName} onClick={maak} disabled={busy} title="Maak een eenmalige link waarmee deze persoon zelf een nieuw wachtwoord kiest">
-        {busy ? 'Bezig…' : '🔑 Herstellink'}
+        {busy ? 'Bezig…' : `🔑 ${label ?? 'Herstellink'}`}
       </button>
       {link && (
         <div className="herstel-uit">

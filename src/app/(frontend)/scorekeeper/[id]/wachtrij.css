@@ -1,0 +1,7 @@
+/* Tikken die niet meteen lukten (WachtrijMeldingen) */
+.wq-wrap { display: grid; gap: 8px; margin: 8px 12px; }
+.wq-kaart { display: grid; gap: 6px; padding: 12px 14px; border-radius: 12px; background: #3a2a10; border: 1px solid #e0a23d; color: #fff3df; font-size: 0.9rem; }
+.wq-kaart strong { font-size: 0.95rem; }
+.wq-knoppen { display: flex; gap: 8px; flex-wrap: wrap; }
+.wq-knop { min-height: 44px; padding: 0 16px; border-radius: 10px; border: 0; background: #ffffff; color: #1a1205; font-weight: 700; font-size: 0.95rem; cursor: pointer; }
+.wq-gevaar { background: transparent; color: #ffd9a8; border: 1px solid #e0a23d; }

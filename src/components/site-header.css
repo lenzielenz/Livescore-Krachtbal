@@ -299,3 +299,32 @@
   cursor: pointer;
 }
 .sh-kijkmodus-btn:hover { filter: brightness(1.1); }
+
+/* Op de brede werkschermen (federatie, clubbeheer) loopt de balk mee met de inhoud. */
+body:has(.site-breed) .sh-inner {
+  max-width: 1440px;
+}
+@media (min-width: 1100px) {
+  body:has(.site-breed) .sh-inner {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
+
+/* 🔔 meldingen met het aantal ongelezen */
+.sh-bel { position: relative; padding-right: 10px; }
+.sh-bel-n {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #e0533d;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 17px;
+  text-align: center;
+}

@@ -13,9 +13,10 @@ import { VeldschermKoppelen } from '@/components/VeldschermKoppelen'
 import { hasRole, isFederationLevel } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
+import { mayScoreMatch, type AuthedUser } from '@/lib/api-auth'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
-import { dateStrBE, formatDateTimeBE } from '@/lib/datetime'
+import { dateStrBE, formatDateTimeBE, formatTimeBE } from '@/lib/datetime'
 import { buildExpectedScore } from '@/lib/expected-score'
 import { googleCalendarUrl } from '@/lib/google-calendar'
 import { matchTitel } from '@/lib/match-ics'
@@ -37,6 +38,12 @@ import { LiveStream } from './LiveStream'
 import { MatchScorers } from './MatchScorers'
 import { MatchActivitySummary } from './MatchActivitySummary'
 import { PronostiekWidget } from './PronostiekWidget'
+import { AftrapVerschuiven } from '@/components/AftrapVerschuiven'
+import { Verplaatsing } from '@/components/Verplaatsing'
+import { verplaatsingen } from '@/lib/verplaatsing'
+import { userClubId } from '@/lib/access'
+import { aftrapGeschiedenis, aftrapRechten, volgendeOpTerrein } from '@/lib/aftrap'
+import { PapierenUitslag } from './PapierenUitslag'
 import { ReportResult } from './ReportResult'
 import { ScoreTrust } from './ScoreTrust'
 import { ToekomstigeWedstrijd } from './ToekomstigeWedstrijd'
@@ -140,6 +147,30 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const magVeldschermVoorAftrap = state.match.status === 'scheduled' && isVeldschermPreMatchLead(matchDoc?.date as string | undefined)
   const magKoppelen = Boolean(me) && (state.match.status === 'live' || magVeldschermVoorAftrap)
   const datum = matchDoc?.date ? formatDateTimeBE(matchDoc.date as string) : null
+  // Aftrap verschoven op de wedstrijddag (lib/aftrap.ts): iedereen ziet het nieuwe uur en waarom;
+  // wie mag (scheidsrechter, federatie, beide clubs/coach) kan het hier zelf verschuiven.
+  const aftrapLog = matchDoc ? await aftrapGeschiedenis(payload, matchId) : []
+  const aftrapRecht =
+    matchDoc && me && state.match.status === 'scheduled' && !matchDoc.afgelast
+      ? await aftrapRechten(payload, me as never, matchDoc as never)
+      : { wijzigen: false, meeschuiven: false, rol: '' }
+  // Verplaatsingsaanvraag (lib/verplaatsing.ts): de staf van beide clubs en de federatie.
+  const mijnClub = me && hasRole(me, 'club-beheerder', 'club-medewerker') ? Number(userClubId(me)) : null
+  const clubVanPloeg = (t: unknown) => {
+    const c = t && typeof t === 'object' ? (t as { club?: unknown }).club : null
+    return Number(c && typeof c === 'object' ? (c as { id?: unknown }).id : c)
+  }
+  const clubsVanMatch = [clubVanPloeg(matchDoc?.homeTeam), clubVanPloeg(matchDoc?.awayTeam)]
+  const verplaatsingRol: 'aanvrager' | 'tegenpartij' | 'federatie' | 'club' | null =
+    state.match.status !== 'scheduled' || !matchDoc ? null : isFederationLevel(me) ? 'federatie' : mijnClub != null && clubsVanMatch.includes(mijnClub) ? 'club' : null
+  const verplaatsingAanvraag = verplaatsingRol ? (await verplaatsingen(payload, { match: { equals: matchId } }, 1))[0] ?? null : null
+  const verplaatsingRolEcht =
+    verplaatsingRol === 'club' && verplaatsingAanvraag
+      ? verplaatsingAanvraag.aanvragerId === mijnClub
+        ? 'aanvrager'
+        : 'tegenpartij'
+      : verplaatsingRol
+  const aftrapVolgende = aftrapRecht.meeschuiven && matchDoc ? await volgendeOpTerrein(payload, matchDoc as never) : []
   // Wie de wedstrijd mag rechtzetten (tijdstip + ploegnaam/club): de federatie, en nooit op een
   // analysewedstrijd — die is privé en wordt onder /analyse/beheer beheerd.
   const magBeheren =
@@ -353,13 +384,22 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   // Vertrouwenslaag: enkel zinvol bij een vrije supporters-score. Wie zelf meetekende, mag niet
   // bevestigen (geen onafhankelijke controle); wie niets claimde, kan het aantekenen overnemen.
   const trust = state.trust
+  // Mag deze kijker de wedstrijd aantekenen? Supporters: elke kijker. Federatie: enkel wie
+  // mayScoreMatch zegt. Telkens niet als iemand anders de lopende wedstrijd al aantekent.
+  const iemandAndersTekentAan =
+    state.trust.claimActive && state.trust.scorerId != null && state.trust.scorerId !== (me ? Number((me as { id?: number }).id) : null) && !isFederationLevel(me)
+  const toonAantekenen =
+    state.match.status !== 'finished' &&
+    !toekomstig &&
+    !iemandAndersTekentAan &&
+    (supportersMode || (me != null && (await mayScoreMatch(payload, me as unknown as AuthedUser, matchId))))
   const trustState = sanitizeTrust((matchDoc as { scoreTrust?: unknown } | null)?.scoreTrust)
   const meId = me ? Number((me as { id?: number }).id) : null
   const trustMe =
     meId != null
       ? {
           isScorer: trustState.scorerId === meId,
-          mayClaim: state.match.status !== 'finished' && mayClaim(trustState, meId),
+          mayClaim: state.match.status !== 'finished' && mayClaim(trustState, meId, Date.now(), state.match.status === 'live'),
           mayVote:
             voteWindowOpen(state.match.status, state.match.finishedAt) && mayVote(trustState, meId),
           myVote: trustState.confirms.some((v) => v.userId === meId)
@@ -395,14 +435,29 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       {/* Supporters-modus: vrije livescore. Iedereen kan meteen beginnen aantekenen — geen
           scheidsrechter of aftekenen nodig. */}
       {/* Tekent iemand anders deze lopende wedstrijd al aan, dan verdwijnt de knop: er kan maar één
-          aantekenaar tegelijk zijn (zie claimHeld in score-trust.ts). */}
-      {supportersMode && state.match.status !== 'finished' && !toekomstig && !(state.trust.claimActive && state.trust.scorerId != null && state.trust.scorerId !== myUid) && (
+          aantekenaar tegelijk zijn (zie claimHeld in score-trust.ts). Federatie/admin blijven de
+          noodrem en zien de knop wel. In de federatieflow krijgt enkel de aangeduide tafel hem
+          (mayScoreMatch): clubverantwoordelijke, aantekenaar of scheidsrechter van dienst. */}
+      {/* Afgelast door de scheidsrechter (terrein, weer): de wedstrijd gaat niet door op dit uur. */}
+      {Boolean(matchDoc?.afgelast) && state.match.status === 'scheduled' && (
+        <p className="match-afgelast">⛈️ Afgelast — de federatie plant een nieuwe datum.</p>
+      )}
+      {aftrapLog.length > 0 && state.match.status === 'scheduled' && !matchDoc?.afgelast && (
+        <p className="match-afgelast">
+          ⏱️ Aftrap verschoven naar {formatTimeBE(aftrapLog[0].naar)} ({aftrapLog[0].redenTekst}).
+        </p>
+      )}
+      {toonAantekenen && !matchDoc?.afgelast && (
         <Link href={`/scorekeeper/${matchId}`} className="match-score-cta">
           <span aria-hidden>✏️</span>
           <span>
-            {state.match.status === 'live'
-              ? 'Aantekenen — verder scoren'
-              : 'Aantekenen — start de wedstrijd'}
+            {!supportersMode
+              ? state.match.status === 'live'
+                ? 'Aantekenen (officiële tafel) — verder scoren'
+                : 'Aantekenen (officiële tafel) — naar de start'
+              : state.match.status === 'live'
+                ? 'Aantekenen — verder scoren'
+                : 'Aantekenen — start de wedstrijd'}
           </span>
           <span className="match-score-cta-arrow" aria-hidden>→</span>
         </Link>
@@ -419,6 +474,17 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             loggedIn={Boolean(me)}
             homeName={state.teams.home.name}
             awayName={state.teams.away.name}
+          />
+        )}
+      {/* Federatie: toestel uitgevallen en op papier verder gegaan → eindstand van het noodblad. */}
+      {magBeheren &&
+        state.match.status !== 'finished' &&
+        (state.match.status === 'live' || (matchDoc?.date && Date.now() >= new Date(matchDoc.date as string).getTime())) && (
+          <PapierenUitslag
+            matchId={matchId}
+            homeName={state.teams.home.name}
+            awayName={state.teams.away.name}
+            huidig={{ home: state.score.home, away: state.score.away }}
           />
         )}
       {/* Match-context als kop bovenaan (reeks · datum · locatie · scheidsrechter), zodat
@@ -508,6 +574,28 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             googleUrl={googleAgenda}
           />
         </>
+      )}
+      {/* Wedstrijddag en planning voor wie mag: aftrap verschuiven (lib/aftrap.ts), verplaatsing
+          aanvragen of beantwoorden (lib/verplaatsing.ts). Onder de affiche, zodat de wedstrijd eerst staat. */}
+      {verplaatsingRolEcht && (
+        <Verplaatsing
+          matchId={matchId}
+          aanvraag={verplaatsingAanvraag && !['ingetrokken'].includes(verplaatsingAanvraag.status) ? verplaatsingAanvraag : null}
+          rol={verplaatsingRolEcht}
+        />
+      )}
+      {aftrapRecht.wijzigen && matchDoc?.date && (
+        <AftrapVerschuiven
+          matchId={matchId}
+          aftrap={String(matchDoc.date)}
+          magMeeschuiven={aftrapRecht.meeschuiven}
+          volgende={aftrapVolgende.map((v) => ({
+            id: v.id,
+            titel: `${(v.homeTeam as { name?: string } | null)?.name ?? '?'} – ${(v.awayTeam as { name?: string } | null)?.name ?? '?'}`,
+            aftrap: String(v.date),
+          }))}
+          geschiedenis={aftrapLog}
+        />
       )}
       {/* Weerbericht aan het veld voor de thuislocatie. Het paneel verbergt zichzelf zodra de
           napraatperiode voorbij is (een paar uur na de aftrap) — ook voor afgelopen wedstrijden

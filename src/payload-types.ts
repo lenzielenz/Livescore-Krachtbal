@@ -70,6 +70,18 @@ export interface Config {
     clubs: Club;
     teams: Team;
     players: Player;
+    'medische-attesten': MedischeAttesten;
+    'ongeval-documenten': OngevalDocumenten;
+    afgelastingen: Afgelastingen;
+    'afgelasting-fotos': AfgelastingFoto;
+    'aftrap-wijzigingen': AftrapWijzigingen;
+    'boete-soorten': BoeteSoorten;
+    boetes: Boete;
+    inschrijvingsrondes: Inschrijvingsronde;
+    inschrijvingen: Inschrijvingen;
+    verplaatsingsaanvragen: Verplaatsingsaanvragen;
+    'medische-kaart-aanvragen': MedischeKaartAanvragen;
+    meldingen: Meldingen;
     matches: Match;
     'field-screens': FieldScreen;
     matchsheets: Matchsheet;
@@ -79,6 +91,12 @@ export interface Config {
     kampioenen: Kampioenen;
     bekerwinnaars: Bekerwinnaar;
     'referendum-awards': ReferendumAward;
+    'referendum-rondes': ReferendumRonde;
+    'referendum-stemmen': ReferendumStemman;
+    reglementen: Reglementen;
+    'reglement-verslagen': ReglementVerslagen;
+    competitieregels: Competitieregel;
+    eindrondes: Eindronde;
     sanctions: Sanction;
     tournaments: Tournament;
     'tournament-matches': TournamentMatch;
@@ -119,6 +137,18 @@ export interface Config {
     clubs: ClubsSelect<false> | ClubsSelect<true>;
     teams: TeamsSelect<false> | TeamsSelect<true>;
     players: PlayersSelect<false> | PlayersSelect<true>;
+    'medische-attesten': MedischeAttestenSelect<false> | MedischeAttestenSelect<true>;
+    'ongeval-documenten': OngevalDocumentenSelect<false> | OngevalDocumentenSelect<true>;
+    afgelastingen: AfgelastingenSelect<false> | AfgelastingenSelect<true>;
+    'afgelasting-fotos': AfgelastingFotosSelect<false> | AfgelastingFotosSelect<true>;
+    'aftrap-wijzigingen': AftrapWijzigingenSelect<false> | AftrapWijzigingenSelect<true>;
+    'boete-soorten': BoeteSoortenSelect<false> | BoeteSoortenSelect<true>;
+    boetes: BoetesSelect<false> | BoetesSelect<true>;
+    inschrijvingsrondes: InschrijvingsrondesSelect<false> | InschrijvingsrondesSelect<true>;
+    inschrijvingen: InschrijvingenSelect<false> | InschrijvingenSelect<true>;
+    verplaatsingsaanvragen: VerplaatsingsaanvragenSelect<false> | VerplaatsingsaanvragenSelect<true>;
+    'medische-kaart-aanvragen': MedischeKaartAanvragenSelect<false> | MedischeKaartAanvragenSelect<true>;
+    meldingen: MeldingenSelect<false> | MeldingenSelect<true>;
     matches: MatchesSelect<false> | MatchesSelect<true>;
     'field-screens': FieldScreensSelect<false> | FieldScreensSelect<true>;
     matchsheets: MatchsheetsSelect<false> | MatchsheetsSelect<true>;
@@ -128,6 +158,12 @@ export interface Config {
     kampioenen: KampioenenSelect<false> | KampioenenSelect<true>;
     bekerwinnaars: BekerwinnaarsSelect<false> | BekerwinnaarsSelect<true>;
     'referendum-awards': ReferendumAwardsSelect<false> | ReferendumAwardsSelect<true>;
+    'referendum-rondes': ReferendumRondesSelect<false> | ReferendumRondesSelect<true>;
+    'referendum-stemmen': ReferendumStemmenSelect<false> | ReferendumStemmenSelect<true>;
+    reglementen: ReglementenSelect<false> | ReglementenSelect<true>;
+    'reglement-verslagen': ReglementVerslagenSelect<false> | ReglementVerslagenSelect<true>;
+    competitieregels: CompetitieregelsSelect<false> | CompetitieregelsSelect<true>;
+    eindrondes: EindrondesSelect<false> | EindrondesSelect<true>;
     sanctions: SanctionsSelect<false> | SanctionsSelect<true>;
     tournaments: TournamentsSelect<false> | TournamentsSelect<true>;
     'tournament-matches': TournamentMatchesSelect<false> | TournamentMatchesSelect<true>;
@@ -329,6 +365,11 @@ export interface User {
    */
   team?: (number | null) | Team;
   /**
+   * Toegekend door de club-beheerder (Clubteam) of de federatie.
+   */
+  clubFuncties?: ('jeugdverantwoordelijke' | 'trainer' | 'coach' | 'speler' | 'lid')[] | null;
+  functieTeams?: (number | Team)[] | null;
+  /**
    * Clubs die deze supporter volgt i.p.v. een eigen club te kiezen. De gebruiker beheert dit zelf.
    */
   followedClubs?: (number | Club)[] | null;
@@ -350,6 +391,10 @@ export interface User {
    * Koppel je account aan je spelersdossier zodat je scorecard je echte cijfers toont.
    */
   player?: (number | null) | Player;
+  /**
+   * De jeugdspelers waarvan dit account de ouder is. Ze staan op "Mijn profiel".
+   */
+  kinderen?: (number | Player)[] | null;
   /**
    * Eigen/coach-beoordeling per as (0–100) voor de scorecard. De gebruiker beheert dit zelf.
    */
@@ -539,6 +584,11 @@ export interface Team {
    * Vast aanvangsuur wanneer deze ploeg thuis speelt in deze reeks (bv. 11:30).
    */
   thuisUur?: string | null;
+  thuisdag?: ('za' | 'zo') | null;
+  /**
+   * Zelfde club, andere reeks: speelt zo veel mogelijk hetzelfde weekend tegen dezelfde club, op hetzelfde terrein.
+   */
+  koppelMet?: (number | null) | Team;
   /**
    * Bv. "KV Roeselare U14". Het logo komt van de club.
    */
@@ -605,6 +655,32 @@ export interface Player {
    */
   hogerSpelenVerbod?: boolean | null;
   actief?: boolean | null;
+  voornaam?: string | null;
+  achternaam?: string | null;
+  geslacht?: ('m' | 'v') | null;
+  /**
+   * Verplicht vanaf 13 jaar (instelbaar). Hiermee krijgt het lid een eigen login.
+   */
+  email?: string | null;
+  /**
+   * Voor jeugd: de ouder ziet het dossier van het kind in zijn eigen login.
+   */
+  ouderEmail?: string | null;
+  /**
+   * Een gewoon lid speelt geen wedstrijden en heeft geen vergunning nodig.
+   */
+  soortLid?: ('speler' | 'lid') | null;
+  /**
+   * Enkel de federatie vult dit in.
+   */
+  vergunningsnummer?: string | null;
+  medischeKeuringOp?: string | null;
+  medischAttestBestand?: (number | null) | MedischeAttesten;
+  registratieStatus?: ('concept' | 'ingediend' | 'goedgekeurd' | 'afgekeurd') | null;
+  ingediendOp?: string | null;
+  beoordeeldOp?: string | null;
+  beoordeeldDoor?: (number | null) | User;
+  afkeurReden?: string | null;
   /**
    * Aangemaakt in de analysemodule. Verschijnt nooit in de competitie (live, rangschikking, beheer) — enkel in de eigen analyse-database.
    */
@@ -615,6 +691,29 @@ export interface Player {
   analyseOwner?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * Doktersattesten bij de spelersregistratie. Zichtbaar via het veld "Attest" op de speler.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "medische-attesten".
+ */
+export interface MedischeAttesten {
+  id: number;
+  player?: (number | null) | Player;
+  club?: (number | null) | Club;
+  geuploadDoor?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -629,6 +728,72 @@ export interface Official {
   user?: (number | null) | User;
   type: 'scheidsrechter' | 'grensrechter' | 'aantekenaar' | 'tijdopnemer';
   federationNumber?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ongeval-documenten".
+ */
+export interface OngevalDocumenten {
+  id: number;
+  accident: number | Accident;
+  player?: (number | null) | Player;
+  club?: (number | null) | Club;
+  soort: 'aangifte' | 'getuigschrift' | 'ander';
+  geuploadDoor?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "accidents".
+ */
+export interface Accident {
+  id: number;
+  titel?: string | null;
+  /**
+   * De wedstrijd waarbij het ongeval gebeurde (optioneel).
+   */
+  match?: (number | null) | Match;
+  /**
+   * Indien het slachtoffer een geregistreerd lid is.
+   */
+  player?: (number | null) | Player;
+  club?: (number | null) | Club;
+  slachtofferNaam: string;
+  slachtofferGeboortedatum?: string | null;
+  slachtofferAdres?: string | null;
+  slachtofferBeroep?: string | null;
+  ongevalPlaats?: string | null;
+  ongevalDatum?: string | null;
+  /**
+   * Bv. "2e helft 12:30, stand 10–8".
+   */
+  moment?: string | null;
+  omstandigheden?: string | null;
+  gemeldDoor?: (number | null) | User;
+  getuigen?:
+    | {
+        naam?: string | null;
+        adres?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  opmerkingen?: string | null;
+  status?: ('gemeld' | 'ingediend' | 'afgehandeld') | null;
+  ingediendOp?: string | null;
+  afgehandeldOp?: string | null;
+  federatieOpmerking?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -770,7 +935,12 @@ export interface Match {
     | 'U12B'
     | 'recreatief'
     | 'beker'
-    | 'andere';
+    | 'andere'
+    | 'EINDR';
+  /**
+   * Aangemaakt uit een eindronde-regel.
+   */
+  eindronde?: (number | null) | Eindronde;
   /**
    * Bv. 2025-2026. Leeg laten = automatisch afgeleid uit de datum (juli–juni).
    */
@@ -782,6 +952,7 @@ export interface Match {
   awayTeam: number | Team;
   date: string;
   status: 'scheduled' | 'live' | 'finished';
+  afgelast?: boolean | null;
   /**
    * Min. 10 m (15 m voor nieuwe terreinen, 5 m in zalen). Bepaalt de veldlengte en de afstandsberekening.
    */
@@ -923,6 +1094,358 @@ export interface Match {
   createdAt: string;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "eindrondes".
+ */
+export interface Eindronde {
+  id: number;
+  naam: string;
+  seizoen: string;
+  regel: number | Competitieregel;
+  categorie?: ('U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren') | null;
+  ploegen?: (number | Team)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "competitieregels".
+ */
+export interface Competitieregel {
+  id: number;
+  naam: string;
+  soort: 'vastspelen' | 'eindronde';
+  actief?: boolean | null;
+  reglement?: (number | null) | Reglementen;
+  verslag?: (number | null) | ReglementVerslagen;
+  artikel?: string | null;
+  maxKeerHoger?: number | null;
+  categorie?: ('alle' | 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren') | null;
+  bronReeksen?:
+    | (
+        | '1NAH'
+        | '1NAHB'
+        | '1NAD'
+        | '2NAH'
+        | '2NAHB'
+        | 'LH'
+        | 'LD'
+        | 'RHA'
+        | 'RHB'
+        | 'RHC'
+        | 'RDA'
+        | 'RDB'
+        | 'U18J'
+        | 'U18M'
+        | 'U16J'
+        | 'U16M'
+        | 'U16MA'
+        | 'U16MB'
+        | 'U14J'
+        | 'U14JA'
+        | 'U14JB'
+        | 'U14M'
+        | 'U12'
+        | 'U12A'
+        | 'U12B'
+        | 'recreatief'
+        | 'beker'
+        | 'andere'
+      )[]
+    | null;
+  topPerReeks?: number | null;
+  eindrondeNaam?: string | null;
+  heenEnTerug?: boolean | null;
+  dagenNaEinde?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglementen".
+ */
+export interface Reglementen {
+  id: number;
+  /**
+   * Bv. "RCVK 2026".
+   */
+  titel: string;
+  geldigVanaf: string;
+  status: 'concept' | 'actief' | 'archief';
+  bron?: string | null;
+  inhoud: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglement-verslagen".
+ */
+export interface ReglementVerslagen {
+  id: number;
+  titel: string;
+  datum: string;
+  reglement: number | Reglementen;
+  /**
+   * Welk artikel wijzigt of vult het aan, bv. "art. 34".
+   */
+  artikel?: string | null;
+  status: 'actief' | 'ingetrokken';
+  inhoud: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "afgelastingen".
+ */
+export interface Afgelastingen {
+  id: number;
+  match: number | Match;
+  clubs?: (number | Club)[] | null;
+  reden: 'terrein' | 'weer' | 'ander';
+  toelichting?: string | null;
+  oorspronkelijkeDatum?: string | null;
+  gemeldDoor?: (number | null) | User;
+  scheidsrechterNaam?: string | null;
+  status?: ('gemeld' | 'herpland' | 'ingetrokken') | null;
+  nieuweDatum?: string | null;
+  behandeldOp?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "afgelasting-fotos".
+ */
+export interface AfgelastingFoto {
+  id: number;
+  afgelasting: number | Afgelastingen;
+  clubs?: (number | Club)[] | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "aftrap-wijzigingen".
+ */
+export interface AftrapWijzigingen {
+  id: number;
+  match: number | Match;
+  clubs?: (number | Club)[] | null;
+  van: string;
+  naar: string;
+  reden: 'file' | 'ziekte' | 'uitloop' | 'vervroegen' | 'terrein' | 'scheidsrechter' | 'ander';
+  toelichting?: string | null;
+  gemeldDoor?: (number | null) | User;
+  gemeldDoorNaam?: string | null;
+  /**
+   * Gezet als deze wedstrijd mee verschoof met een eerdere op hetzelfde terrein.
+   */
+  aanleiding?: (number | null) | AftrapWijzigingen;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "boete-soorten".
+ */
+export interface BoeteSoorten {
+  id: number;
+  naam: string;
+  /**
+   * Bv. "Huishoudelijk reglement art. 12" — staat bij de boete op het overzicht van de club.
+   */
+  artikel?: string | null;
+  bedrag: number;
+  /**
+   * Het systeem maakt een VOORSTEL; de federatie beslist altijd zelf of het opgelegd wordt.
+   */
+  trigger?: ('geen' | 'forfait' | 'blad_te_laat' | 'te_laat') | null;
+  /**
+   * Voor "blad niet tijdig ingediend": zoveel dagen na de wedstrijd. Voor "aftrap later": vanaf hoeveel minuten (leeg = elke vertraging).
+   */
+  termijnDagen?: number | null;
+  actief?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "boetes".
+ */
+export interface Boete {
+  id: number;
+  club: number | Club;
+  soort?: (number | null) | BoeteSoorten;
+  match?: (number | null) | Match;
+  omschrijving: string;
+  /**
+   * Vastgezet bij het voorstel: een latere wijziging van de boetelijst raakt deze boete niet.
+   */
+  bedrag: number;
+  status?: ('voorstel' | 'opgelegd' | 'betaling_gemeld' | 'betaald' | 'betwist' | 'vernietigd') | null;
+  bron?: ('automatisch' | 'manueel') | null;
+  /**
+   * Voorkomt dat hetzelfde automatische voorstel twee keer gemaakt wordt.
+   */
+  sleutel?: string | null;
+  opgelegdOp?: string | null;
+  betalingGemeldOp?: string | null;
+  betaaldOp?: string | null;
+  clubOpmerking?: string | null;
+  federatieOpmerking?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "inschrijvingsrondes".
+ */
+export interface Inschrijvingsronde {
+  id: number;
+  seizoen: string;
+  deadline: string;
+  status?: ('open' | 'gesloten') | null;
+  eersteWeekend: string;
+  laatsteWeekend: string;
+  /**
+   * Feestdagen, beker, tornooien: daar plant de kalender niets.
+   */
+  vrijeWeekends?:
+    | {
+        weekend: string;
+        reden?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  toelichting?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "inschrijvingen".
+ */
+export interface Inschrijvingen {
+  id: number;
+  ronde: number | Inschrijvingsronde;
+  club: number | Club;
+  status?: ('concept' | 'ingediend' | 'verwerkt') | null;
+  ingediendOp?: string | null;
+  ploegen?:
+    | {
+        team?: (number | null) | Team;
+        naam: string;
+        reeks:
+          | '1NAH'
+          | '1NAHB'
+          | '1NAD'
+          | '2NAH'
+          | '2NAHB'
+          | 'LH'
+          | 'LD'
+          | 'RHA'
+          | 'RHB'
+          | 'RHC'
+          | 'RDA'
+          | 'RDB'
+          | 'U18J'
+          | 'U18M'
+          | 'U16J'
+          | 'U16M'
+          | 'U16MA'
+          | 'U16MB'
+          | 'U14J'
+          | 'U14JA'
+          | 'U14JB'
+          | 'U14M'
+          | 'U12'
+          | 'U12A'
+          | 'U12B'
+          | 'recreatief'
+          | 'beker'
+          | 'andere';
+        thuisdag?: ('za' | 'zo') | null;
+        thuisUur?: string | null;
+        koppelMet?: string | null;
+        opmerking?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  aantalVelden?: number | null;
+  onbeschikbaar?:
+    | {
+        weekend: string;
+        reden?: string | null;
+        hard?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  wensen?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "verplaatsingsaanvragen".
+ */
+export interface Verplaatsingsaanvragen {
+  id: number;
+  match: number | Match;
+  aanvrager: number | Club;
+  tegenpartij?: (number | null) | Club;
+  oorspronkelijk?: string | null;
+  voorgesteld: string;
+  reden: string;
+  status?: ('wacht_tegenpartij' | 'wacht_federatie' | 'geweigerd' | 'goedgekeurd' | 'afgewezen' | 'ingetrokken') | null;
+  aangevraagdDoor?: (number | null) | User;
+  tegenpartijOpmerking?: string | null;
+  federatieOpmerking?: string | null;
+  behandeldOp?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "medische-kaart-aanvragen".
+ */
+export interface MedischeKaartAanvragen {
+  id: number;
+  player: number | Player;
+  club?: (number | null) | Club;
+  aangevraagdDoor?: (number | null) | User;
+  via: 'lid' | 'club' | 'ouder';
+  status: 'aangevraagd' | 'verstuurd' | 'geweigerd';
+  opmerking?: string | null;
+  behandeldOp?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "meldingen".
+ */
+export interface Meldingen {
+  id: number;
+  user: number | User;
+  titel: string;
+  tekst?: string | null;
+  url?: string | null;
+  gelezen?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Eén per fysiek veld/scherm bij een club. Beheer het aantal velden via "Mijn club" → Veldscherm, niet hier.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -974,6 +1497,10 @@ export interface Matchsheet {
    * Mag de wedstrijd óók vrijgeven (met dezelfde vrijgavecode) als de toegewezen SR afwezig is.
    */
   backupReferee?: (number | null) | Official;
+  /**
+   * Gezet bij het aftekenen. Leeg = de toegewezen scheidsrechter.
+   */
+  geflotenDoor?: (number | null) | Official;
   assignedLinesman?: (number | null) | Official;
   /**
    * Geheime per-wedstrijd code. De federatie bezorgt die aan de (backup-)scheidsrechter; enkel met deze code kan de SR groen licht geven.
@@ -1127,39 +1654,6 @@ export interface Matchsheet {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "accidents".
- */
-export interface Accident {
-  id: number;
-  titel?: string | null;
-  /**
-   * De wedstrijd waarbij het ongeval gebeurde (optioneel).
-   */
-  match?: (number | null) | Match;
-  /**
-   * Indien het slachtoffer een geregistreerd lid is.
-   */
-  player?: (number | null) | Player;
-  slachtofferNaam: string;
-  slachtofferGeboortedatum?: string | null;
-  slachtofferAdres?: string | null;
-  slachtofferBeroep?: string | null;
-  ongevalPlaats?: string | null;
-  ongevalDatum?: string | null;
-  omstandigheden?: string | null;
-  getuigen?:
-    | {
-        naam?: string | null;
-        adres?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  opmerkingen?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "cupfinals".
  */
 export interface Cupfinal {
@@ -1261,6 +1755,46 @@ export interface ReferendumAward {
     jaar: string;
     naam: string;
     club: string;
+    id?: string | null;
+  }[];
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referendum-rondes".
+ */
+export interface ReferendumRonde {
+  id: number;
+  /**
+   * Bv. 2026-2027.
+   */
+  seizoen: string;
+  status: 'voorbereiding' | 'open' | 'gesloten' | 'gepubliceerd';
+  reeksHeren?: string | null;
+  reeksDames?: string | null;
+  minWedstrijden?: number | null;
+  maxLeeftijdBelofte?: number | null;
+  /**
+   * Leeg = de dag dat de ronde sluit.
+   */
+  peildatum?: string | null;
+  gepubliceerdOp?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referendum-stemmen".
+ */
+export interface ReferendumStemman {
+  id: number;
+  ronde: number | ReferendumRonde;
+  stemmer: number | Player;
+  competitie: 'heren' | 'dames';
+  regels: {
+    speler: number | Player;
+    punten: number;
     id?: string | null;
   }[];
   updatedAt: string;
@@ -2136,7 +2670,7 @@ export interface PhotoboothFoto {
   focalY?: number | null;
 }
 /**
- * Hoe vlot het stadion loopt per bezoek (anoniem). Het overzicht: /api/virtueel/meting.
+ * Hoe vlot het stadion loopt per bezoek (anoniem). De analyse met knelpunten en advies: /federatie/stadion.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "virtuele-metingen".
@@ -2227,6 +2761,54 @@ export interface PayloadLockedDocument {
         value: number | Player;
       } | null)
     | ({
+        relationTo: 'medische-attesten';
+        value: number | MedischeAttesten;
+      } | null)
+    | ({
+        relationTo: 'ongeval-documenten';
+        value: number | OngevalDocumenten;
+      } | null)
+    | ({
+        relationTo: 'afgelastingen';
+        value: number | Afgelastingen;
+      } | null)
+    | ({
+        relationTo: 'afgelasting-fotos';
+        value: number | AfgelastingFoto;
+      } | null)
+    | ({
+        relationTo: 'aftrap-wijzigingen';
+        value: number | AftrapWijzigingen;
+      } | null)
+    | ({
+        relationTo: 'boete-soorten';
+        value: number | BoeteSoorten;
+      } | null)
+    | ({
+        relationTo: 'boetes';
+        value: number | Boete;
+      } | null)
+    | ({
+        relationTo: 'inschrijvingsrondes';
+        value: number | Inschrijvingsronde;
+      } | null)
+    | ({
+        relationTo: 'inschrijvingen';
+        value: number | Inschrijvingen;
+      } | null)
+    | ({
+        relationTo: 'verplaatsingsaanvragen';
+        value: number | Verplaatsingsaanvragen;
+      } | null)
+    | ({
+        relationTo: 'medische-kaart-aanvragen';
+        value: number | MedischeKaartAanvragen;
+      } | null)
+    | ({
+        relationTo: 'meldingen';
+        value: number | Meldingen;
+      } | null)
+    | ({
         relationTo: 'matches';
         value: number | Match;
       } | null)
@@ -2261,6 +2843,30 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'referendum-awards';
         value: number | ReferendumAward;
+      } | null)
+    | ({
+        relationTo: 'referendum-rondes';
+        value: number | ReferendumRonde;
+      } | null)
+    | ({
+        relationTo: 'referendum-stemmen';
+        value: number | ReferendumStemman;
+      } | null)
+    | ({
+        relationTo: 'reglementen';
+        value: number | Reglementen;
+      } | null)
+    | ({
+        relationTo: 'reglement-verslagen';
+        value: number | ReglementVerslagen;
+      } | null)
+    | ({
+        relationTo: 'competitieregels';
+        value: number | Competitieregel;
+      } | null)
+    | ({
+        relationTo: 'eindrondes';
+        value: number | Eindronde;
       } | null)
     | ({
         relationTo: 'sanctions';
@@ -2467,6 +3073,8 @@ export interface TeamsSelect<T extends boolean = true> {
   category?: T;
   reeks?: T;
   thuisUur?: T;
+  thuisdag?: T;
+  koppelMet?: T;
   name?: T;
   speelstijl?: T;
   vasteOpstellingIds?: T;
@@ -2491,8 +3099,255 @@ export interface PlayersSelect<T extends boolean = true> {
   medischAttest?: T;
   hogerSpelenVerbod?: T;
   actief?: T;
+  voornaam?: T;
+  achternaam?: T;
+  geslacht?: T;
+  email?: T;
+  ouderEmail?: T;
+  soortLid?: T;
+  vergunningsnummer?: T;
+  medischeKeuringOp?: T;
+  medischAttestBestand?: T;
+  registratieStatus?: T;
+  ingediendOp?: T;
+  beoordeeldOp?: T;
+  beoordeeldDoor?: T;
+  afkeurReden?: T;
   analyseOnly?: T;
   analyseOwner?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "medische-attesten_select".
+ */
+export interface MedischeAttestenSelect<T extends boolean = true> {
+  player?: T;
+  club?: T;
+  geuploadDoor?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ongeval-documenten_select".
+ */
+export interface OngevalDocumentenSelect<T extends boolean = true> {
+  accident?: T;
+  player?: T;
+  club?: T;
+  soort?: T;
+  geuploadDoor?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "afgelastingen_select".
+ */
+export interface AfgelastingenSelect<T extends boolean = true> {
+  match?: T;
+  clubs?: T;
+  reden?: T;
+  toelichting?: T;
+  oorspronkelijkeDatum?: T;
+  gemeldDoor?: T;
+  scheidsrechterNaam?: T;
+  status?: T;
+  nieuweDatum?: T;
+  behandeldOp?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "afgelasting-fotos_select".
+ */
+export interface AfgelastingFotosSelect<T extends boolean = true> {
+  afgelasting?: T;
+  clubs?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "aftrap-wijzigingen_select".
+ */
+export interface AftrapWijzigingenSelect<T extends boolean = true> {
+  match?: T;
+  clubs?: T;
+  van?: T;
+  naar?: T;
+  reden?: T;
+  toelichting?: T;
+  gemeldDoor?: T;
+  gemeldDoorNaam?: T;
+  aanleiding?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "boete-soorten_select".
+ */
+export interface BoeteSoortenSelect<T extends boolean = true> {
+  naam?: T;
+  artikel?: T;
+  bedrag?: T;
+  trigger?: T;
+  termijnDagen?: T;
+  actief?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "boetes_select".
+ */
+export interface BoetesSelect<T extends boolean = true> {
+  club?: T;
+  soort?: T;
+  match?: T;
+  omschrijving?: T;
+  bedrag?: T;
+  status?: T;
+  bron?: T;
+  sleutel?: T;
+  opgelegdOp?: T;
+  betalingGemeldOp?: T;
+  betaaldOp?: T;
+  clubOpmerking?: T;
+  federatieOpmerking?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "inschrijvingsrondes_select".
+ */
+export interface InschrijvingsrondesSelect<T extends boolean = true> {
+  seizoen?: T;
+  deadline?: T;
+  status?: T;
+  eersteWeekend?: T;
+  laatsteWeekend?: T;
+  vrijeWeekends?:
+    | T
+    | {
+        weekend?: T;
+        reden?: T;
+        id?: T;
+      };
+  toelichting?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "inschrijvingen_select".
+ */
+export interface InschrijvingenSelect<T extends boolean = true> {
+  ronde?: T;
+  club?: T;
+  status?: T;
+  ingediendOp?: T;
+  ploegen?:
+    | T
+    | {
+        team?: T;
+        naam?: T;
+        reeks?: T;
+        thuisdag?: T;
+        thuisUur?: T;
+        koppelMet?: T;
+        opmerking?: T;
+        id?: T;
+      };
+  aantalVelden?: T;
+  onbeschikbaar?:
+    | T
+    | {
+        weekend?: T;
+        reden?: T;
+        hard?: T;
+        id?: T;
+      };
+  wensen?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "verplaatsingsaanvragen_select".
+ */
+export interface VerplaatsingsaanvragenSelect<T extends boolean = true> {
+  match?: T;
+  aanvrager?: T;
+  tegenpartij?: T;
+  oorspronkelijk?: T;
+  voorgesteld?: T;
+  reden?: T;
+  status?: T;
+  aangevraagdDoor?: T;
+  tegenpartijOpmerking?: T;
+  federatieOpmerking?: T;
+  behandeldOp?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "medische-kaart-aanvragen_select".
+ */
+export interface MedischeKaartAanvragenSelect<T extends boolean = true> {
+  player?: T;
+  club?: T;
+  aangevraagdDoor?: T;
+  via?: T;
+  status?: T;
+  opmerking?: T;
+  behandeldOp?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "meldingen_select".
+ */
+export interface MeldingenSelect<T extends boolean = true> {
+  user?: T;
+  titel?: T;
+  tekst?: T;
+  url?: T;
+  gelezen?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2516,11 +3371,13 @@ export interface MatchesSelect<T extends boolean = true> {
   cvAnalyse?: T;
   cvFysiek?: T;
   reeks?: T;
+  eindronde?: T;
   seizoen?: T;
   homeTeam?: T;
   awayTeam?: T;
   date?: T;
   status?: T;
+  afgelast?: T;
   goalAreaDepth?: T;
   veldBreedte?: T;
   veldSpeelveld?: T;
@@ -2580,6 +3437,7 @@ export interface MatchsheetsSelect<T extends boolean = true> {
   status?: T;
   assignedReferee?: T;
   backupReferee?: T;
+  geflotenDoor?: T;
   assignedLinesman?: T;
   vrijgaveCode?: T;
   officials?:
@@ -2728,13 +3586,16 @@ export interface AccidentsSelect<T extends boolean = true> {
   titel?: T;
   match?: T;
   player?: T;
+  club?: T;
   slachtofferNaam?: T;
   slachtofferGeboortedatum?: T;
   slachtofferAdres?: T;
   slachtofferBeroep?: T;
   ongevalPlaats?: T;
   ongevalDatum?: T;
+  moment?: T;
   omstandigheden?: T;
+  gemeldDoor?: T;
   getuigen?:
     | T
     | {
@@ -2743,6 +3604,10 @@ export interface AccidentsSelect<T extends boolean = true> {
         id?: T;
       };
   opmerkingen?: T;
+  status?: T;
+  ingediendOp?: T;
+  afgehandeldOp?: T;
+  federatieOpmerking?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2817,6 +3682,101 @@ export interface ReferendumAwardsSelect<T extends boolean = true> {
         club?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referendum-rondes_select".
+ */
+export interface ReferendumRondesSelect<T extends boolean = true> {
+  seizoen?: T;
+  status?: T;
+  reeksHeren?: T;
+  reeksDames?: T;
+  minWedstrijden?: T;
+  maxLeeftijdBelofte?: T;
+  peildatum?: T;
+  gepubliceerdOp?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referendum-stemmen_select".
+ */
+export interface ReferendumStemmenSelect<T extends boolean = true> {
+  ronde?: T;
+  stemmer?: T;
+  competitie?: T;
+  regels?:
+    | T
+    | {
+        speler?: T;
+        punten?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglementen_select".
+ */
+export interface ReglementenSelect<T extends boolean = true> {
+  titel?: T;
+  geldigVanaf?: T;
+  status?: T;
+  bron?: T;
+  inhoud?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglement-verslagen_select".
+ */
+export interface ReglementVerslagenSelect<T extends boolean = true> {
+  titel?: T;
+  datum?: T;
+  reglement?: T;
+  artikel?: T;
+  status?: T;
+  inhoud?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "competitieregels_select".
+ */
+export interface CompetitieregelsSelect<T extends boolean = true> {
+  naam?: T;
+  soort?: T;
+  actief?: T;
+  reglement?: T;
+  verslag?: T;
+  artikel?: T;
+  maxKeerHoger?: T;
+  categorie?: T;
+  bronReeksen?: T;
+  topPerReeks?: T;
+  eindrondeNaam?: T;
+  heenEnTerug?: T;
+  dagenNaEinde?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "eindrondes_select".
+ */
+export interface EindrondesSelect<T extends boolean = true> {
+  naam?: T;
+  seizoen?: T;
+  regel?: T;
+  categorie?: T;
+  ploegen?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -3090,6 +4050,8 @@ export interface UsersSelect<T extends boolean = true> {
   club?: T;
   functie?: T;
   team?: T;
+  clubFuncties?: T;
+  functieTeams?: T;
   followedClubs?: T;
   photo?: T;
   photoZoom?: T;
@@ -3097,6 +4059,7 @@ export interface UsersSelect<T extends boolean = true> {
   photoOffsetY?: T;
   position?: T;
   player?: T;
+  kinderen?: T;
   scorecardSkills?: T;
   myTeams?: T;
   kantineScherm?: T;
@@ -3463,7 +4426,7 @@ export interface Season {
 export interface Setting {
   id: number;
   /**
-   * Geldt voor álle wedstrijden. Federatie = volledige flow (opstelling, scheidsrechtersakkoord, aftekenen). Supporters = vrije livescore: de scheidsrechterflow valt weg en iedereen kan elke wedstrijd openen en de score doorgeven.
+   * Geldt voor álle wedstrijden. Federatie = volledige flow (opstelling, scheidsrechtersakkoord, aftekenen). Supporters = vrije livescore: de scheidsrechterflow valt weg en iedereen kan elke wedstrijd openen en de score doorgeven. In de federatie-testomgeving staat dit altijd op Federatie, wat je hier ook kiest.
    */
   scoreMode: 'federatie' | 'supporters';
   /**
@@ -3479,9 +4442,21 @@ export interface Setting {
    */
   veldMatchId?: string | null;
   /**
+   * Jonger dan deze leeftijd mag een lid zonder e-mailadres geregistreerd worden.
+   */
+  emailVerplichtVanaf?: number | null;
+  /**
    * Bij dit aantal of meer openstaande knipjes kan een speler niet geselecteerd worden.
    */
   knipjesDrempel: number;
+  /**
+   * Bepaalt wat elke club ziet onder "Scheidsrechterskosten" op haar boete-overzicht.
+   */
+  scheidsrechterKostenBetaler?: ('federatie' | 'thuisclub' | 'gedeeld') | null;
+  /**
+   * Het forfait-onkostenblad van de scheidsrechter (€13 + km).
+   */
+  forfaitKostenBetaler?: ('federatie' | 'forfaitploeg') | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -3529,7 +4504,10 @@ export interface SettingsSelect<T extends boolean = true> {
   releaseMinutesBefore?: T;
   kantineMatchIds?: T;
   veldMatchId?: T;
+  emailVerplichtVanaf?: T;
   knipjesDrempel?: T;
+  scheidsrechterKostenBetaler?: T;
+  forfaitKostenBetaler?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

@@ -99,3 +99,14 @@ export async function sendPushToClubs(payload: Payload, clubIds: (number | strin
     .catch(() => ({ docs: [] as StoredSub[] }))
   return sendToSubs(payload, res.docs as unknown as StoredSub[], notif)
 }
+
+/** Stuurt een melding naar bepaalde accounts (bv. de scheidsrechters die net een wedstrijd kregen). */
+export async function sendPushToUsers(payload: Payload, userIds: (number | string | null | undefined)[], notif: PushPayload): Promise<{ sent: number; pruned: number }> {
+  if (!ensureConfigured()) return { sent: 0, pruned: 0 }
+  const ids = [...new Set(userIds.filter((u): u is number | string => u != null))]
+  if (ids.length === 0) return { sent: 0, pruned: 0 }
+  const res = await payload
+    .find({ collection: 'push-subscriptions', where: { user: { in: ids } }, depth: 0, limit: 10000, pagination: false })
+    .catch(() => ({ docs: [] as StoredSub[] }))
+  return sendToSubs(payload, res.docs as unknown as StoredSub[], notif)
+}

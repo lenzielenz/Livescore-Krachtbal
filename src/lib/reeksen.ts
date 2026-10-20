@@ -6,6 +6,10 @@
 // NB: de federatie past de indeling jaarlijks aan; deze lijst dekt de hoofdreeksen. Sub-poules
 // (bv. "2NHA 1-2-3") kunnen later toegevoegd worden of via een aparte poule-aanduiding.
 
+/** Wedstrijden uit een eindronde (ploegen uit verschillende reeksen) — zie lib/competitieregels.ts. */
+export const EINDRONDE_REEKS = 'EINDR'
+export const EINDRONDE_REEKS_OPTIE = { label: 'Eindronde (automatisch, zie eindronde)', value: EINDRONDE_REEKS } as const
+
 export const REEKS_OPTIONS = [
   // Nationaal
   { label: '1NAH — 1ste Nationale Heren', value: '1NAH' },
@@ -46,6 +50,7 @@ export type Reeks = (typeof REEKS_OPTIONS)[number]['value']
 
 /** Leesbare reeksnaam zonder de code-prefix, bv. "2de Nationale Heren" i.p.v. "2NAH — 2de Nationale Heren". */
 export function reeksNaam(value: unknown): string {
+  if (value === EINDRONDE_REEKS) return 'Eindronde'
   const opt = REEKS_OPTIONS.find((o) => o.value === value)
   if (opt) return opt.label.split('—').pop()!.trim()
   return typeof value === 'string' && value ? value : 'Overig'
@@ -122,7 +127,8 @@ const REEKS_CATEGORIE: Record<Reeks, Category> = {
 
 /** Categorie (leeftijdsniveau) die hoort bij een reeks. */
 export function reeksCategorie(reeks: Reeks): Category {
-  return REEKS_CATEGORIE[reeks]
+  // Een onbekende waarde (bv. een eindronde-wedstrijd) mag de categorie-afleiding niet breken.
+  return REEKS_CATEGORIE[reeks] ?? 'senioren'
 }
 
 // Volwassen reeks = senioren-categorie (landelijk/nationaal/regionaal, recreatief, beker). Alle
@@ -221,6 +227,19 @@ export function vereisteOfficialsTekst(reeks: Reeks): string {
     default:
       return 'Best minstens 5 personen aanwezig; coach telt niet als noodzakelijke official. Een coach mag geen grensrechter zijn (Art. 25).'
   }
+}
+
+/**
+ * Niveau van een reeks voor het vastspelen (lager getal = hogere reeks): de competitierang, en bij
+ * de jeugd A boven B (bv. U14JA boven U14JB). null = geen rangorde (beker, recreatief, eindronde).
+ */
+export function reeksRang(reeks: string | null | undefined): number | null {
+  if (!reeks) return null
+  const r = REEKS_RANG[reeks as Reeks]
+  if (r != null) return r
+  if (/^U\d+[A-Z]*A$/.test(reeks)) return 1
+  if (/^U\d+[A-Z]*B$/.test(reeks)) return 2
+  return null
 }
 
 /** Beker-voorgift: 3 ptn per reeksverschil, max 6 (WEDSTRIJDBLAD-PROMPT). */

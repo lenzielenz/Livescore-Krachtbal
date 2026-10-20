@@ -5,6 +5,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { hasRole, isFederationLevel, userClubId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { clinchStatus } from '@/lib/championship'
+import { magOpstellingVoor } from '@/lib/club-functies'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { sheetOpenForScoring } from '@/lib/matchsheet-workflow'
 import { getAuthUser } from '@/lib/auth-user'
@@ -50,6 +51,9 @@ type Row = {
   side: 'home' | 'away'
   /** Id van de eigen (club-)ploeg in deze wedstrijd, voor de "Mijn ploegen"-focus. */
   myTeamId: number
+  /** Mag deze gebruiker de opstelling van de eigen ploeg zetten (clubstaf, coach, jeugdverantwoordelijke)? */
+  magOpstelling: boolean
+  afgelast: boolean
   home: string
   away: string
   ownReady: boolean
@@ -98,6 +102,10 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
   }
   const clubId = userClubId(user)
   const isBeheerder = hasRole(user, 'club-beheerder')
+  // Clubstaf (en federatie) beheert alle wedstrijden van de club en tekent aan; een coach zet enkel
+  // de opstelling van zijn ploegen.
+  const clubStaf = isFederationLevel(user) || hasRole(user, 'club-beheerder', 'club-medewerker')
+  const magAantekenen = clubStaf || hasRole(user, 'scorekeeper')
   if (clubId == null) {
     return (
       <Shell>
@@ -185,6 +193,12 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
         status: String(m.status ?? 'scheduled'),
         side,
         myTeamId: Number((side === 'home' ? homeTeam?.id : awayTeam?.id) ?? 0),
+        afgelast: Boolean((m as { afgelast?: boolean }).afgelast),
+        magOpstelling: magOpstellingVoor(user, {
+          id: Number((side === 'home' ? homeTeam?.id : awayTeam?.id) ?? 0),
+          club: clubId,
+          category: (side === 'home' ? homeTeam : awayTeam) ? String(((side === 'home' ? homeTeam : awayTeam) as { category?: unknown }).category ?? '') : null,
+        }),
         home: nameOf(homeTeam),
         away: nameOf(awayTeam),
         ownReady: r ? (side === 'home' ? r.homeOk : r.awayOk) : true,
@@ -217,7 +231,16 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
     }
   })
   const rawMine = (user as { myTeams?: unknown }).myTeams
-  const myTeams = (Array.isArray(rawMine) ? rawMine.map(Number).filter((n) => Number.isFinite(n)) : []).filter((id) => teamIdSet.has(id))
+  // Een coach of jeugdverantwoordelijke zonder eigen keuze ziet meteen de ploegen waarvan hij de
+  // opstelling zet (lib/club-functies.ts) — niet de hele club met knoppen die voor hem niet werken.
+  const functiePloegen = clubStaf
+    ? []
+    : teams.docs
+        .filter((t) => magOpstellingVoor(user, { id: t.id, club: clubId, category: String((t as { category?: unknown }).category ?? '') }))
+        .map((t) => Number(t.id))
+  const myTeams = (Array.isArray(rawMine) && rawMine.length ? rawMine.map(Number).filter((n) => Number.isFinite(n)) : functiePloegen).filter((id) =>
+    teamIdSet.has(id),
+  )
   const mySet = new Set(myTeams)
   const focusing = mySet.size > 0 && !showAll
   // Bij een actieve focus tonen we enkel de wedstrijden van de eigen ploeg(en).
@@ -261,6 +284,13 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
       <MyTeamsPicker teams={allTeams} initial={myTeams} />
       <InstagramWeekendCard />
 
+      {hasRole(user, 'club-beheerder', 'club-medewerker') && (
+        <p className="myteams-focusbar">
+          <Link href="/club/leden" className="myteams-link">🪪 Leden &amp; registratie — wie mag spelen →</Link>
+          <Link href="/club/boetes" className="myteams-link">💶 Boetes &amp; scheidsrechterskosten →</Link>
+          <Link href="/club/inschrijving" className="myteams-link">📝 Inschrijving ploegen nieuw seizoen →</Link>
+        </p>
+      )}
       {isBeheerder && (
         <p className="myteams-focusbar">
           <Link href="/beheer/club-team" className="myteams-link">👥 Clubteam beheren — leden een rol geven →</Link>
@@ -332,6 +362,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
                   {formatDateBE(new Date(m.date), { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   {m.location ? <> · 📍 {m.location}</> : null}
                   {m.refereeName ? <> · 🟡 SR: {m.refereeName}</> : null}
+                  {m.afgelast ? <> · <strong style={{ color: '#e0a23d' }}>⛈️ Afgelast — nieuwe datum volgt</strong></> : null}
                 </span>
                 <span className="club-match-coach">
                   <ClaimButton matchId={m.id} coachName={m.coachName} mine={m.coachMine} takeoverName={m.takeoverName} takeoverMine={m.takeoverMine} />
@@ -342,13 +373,21 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
                   // Welke knoppen hier horen, hangt van de aantekenmodus af — die regel staat in
                   // wedstrijddag-acties.ts. In supportersmodus is dat er maar één die telt:
                   // aantekenen, zonder opstelling en zonder op een scheidsrechter te wachten.
-                  const acties = clubActies({
+                  const alle = clubActies({
                     supportersMode,
                     side: m.side,
                     live: m.status === 'live',
                     bladOpen: sheetOpenForScoring(m.sheetStatus),
                     claimedByOther: m.claimedByOther,
                   })
+                  // Enkel de knoppen die voor deze gebruiker werken: een coach zet de opstelling
+                  // van zijn ploeg en volgt verder mee; aantekenen is voor de clubtafel.
+                  const gefilterd = alle.filter(
+                    (a) =>
+                      (a !== 'opstelling' || m.magOpstelling) &&
+                      ((a !== 'aantekenen' && a !== 'wachtOpScheidsrechter') || magAantekenen || supportersMode),
+                  )
+                  const acties = gefilterd.includes('bekijk') ? gefilterd : [...gefilterd, 'bekijk' as const]
                   const primair = primaireActie(acties)
                   const cls = (a: string) => `btn ${a === primair ? 'btn-primary' : 'btn-ghost'}`
                   return acties.map((a) => {

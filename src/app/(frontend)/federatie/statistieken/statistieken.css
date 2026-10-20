@@ -1,0 +1,24 @@
+/* Statistieken (federatie): tegels, staafjes in één kleur met het getal ernaast, en een tabel. */
+.st-kop { font-size: 1rem; margin: 22px 0 10px; }
+.st-tegels { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.st-tegel { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.st-waarde { font-size: 1.7rem; font-weight: 800; line-height: 1.1; color: var(--txt); font-variant-numeric: tabular-nums; }
+.st-label { font-size: 0.86rem; font-weight: 700; color: var(--txt); }
+.st-sub { font-size: 0.76rem; color: var(--dim); }
+.st-rooster { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 12px; margin-top: 12px; }
+@media (max-width: 480px) { .st-rooster { grid-template-columns: 1fr; } }
+.st-kaart { padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); display: flex; flex-direction: column; gap: 8px; }
+.st-kaart h2 { margin: 0; font-size: 0.92rem; }
+.st-staven { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.st-staven li { display: grid; grid-template-columns: minmax(90px, 34%) 1fr 3.2em; gap: 8px; align-items: center; font-size: 0.82rem; border-radius: 6px; padding: 1px 2px; }
+.st-staven li:hover { background: color-mix(in srgb, var(--txt) 6%, transparent); }
+.st-staaf-label { color: var(--txt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-staaf-baan { height: 10px; }
+.st-staaf { display: block; height: 100%; min-width: 2px; border-radius: 0 4px 4px 0; background: var(--accent); }
+.st-staaf-waarde { text-align: right; color: var(--txt); font-weight: 700; font-variant-numeric: tabular-nums; }
+.st-tabel-wrap { overflow-x: auto; }
+.st-tabel { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.st-tabel th, .st-tabel td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.st-tabel th button { border: none; background: none; color: var(--dim); font: inherit; font-weight: 700; cursor: pointer; padding: 0; }
+.st-tabel .st-num { text-align: right; font-variant-numeric: tabular-nums; }
+.st-tabel tbody tr:hover { background: color-mix(in srgb, var(--txt) 5%, transparent); }

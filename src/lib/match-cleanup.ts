@@ -25,6 +25,9 @@ export const MATCH_VERPLICHTE_COLLECTIONS = [
   'match-mvp-votes',
   'cv-events',
   'analyse-notities',
+  'afgelastingen',
+  'aftrap-wijzigingen',
+  'verplaatsingsaanvragen',
 ] as const satisfies readonly CollectionSlug[]
 
 // Wat hier bewust NIET in staat: `accidents`. Dat is als enige nullable — een
@@ -49,6 +52,11 @@ export async function verwijderMatchKinderen(
   req?: PayloadRequest,
 ): Promise<void> {
   const where = { match: { equals: matchId } }
+  // De foto's van een afgelasting hangen (NOT NULL) aan de afgelasting, niet aan de wedstrijd: eerst weg.
+  const afgelastingen = await payload.find({ collection: 'afgelastingen', where, depth: 0, limit: 100, req, overrideAccess: true })
+  if (afgelastingen.docs.length) {
+    await payload.delete({ collection: 'afgelasting-fotos', where: { afgelasting: { in: afgelastingen.docs.map((a) => a.id) } }, req, overrideAccess: true })
+  }
   for (const collection of MATCH_VERPLICHTE_COLLECTIONS) {
     await payload.delete({ collection, where, req, overrideAccess: true })
   }

@@ -170,7 +170,12 @@ export async function POST(
     // een lege batterij een wedstrijd nooit blokkeert (zie score-trust.ts).
     let trust = viaSupporters ? await readMatchTrust(payload, matchId, 'tournament-matches') : null
     if (viaSupporters && trust) {
-      if (!mayClaim(trust, userId)) {
+      // Op een lopende wedstrijd vervalt de claim niet (zie claimHeld): enkel terugzetten geeft
+      // ze vrij, net als bij de competitie.
+      const lopend =
+        (await payload.findByID({ collection: 'tournament-matches', id: matchId, depth: 0, overrideAccess: true }).catch(() => null))
+          ?.status === 'live'
+      if (!mayClaim(trust, userId, Date.now(), lopend)) {
         return Response.json(
           { error: `${trust.scorerName ?? 'Iemand anders'} telt deze wedstrijd al mee. Je kan de stand wel bevestigen of betwisten.` },
           { status: 403 },

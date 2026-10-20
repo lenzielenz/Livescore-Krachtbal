@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 
 import { buildMatchState, recordRefereeStop, recordTimeout } from './match-engine'
 import { isSupportersMode } from './score-mode'
+import { hoortBijKant } from './wedstrijd-selectie'
 import {
   buildFixedSimpleScore,
   MATCH_ASSUMED_DONE_MS,
@@ -21,11 +22,25 @@ const relId = (v: unknown): number =>
 // De LIVE klokstand (seconden): clockSeconds is enkel de vastgezette basis bij de laatste
 // pauze; terwijl de klok loopt moet de verstreken tijd sinds clockUpdatedAt erbij geteld
 // worden. Zonder dit kreeg elk snelscore-doelpunt clock 0 (en dus minuut 0 in de tijdlijn).
-export function liveClockSeconds(m: { clockRunning?: boolean | null; clockUpdatedAt?: string | null; clockSeconds?: number | null }): number {
+export function liveClockSeconds(
+  m: { clockRunning?: boolean | null; clockUpdatedAt?: string | null; clockSeconds?: number | null },
+  nu: number = Date.now(),
+): number {
   const base = m.clockSeconds ?? 0
   if (!m.clockRunning || !m.clockUpdatedAt) return base
-  const elapsed = (Date.now() - new Date(m.clockUpdatedAt).getTime()) / 1000
+  const elapsed = (nu - new Date(m.clockUpdatedAt).getTime()) / 1000
   return base + Math.max(0, elapsed)
+}
+
+/**
+ * Het moment waarop de tik op het toestel gebeurde (`at` uit de wachtrij), begrensd: nooit in de
+ * toekomst en nooit vóór de laatste klokwijziging. Een doelpunt dat offline bewaard werd en een
+ * minuut later aankomt, krijgt zo toch de juiste minuut. Zonder (of met een onzinnig) `at`: nu.
+ */
+export function tikMoment(at: unknown, clockUpdatedAt?: string | null, nu: number = Date.now()): number {
+  const t = typeof at === 'number' && Number.isFinite(at) ? at : nu
+  const ondergrens = clockUpdatedAt ? new Date(clockUpdatedAt).getTime() : -Infinity
+  return Math.min(nu, Math.max(t, ondergrens))
 }
 
 /**
@@ -109,16 +124,19 @@ export async function recordSimpleGoal(
   side: SimpleSide,
   points: 1 | 2,
   scorer?: SimpleScorer,
+  at?: number,
 ) {
-  const { match, score, half, clock } = await loadSimpleMatch(payload, matchId)
-  const goalClock = clock
+  const { match, score, half } = await loadSimpleMatch(payload, matchId)
+  const moment = tikMoment(at, match.clockUpdatedAt)
+  const goalClock = Math.floor(liveClockSeconds(match, moment))
   const teamId = side === 'home' ? relId(match.homeTeam) : relId(match.awayTeam)
 
   let player: { id: number; shirtNumber?: number | null; name?: string | null; team?: unknown } | null = null
   if (scorer && Number.isFinite(scorer.id) && scorer.id > 0) {
     // Bewaak dat de gekozen speler tot de scorende ploeg behoort.
     player = await payload.findByID({ collection: 'players', id: scorer.id, depth: 0 }).catch(() => null)
-    if (!player || relId(player.team) !== teamId) {
+    // Een speler uit een lagere ploeg die de coach selecteerde, hoort er ook bij.
+    if (!player || teamId == null || !(await hoortBijKant(payload, matchId, side, teamId, player))) {
       throw new Error('Die speler hoort niet bij de scorende ploeg.')
     }
   } else if (!(await isSupportersMode(payload))) {
@@ -147,7 +165,7 @@ export async function recordSimpleGoal(
     points,
     half,
     clock: goalClock,
-    ts: Date.now(),
+    ts: moment,
     ...(player ? { scorerId: player.id } : {}),
     ...(player
       ? {
@@ -296,9 +314,77 @@ export async function reportFinalResult(payload: Payload, matchId: number, home:
   return buildMatchState(payload, matchId)
 }
 
+/**
+ * De eindstand van het NOODBLAD (papier) ingeven — enkel de federatie (de route bewaakt dat).
+ * Anders dan reportFinalResult mag dit ook op een wedstrijd die half aangetekend werd en daarna
+ * op papier verder ging (toestel uitgevallen): wat er al digitaal genoteerd stond blijft staan,
+ * het verschil komt erbij als doelpunten zonder scorer (die staan enkel op papier). Is de
+ * papieren stand lager dan wat er al genoteerd was, dan klopte de digitale notatie niet: met
+ * `vervang` wordt dan de hele stand door die van het papier vervangen.
+ */
+export async function papierenUitslag(
+  payload: Payload,
+  matchId: number,
+  home: number,
+  away: number,
+  vervang = false,
+) {
+  const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0, overrideAccess: true })
+  if ((match as { analyseOnly?: boolean }).analyseOnly) throw new Error('Analyse-opnames hebben geen publieke uitslag.')
+  if (match.status === 'finished') throw new Error('Deze wedstrijd is al afgesloten — heropen ze eerst.')
+  if ((match as { afgelast?: boolean }).afgelast) throw new Error('Deze wedstrijd is afgelast — plan ze eerst opnieuw.')
+  if (![home, away].every((n) => Number.isInteger(n) && n >= 0 && n <= 199)) {
+    throw new Error('Geef een geldige eindstand op (gehele cijfers, 0–199).')
+  }
+  const kickoff = match.date ? new Date(match.date as string).getTime() : NaN
+  if (match.status !== 'live' && (!Number.isFinite(kickoff) || Date.now() < kickoff)) {
+    throw new Error('Deze wedstrijd is nog niet begonnen.')
+  }
+  const worpen = await payload.count({ collection: 'throws', where: { match: { equals: matchId } } }).catch(() => ({ totalDocs: 0 }))
+  if (worpen.totalDocs > 0) throw new Error('Deze wedstrijd werd met het veldschema aangetekend — corrigeer ze daar.')
+
+  const score = readSimpleScore(match)
+  const al = { home: 0, away: 0 }
+  for (const g of score.goals) al[g.side] += g.points
+  let nieuw: SimpleScoreState
+  if (home < al.home || away < al.away) {
+    if (!vervang) {
+      throw new Error(
+        `Op het toestel stond al ${al.home}–${al.away}: hoger dan het papier. Klopt het papier, bevestig dan dat de digitale stand vervangen wordt.`,
+      )
+    }
+    nieuw = { ...buildFixedSimpleScore(home, away), crosses: score.crosses }
+  } else {
+    nieuw = { ...score, goals: [...score.goals] }
+    const half = Math.max(1, match.currentHalf ?? 1)
+    let ts = Date.now()
+    for (const side of ['home', 'away'] as const) {
+      for (let k = (side === 'home' ? home : away) - al[side]; k > 0; k--) {
+        nieuw.goals.push({ side, points: 1, half, clock: 0, ts: ts++ })
+      }
+    }
+  }
+  await payload.update({
+    collection: 'matches',
+    id: matchId,
+    data: {
+      status: 'finished',
+      currentHalf: 2,
+      clockRunning: false,
+      simpleScore: nieuw as unknown as Record<string, unknown>,
+    },
+    overrideAccess: true,
+  })
+  return buildMatchState(payload, matchId)
+}
+
 /** Beëindig de huidige helft en start meteen de volgende (zonder balbezit). */
 export async function advanceSimpleHalf(payload: Payload, matchId: number) {
-  const { half, clock } = await loadSimpleMatch(payload, matchId)
+  const { match, half, clock } = await loadSimpleMatch(payload, matchId)
+  eisNietAfgelopen(match)
+  // Krachtbal kent twee helften. Een tweede tik op "volgende helft" (traag toestel, dubbel
+  // getikt, of een heruitzending zonder opId) maakte vroeger een 3e helft aan.
+  if (half >= 2) throw new Error('De 2e helft loopt al — beëindig de wedstrijd met "Einde".')
   await payload.create({
     collection: 'match-events',
     data: { match: matchId, type: 'half_end', half, gameClock: clock },

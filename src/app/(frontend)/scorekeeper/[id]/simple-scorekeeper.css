@@ -634,3 +634,18 @@
 .ssk-veldkoppel-msg { font-size: 0.84rem; font-weight: 600; }
 .ssk-veldkoppel-msg.ok { color: #0fe0a6; }
 .ssk-veldkoppel-msg.err { color: #ef476f; }
+
+/* Federatieflow: nog niet startklaar — wat ontbreekt er, en waar regel je het. */
+.ssk-startklaar {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid #f4c542;
+  border-radius: 12px;
+  background: rgba(244, 197, 66, 0.1);
+  text-align: center;
+  font-size: 0.9rem;
+}
+.ssk-startklaar strong { color: #f4c542; }
+.ssk-startklaar-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }

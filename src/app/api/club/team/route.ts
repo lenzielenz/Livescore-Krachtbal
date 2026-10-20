@@ -1,5 +1,6 @@
 import { hasRole, userClubId, type UserRole } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
+import { CLUB_FUNCTIES } from '@/lib/club-functies'
 import { getPayloadClient } from '@/lib/payload-client'
 
 // Clubteam-beheer door een CLUB-BEHEERDER: ken de club-subrollen (club-medewerker / club-lid) toe
@@ -7,11 +8,12 @@ import { getPayloadClient } from '@/lib/payload-client'
 // Strikt afgeschermd tegen escalatie:
 //  - enkel een club-beheerder (admins gebruiken /beheer/accounts);
 //  - enkel accounts in/van de EIGEN club — nooit een account met een hogere rol (admin/federatie/
-//    scheidsrechter/club-beheerder) of een account dat al bij een andere club zit;
+//    club-beheerder) of een account dat al bij een andere club zit;
 //  - enkel de twee club-subrollen; de overige rollen van het account blijven ongemoeid.
 const CLUB_SUBROLES = ['club-medewerker', 'club-lid'] as const
 type ClubSubRole = (typeof CLUB_SUBROLES)[number]
-const PROTECTED = ['admin', 'federatie', 'scheidsrechter', 'club-beheerder']
+// Een scheidsrechter mag ook clublid zijn: de club zet dan enkel zijn club-subrol, zijn scheidsrechterrol blijft.
+const PROTECTED = ['admin', 'federatie', 'club-beheerder']
 
 const relId = (v: unknown): number | string | null =>
   v && typeof v === 'object' ? ((v as { id?: number | string }).id ?? null) : (v as number | string | null)
@@ -58,20 +60,20 @@ export async function POST(req: Request) {
       .find({ collection: 'users', where: { email: { equals: email } }, limit: 1, depth: 0 })
       .catch(() => ({ docs: [] as Record<string, unknown>[] }))
     const target = found.docs[0]
-    if (!target) {
-      return Response.json(
-        { error: 'Geen account met dit e-mailadres. Vraag de persoon eerst een gratis account aan te maken.' },
-        { status: 404 },
-      )
-    }
+    // Eén neutrale melding voor elke reden waarom het niet lukt: anders kon je met dit formulier
+    // uitzoeken welke e-mailadressen een account hebben, en welk soort (hogere rol, andere club).
+    const nietToevoegbaar = Response.json(
+      {
+        error:
+          'Dit e-mailadres kan je niet toevoegen. Heeft de persoon nog geen account, vraag dan eerst er gratis een aan te maken; hoort het al bij een andere club of heeft het een andere functie, dan regelt de federatie dat.',
+      },
+      { status: 400 },
+    )
+    if (!target) return nietToevoegbaar
     const current = roleArr(target)
-    if (current.some((r) => PROTECTED.includes(r))) {
-      return Response.json({ error: 'Dit account heeft een hogere rol — vraag de federatie.' }, { status: 403 })
-    }
+    if (current.some((r) => PROTECTED.includes(r))) return nietToevoegbaar
     const tClub = relId((target as { club?: unknown }).club)
-    if (tClub != null && String(tClub) !== String(myClub)) {
-      return Response.json({ error: 'Dit account hoort al bij een andere club.' }, { status: 403 })
-    }
+    if (tClub != null && String(tClub) !== String(myClub)) return nietToevoegbaar
     try {
       await payload.update({
         collection: 'users',
@@ -95,6 +97,42 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Je kan enkel leden van je eigen club beheren.' }, { status: 403 })
   }
   const current = roleArr(target)
+  const zelf = String(userId) === String(user!.id)
+
+  // Branch: functies in de club (coach, trainer, jeugdverantwoordelijke, speler, lid) en de ploegen
+  // van een coach/trainer — zie lib/club-functies.ts. Mag ook voor jezelf (een beheerder die coacht);
+  // enkel ploegen van de eigen club. Rollen en andere velden blijven ongemoeid.
+  if ('clubFuncties' in body) {
+    if (!zelf && current.some((r) => PROTECTED.includes(r))) {
+      return Response.json({ error: 'Dit account beheer je niet hier (hogere rol — vraag de federatie).' }, { status: 403 })
+    }
+    const functies = [...new Set((Array.isArray(body.clubFuncties) ? body.clubFuncties : []).map(String))]
+    if (functies.some((f) => !CLUB_FUNCTIES.has(f))) return Response.json({ error: 'Ongeldige functie.' }, { status: 400 })
+    const teamIds = [...new Set((Array.isArray(body.functieTeams) ? body.functieTeams : []).map(Number).filter(Number.isFinite))]
+    if (teamIds.length) {
+      const eigen = await payload.find({
+        collection: 'teams',
+        where: { and: [{ id: { in: teamIds } }, { club: { equals: myClub } }] },
+        depth: 0,
+        limit: teamIds.length,
+      })
+      if (eigen.docs.length !== teamIds.length) {
+        return Response.json({ error: 'Je kan enkel ploegen van je eigen club toekennen.' }, { status: 403 })
+      }
+    }
+    try {
+      await payload.update({
+        collection: 'users',
+        id: userId,
+        data: { clubFuncties: functies as never, functieTeams: teamIds },
+        overrideAccess: true,
+      })
+    } catch {
+      return Response.json({ error: 'Bijwerken mislukt.' }, { status: 500 })
+    }
+    return Response.json({ ok: true })
+  }
+
   if (current.some((r) => PROTECTED.includes(r))) {
     return Response.json({ error: 'Dit account beheer je niet hier (hogere rol — vraag de federatie).' }, { status: 403 })
   }
@@ -106,7 +144,7 @@ export async function POST(req: Request) {
       await payload.update({
         collection: 'users',
         id: userId,
-        data: { club: null, player: null, roles: withClubRole(current, 'none') },
+        data: { club: null, player: null, roles: withClubRole(current, 'none'), clubFuncties: [], functieTeams: [] },
         overrideAccess: true,
       })
     } catch {

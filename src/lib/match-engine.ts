@@ -16,6 +16,7 @@ import { reeksUsesSeniorThrows } from './reeksen'
 import { sanitizeTrust, trustView, type TrustView } from './score-trust'
 import { isOfficialScore } from './score-trust-store'
 import { readSimpleScore } from './simple-score'
+import { hoortBijKant, toegelatenSpelers, wedstrijdSelectie } from './wedstrijd-selectie'
 import type { ResetImpact } from './match-reset-policy'
 import {
   type SetupSide,
@@ -42,11 +43,17 @@ const clamp01 = (n: number) => Math.max(0, Math.min(1, n))
 /** Aantal veldspelers per ploeg (de enige die mogen werpen). */
 export const FIELD_PLAYERS = 4
 
-/** Actieve opstelling: opgeslagen lijst, of (bij leeg) de eerste 4 spelers op rugnummer. */
+/**
+ * Actieve opstelling: opgeslagen lijst, of (bij leeg) de eerste 4 uit de selectie van het
+ * wedstrijdblad — of, zonder selectie, de eerste 4 spelers van de ploeg op rugnummer
+ * (lib/wedstrijd-selectie.ts).
+ */
 async function resolveLineup(
   payload: Payload,
   stored: unknown,
   teamId: number,
+  matchId: number,
+  side: TeamSide,
 ): Promise<number[]> {
   const ids = Array.isArray(stored)
     ? stored.map((s) => (typeof s === 'object' && s ? (s as { id: number }).id : (s as number))).filter(Boolean)
@@ -54,14 +61,7 @@ async function resolveLineup(
   // Maximaal FIELD_PLAYERS staan op het veld; eventuele extra namen in een (oudere)
   // opstelling zijn wissels en worden niet als veldspeler getoond.
   if (ids.length > 0) return ids.slice(0, FIELD_PLAYERS)
-  const res = await payload.find({
-    collection: 'players',
-    where: { team: { equals: teamId } },
-    sort: 'shirtNumber',
-    depth: 0,
-    limit: FIELD_PLAYERS,
-  })
-  return res.docs.map((p) => p.id)
+  return (await toegelatenSpelers(payload, matchId, side, teamId)).slice(0, FIELD_PLAYERS)
 }
 
 /** Minimaal 3 veldspelers (§4) en unieke rugnummers binnen de ploeg, anders een duidelijke fout. */
@@ -203,8 +203,8 @@ export async function startMatch(payload: Payload, matchId: number, startingTeam
   const dir = attackDirForSide(side, 1)
 
   // Leg de start-opstelling vast (eerste 4 op rugnummer) als ze nog niet gezet is.
-  const homeLineup = await resolveLineup(payload, match.homeLineup, homeId)
-  const awayLineup = await resolveLineup(payload, match.awayLineup, awayId)
+  const homeLineup = await resolveLineup(payload, match.homeLineup, homeId, matchId, 'home')
+  const awayLineup = await resolveLineup(payload, match.awayLineup, awayId, matchId, 'away')
 
   // Reglement §4: minstens 3 veldspelers om te spelen, en rugnummers uniek binnen een ploeg.
   // Een demo/oefenwedstrijd mag met minder (de uitleg-flow), dus daar slaan we de controle over.
@@ -312,8 +312,8 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
     .findByID({ collection: 'players', id: input.playerId, depth: 0 })
     .catch(() => null)
   if (!thrower) throw new Error('Onbekende speler.')
-  const throwerTeamId = typeof thrower.team === 'object' && thrower.team ? (thrower.team as { id: number }).id : thrower.team
-  if (Number(throwerTeamId) !== Number(teamId)) {
+  // Een speler uit een lagere ploeg die de coach voor deze wedstrijd selecteerde, hoort er ook bij.
+  if (!(await hoortBijKant(payload, input.matchId, sideOfTeam(Number(teamId), homeId), Number(teamId), thrower))) {
     throw new Error('Die speler hoort niet bij de ploeg die aan bal is.')
   }
 
@@ -500,8 +500,7 @@ export async function recordPass(payload: Payload, input: RecordPassInput) {
 
   const catcher = await payload.findByID({ collection: 'players', id: input.playerId, depth: 0 }).catch(() => null)
   if (!catcher) throw new Error('Onbekende speler.')
-  const catcherTeamId = typeof catcher.team === 'object' && catcher.team ? (catcher.team as { id: number }).id : catcher.team
-  if (Number(catcherTeamId) !== Number(teamId)) {
+  if (!(await hoortBijKant(payload, input.matchId, side, Number(teamId), catcher))) {
     throw new Error('Die speler hoort niet bij de ploeg die aan bal is.')
   }
 
@@ -824,6 +823,8 @@ export async function endHalf(payload: Payload, matchId: number) {
 export async function startNextHalf(payload: Payload, matchId: number) {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
   assertNietAfgelopen(match, 'een volgende helft te starten')
+  // Krachtbal kent twee helften: een dubbele tik mag geen 3e helft aanmaken.
+  if ((match.currentHalf ?? 1) >= 2) throw new Error('De 2e helft loopt al — beëindig de wedstrijd met "Einde".')
   const nextHalf = (match.currentHalf ?? 1) + 1
 
   // Bleef er nog een vrije worp openstaan uit de vorige helft (zie endHalf, §8)? Dan is ze niet
@@ -885,6 +886,10 @@ export async function startNextHalf(payload: Payload, matchId: number) {
 
 /** Beëindig de huidige helft én start meteen de volgende (combinatie). */
 export async function advanceHalf(payload: Payload, matchId: number) {
+  // Eerst controleren, anders sloot een dubbele tik de 2e helft al af vóór de weigering.
+  const { match } = await loadMatch(payload, matchId)
+  assertNietAfgelopen(match, 'een volgende helft te starten')
+  if ((match.currentHalf ?? 1) >= 2) throw new Error('De 2e helft loopt al — beëindig de wedstrijd met "Einde".')
   await endHalf(payload, matchId)
   return startNextHalf(payload, matchId)
 }
@@ -1093,7 +1098,7 @@ export async function substitute(
   assertNietAfgelopen(match, 'nog te wisselen')
   const teamId = side === 'home' ? homeId : awayId
   const stored = side === 'home' ? match.homeLineup : match.awayLineup
-  const current = await resolveLineup(payload, stored, teamId)
+  const current = await resolveLineup(payload, stored, teamId, matchId, side)
 
   if (!current.includes(outPlayerId) || current.includes(inPlayerId)) {
     return buildMatchState(payload, matchId)
@@ -1124,23 +1129,24 @@ export async function setLineup(
   assertNietAfgelopen(match, 'de opstelling nog te wijzigen')
   const teamId = side === 'home' ? homeId : awayId
 
-  const res = await payload.find({
-    collection: 'players',
-    where: { team: { equals: teamId } },
-    depth: 0,
-    limit: 200,
-  })
+  // Toegelaten: de selectie op het wedstrijdblad (ook spelers uit een lagere ploeg), of zonder
+  // selectie de spelers van de ploeg.
+  const toegelaten = await toegelatenSpelers(payload, matchId, side, teamId)
+  const res = await payload.find({ collection: 'players', where: { id: { in: toegelaten } }, depth: 0, limit: 200 })
   const teamPlayerIds = new Set(res.docs.map((p) => p.id))
-  // Ontdubbel en behoud enkel spelers van deze ploeg.
+  // Ontdubbel en behoud enkel toegelaten spelers.
   const chosen = Array.from(new Set(playerIds)).filter((id) => teamPlayerIds.has(id))
-  if (chosen.length !== FIELD_PLAYERS) {
-    throw new Error(`Kies precies ${FIELD_PLAYERS} veldspelers.`)
+  // 4 veldspelers; zijn er maar 3 aanwezig, dan speelt de ploeg met 3 (reglement §4).
+  const nodig = Math.min(FIELD_PLAYERS, teamPlayerIds.size)
+  if (nodig < 3 || chosen.length !== nodig) {
+    throw new Error(nodig < 3 ? 'Minstens 3 spelers nodig om te spelen (§4).' : `Kies precies ${nodig} veldspelers.`)
   }
 
-  // Als de huidige kapitein niet meer in de opstelling staat, de aanduiding wissen.
+  // De kapitein (door de coach aangeduid in de selectie) mag ook op de bank zitten; enkel als hij
+  // niet meer bij de toegelaten spelers hoort, vervalt de aanduiding.
   const curCaptain = captainIdOf((match as { homeCaptain?: unknown; awayCaptain?: unknown })[side === 'home' ? 'homeCaptain' : 'awayCaptain'])
   const captainPatch =
-    curCaptain != null && !chosen.includes(curCaptain)
+    curCaptain != null && !teamPlayerIds.has(curCaptain)
       ? side === 'home'
         ? { homeCaptain: null }
         : { awayCaptain: null }
@@ -1195,9 +1201,9 @@ export async function setCaptain(payload: Payload, matchId: number, side: TeamSi
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
   assertNietAfgelopen(match, 'de kapitein nog te wijzigen')
   const teamId = side === 'home' ? homeId : awayId
-  const player = await payload.findByID({ collection: 'players', id: playerId, depth: 0 }).catch(() => null)
-  const pTeam = player ? (typeof player.team === 'object' && player.team ? player.team.id : player.team) : null
-  if (pTeam !== teamId) throw new Error('De kapitein moet een speler van deze ploeg zijn.')
+  if (!(await toegelatenSpelers(payload, matchId, side, teamId)).includes(playerId)) {
+    throw new Error('De kapitein moet een speler van deze ploeg (of de selectie) zijn.')
+  }
   await payload.update({
     collection: 'matches',
     id: matchId,
@@ -1370,17 +1376,30 @@ export async function buildMatchSheet(payload: Payload, matchId: number): Promis
     payload.findByID({ collection: 'teams', id: awayId, depth: 0 }),
   ])
 
+  // De selectie op het wedstrijdblad bepaalt wie op het blad staat (met het rugnummer van het blad);
+  // zonder selectie zijn het de spelers van de ploegen (lib/wedstrijd-selectie.ts).
+  const selectie = await wedstrijdSelectie(payload, matchId)
+  const selectieIds = [...selectie.home, ...selectie.away].map((r) => r.id)
   const playersRes = await payload.find({
     collection: 'players',
-    where: { team: { in: [homeId, awayId] } },
+    where: { or: [{ team: { in: [homeId, awayId] } }, ...(selectieIds.length ? [{ id: { in: selectieIds } }] : [])] },
     sort: 'shirtNumber',
     depth: 0,
-    limit: 200,
+    limit: 300,
   })
   const rosters = { home: [] as { shirtNumber: number; name: string }[], away: [] as { shirtNumber: number; name: string }[] }
-  for (const p of playersRes.docs) {
-    const tId = typeof p.team === 'object' ? p.team.id : p.team
-    ;(tId === homeId ? rosters.home : rosters.away).push({ shirtNumber: p.shirtNumber, name: p.name })
+  for (const side of ['home', 'away'] as const) {
+    const teamId = side === 'home' ? homeId : awayId
+    if (selectie[side].length) {
+      for (const r of selectie[side]) {
+        const p = playersRes.docs.find((d) => d.id === r.id)
+        if (p) rosters[side].push({ shirtNumber: r.rugnummer ?? p.shirtNumber, name: p.name })
+      }
+    } else {
+      for (const p of playersRes.docs) {
+        if ((typeof p.team === 'object' ? p.team.id : p.team) === teamId) rosters[side].push({ shirtNumber: p.shirtNumber, name: p.name })
+      }
+    }
   }
 
   // Kapiteins: een eigen doelpunt komt op hun naam te staan (§6.6).
@@ -2062,8 +2081,8 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
       away: { id: away.id, name: away.name, logoUrl: clubLogoUrl(away), logoFit: clubLogoFit(away), colors: distinguishAway(clubColors(home), clubColors(away)) },
     },
     lineup: {
-      home: await resolveLineup(payload, match.homeLineup, homeId),
-      away: await resolveLineup(payload, match.awayLineup, awayId),
+      home: await resolveLineup(payload, match.homeLineup, homeId, matchId, 'home'),
+      away: await resolveLineup(payload, match.awayLineup, awayId, matchId, 'away'),
     },
     captain: {
       home: captainIdOf((match as { homeCaptain?: unknown }).homeCaptain),

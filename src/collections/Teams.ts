@@ -87,6 +87,26 @@ export const Teams: CollectionConfig = {
       },
     },
     {
+      // Kalender (lib/kalender-planner.ts): op welke weekenddag deze ploeg thuis speelt.
+      name: 'thuisdag',
+      label: 'Thuisdag',
+      type: 'select',
+      options: [
+        { label: 'Zaterdag', value: 'za' },
+        { label: 'Zondag', value: 'zo' },
+      ],
+    },
+    {
+      // Kalender: een ploeg van dezelfde club in een andere reeks (bv. de dames bij de heren) die
+      // hetzelfde weekend tegen dezelfde club op hetzelfde terrein wil spelen. Gezet bij het
+      // verwerken van de inschrijving (lib/inschrijving.ts).
+      name: 'koppelMet',
+      label: 'Gekoppeld aan',
+      type: 'relationship',
+      relationTo: 'teams',
+      admin: { description: 'Zelfde club, andere reeks: speelt zo veel mogelijk hetzelfde weekend tegen dezelfde club, op hetzelfde terrein.' },
+    },
+    {
       name: 'name',
       label: 'Ploegnaam',
       type: 'text',

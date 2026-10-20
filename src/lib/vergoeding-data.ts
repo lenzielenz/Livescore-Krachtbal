@@ -28,7 +28,7 @@ function hm(date: string | null | undefined): string {
 const teamName = (t: unknown): string =>
   typeof t === 'object' && t ? ((t as { name?: string }).name ?? '—') : '—'
 
-/** Kwitantie-gegevens voor één scheidsrechter over een periode (op basis van toegewezen bladen). */
+/** Kwitantie-gegevens voor één scheidsrechter over een periode (toegewezen en effectief gespeelde wedstrijden). */
 export async function buildKwitantieData(
   payload: Payload,
   officialId: number | string,
@@ -38,7 +38,14 @@ export async function buildKwitantieData(
   const official = await payload.findByID({ collection: 'officials', id: officialId, depth: 0 }).catch(() => null)
   const sheets = await payload.find({
     collection: 'matchsheets',
-    where: { assignedReferee: { equals: Number(officialId) } },
+    // De wedstrijden die hij effectief floot: als backup (geflotenDoor), of als toegewezen
+    // scheidsrechter zolang er geen ander als "gefloten door" staat.
+    where: {
+      or: [
+        { geflotenDoor: { equals: Number(officialId) } },
+        { and: [{ assignedReferee: { equals: Number(officialId) } }, { geflotenDoor: { exists: false } }] },
+      ],
+    },
     depth: 2,
     limit: 500,
   })
@@ -50,10 +57,14 @@ export async function buildKwitantieData(
   let totaalKm = 0
   for (const sheet of sheets.docs) {
     const match = sheet.match as
-      | { id?: number; date?: string; reeks?: string; homeTeam?: unknown; awayTeam?: unknown }
+      | { id?: number; date?: string; reeks?: string; homeTeam?: unknown; awayTeam?: unknown; status?: string; afgelast?: boolean }
       | number
       | null
     if (!match || typeof match === 'number') continue
+    // Enkel wedstrijden die gefloten werden: niet een afgelaste of (nog) niet gespeelde wedstrijd, en
+    // geen forfait — die staat op het forfait-onkostenblad (formulier_3), niet op de kwitantie.
+    const ff = (sheet.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen'
+    if (match.status !== 'finished' || match.afgelast || ff !== 'geen') continue
     const t = match.date ? new Date(match.date).getTime() : NaN
     if (!Number.isNaN(t) && (t < fromTime || t > toTime)) continue
     const km = (sheet.refereeKm as number) ?? 0

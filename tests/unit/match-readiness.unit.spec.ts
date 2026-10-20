@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { computeReadiness, countLineup, LINEUP_MIN, missingSteps } from '@/lib/match-readiness'
+import { computeReadiness, countLineup, LINEUP_MIN, missingSteps, SELECTIE_MIN } from '@/lib/match-readiness'
 
 const lineup = (n: number) => Array.from({ length: n }, (_, i) => ({ player: i + 1 }))
 
@@ -30,7 +30,7 @@ describe('computeReadiness', () => {
 
   it('niet klaar bij onvolledige opstelling', () => {
     const r = computeReadiness({
-      homeLineup: lineup(LINEUP_MIN - 1),
+      homeLineup: lineup(SELECTIE_MIN - 1),
       awayLineup: lineup(0),
       refereeAkkoord: true,
       isDemo: false,
@@ -38,6 +38,11 @@ describe('computeReadiness', () => {
     expect(r.ready).toBe(false)
     expect(r.homeOk).toBe(false)
     expect(missingSteps(r)).toEqual(['opstelling thuis', 'opstelling uit'])
+  })
+
+  it('reglement §4: met 3 spelers wordt er gespeeld', () => {
+    const r = computeReadiness({ homeLineup: lineup(3), awayLineup: lineup(LINEUP_MIN), refereeAkkoord: true, isDemo: false })
+    expect(r.ready).toBe(true)
   })
 
   it('demo is altijd klaar, ook zonder opstelling of akkoord', () => {

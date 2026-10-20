@@ -1,6 +1,10 @@
 import type { CollectionConfig, FieldHook } from 'payload'
 
-import { ROLE_OPTIONS, hasRole, isAdmin, isFederationLevel } from '../lib/access'
+import { CLUB_FUNCTIE_OPTIONS } from '../lib/club-functies'
+import { fieldIsFederation, ROLE_OPTIONS, hasRole, isAdmin, isFederationLevel } from '../lib/access'
+
+/** Rollen die rechten binnen één club geven — wie ze draagt, wisselt niet zelf van club. */
+const CLUBROLLEN = new Set(['club-beheerder', 'club-medewerker'])
 import { POSITION_OPTIONS } from '../lib/positions'
 
 // Eerste gebruiker (bij lege database) wordt automatisch admin; daarna erft de waarde
@@ -153,6 +157,16 @@ export const Users: CollectionConfig = {
       admin: {
         description: 'De eigen club (supporter volgt ze; club-beheerder beheert ze).',
       },
+      // Een supporter kiest zelf zijn club. Wie een clubrol draagt (beheerder/medewerker), mag
+      // niet zelf van club wisselen: anders "verhuist" hij zich naar een andere club en krijgt
+      // hij daar de rechten (leden, opstellingen, herstellinks). Enkel admin/federatie zet dat.
+      access: {
+        update: ({ req, doc }) => {
+          if (isFederationLevel(req.user)) return true
+          const rollen = (doc as { roles?: string[] } | undefined)?.roles ?? []
+          return !rollen.some((r) => CLUBROLLEN.has(r))
+        },
+      },
     },
     {
       // Eigen rol binnen de club: puur informatief voor speler/supporter/bestuur, maar bepalend
@@ -184,6 +198,28 @@ export const Users: CollectionConfig = {
       admin: {
         description: 'Eigen ploeg binnen de gekozen club — highlight haar wedstrijden op het live-bord. De gebruiker stelt dit zelf in via "Mijn profiel".',
       },
+    },
+    {
+      // Functies die de CLUB toekent (lib/club-functies.ts) — anders dan `functie` hierboven, die de
+      // gebruiker zelf invult en nergens rechten geeft. Meerdere tegelijk (een speler kan ook coach
+      // zijn). Coach/trainer krijgen rechten op de ploegen in `functieTeams`; de
+      // jeugdverantwoordelijke op alle jeugdploegen van de club. Enkel via /api/club/team (de
+      // club-beheerder van de eigen club) of door de federatie.
+      name: 'clubFuncties',
+      label: 'Functies in de club (toegekend)',
+      type: 'select',
+      hasMany: true,
+      options: [...CLUB_FUNCTIE_OPTIONS],
+      access: { update: fieldIsFederation, create: fieldIsFederation },
+      admin: { description: 'Toegekend door de club-beheerder (Clubteam) of de federatie.' },
+    },
+    {
+      name: 'functieTeams',
+      label: 'Ploegen van deze coach/trainer',
+      type: 'relationship',
+      relationTo: 'teams',
+      hasMany: true,
+      access: { update: fieldIsFederation, create: fieldIsFederation },
     },
     {
       // Voor een supporter zonder eigen club (bv. "gewoon fan" of nog geen lid ergens): welke
@@ -235,7 +271,22 @@ export const Users: CollectionConfig = {
       label: 'Mijn speler (voor matchstatistiek)',
       type: 'relationship',
       relationTo: 'players',
+      // De koppeling legt de club-beheerder (api/club/team) of de federatie: anders kon iedereen
+      // zich aan eender welke speler hangen en diens dossier bekijken.
+      access: { update: fieldIsFederation, create: fieldIsFederation },
       admin: { description: 'Koppel je account aan je spelersdossier zodat je scorecard je echte cijfers toont.' },
+    },
+    {
+      // Ouder → dossiers van de kinderen (jeugdspelers). Gelegd vanuit het e-mailadres van de ouder
+      // dat de club bij de speler invult (lib/ouders.ts), of door de federatie. Niet zelf te zetten:
+      // anders hangt iemand zich aan het medisch dossier van eender welk kind.
+      name: 'kinderen',
+      label: 'Kinderen (ouder van)',
+      type: 'relationship',
+      relationTo: 'players',
+      hasMany: true,
+      access: { update: fieldIsFederation, create: fieldIsFederation },
+      admin: { description: 'De jeugdspelers waarvan dit account de ouder is. Ze staan op "Mijn profiel".' },
     },
     {
       // Zelf-/coachbeoordeling per radar-as (0..100). Vult de scorecard wanneer er (nog) geen
@@ -382,6 +433,9 @@ export const Users: CollectionConfig = {
       label: 'Officialdossier (voor scheidsrechter/grensrechter)',
       type: 'relationship',
       relationTo: 'officials',
+      // Enkel de federatie koppelt een dossier: anders kon iemand zich als een andere
+      // scheidsrechter voordoen (kwitantie, aftekenen, forfait).
+      access: { update: fieldIsFederation, create: fieldIsFederation },
       admin: {
         description: 'Enkel relevant voor de rol "Scheidsrechter". Beperkt de toegang tot de eigen kwitantie.',
         condition: (data) => Array.isArray(data?.roles) && data.roles.includes('scheidsrechter'),
@@ -420,6 +474,9 @@ export const Users: CollectionConfig = {
       relationTo: 'users',
       hasMany: true,
       admin: { hidden: true, readOnly: true },
+      // Afgeleid door de afterChange-hook (overrideAccess); nooit rechtstreeks te zetten, anders
+      // gaf iemand zichzelf toegang tot andermans analyses.
+      access: { update: () => false, create: () => false },
     },
     {
       name: 'analyseBewerkTot',
@@ -428,6 +485,9 @@ export const Users: CollectionConfig = {
       relationTo: 'users',
       hasMany: true,
       admin: { hidden: true, readOnly: true },
+      // Afgeleid door de afterChange-hook (overrideAccess); nooit rechtstreeks te zetten, anders
+      // gaf iemand zichzelf toegang tot andermans analyses.
+      access: { update: () => false, create: () => false },
     },
   ],
 }

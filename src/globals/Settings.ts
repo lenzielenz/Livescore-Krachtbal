@@ -28,7 +28,7 @@ export const Settings: GlobalConfig = {
       required: true,
       admin: {
         description:
-          'Geldt voor álle wedstrijden. Federatie = volledige flow (opstelling, scheidsrechtersakkoord, aftekenen). Supporters = vrije livescore: de scheidsrechterflow valt weg en iedereen kan elke wedstrijd openen en de score doorgeven.',
+          'Geldt voor álle wedstrijden. Federatie = volledige flow (opstelling, scheidsrechtersakkoord, aftekenen). Supporters = vrije livescore: de scheidsrechterflow valt weg en iedereen kan elke wedstrijd openen en de score doorgeven. In de federatie-testomgeving staat dit altijd op Federatie, wat je hier ook kiest.',
       },
     },
     {
@@ -61,6 +61,18 @@ export const Settings: GlobalConfig = {
       admin: { hidden: true, description: 'Beheerd via de cast-pagina (/cast).' },
     },
     {
+      // Spelersregistratie (lib/registratie.ts): vanaf deze leeftijd is een e-mailadres verplicht —
+      // daarmee krijgt het lid een eigen login. Jonger mag (het adres van een ouder), hoeft niet:
+      // in België geeft een kind pas vanaf 13 zelf toestemming voor online diensten (GDPR).
+      name: 'emailVerplichtVanaf',
+      label: 'E-mailadres verplicht vanaf (leeftijd)',
+      type: 'number',
+      defaultValue: 13,
+      min: 0,
+      max: 99,
+      admin: { description: 'Jonger dan deze leeftijd mag een lid zonder e-mailadres geregistreerd worden.' },
+    },
+    {
       // Drempel waarboven een speler door administratieve knipjes geblokkeerd wordt (fase 8).
       // Defaults; echte waarde komt van de federatie-boetelijst.
       name: 'knipjesDrempel',
@@ -73,6 +85,30 @@ export const Settings: GlobalConfig = {
       admin: {
         description: 'Bij dit aantal of meer openstaande knipjes kan een speler niet geselecteerd worden.',
       },
+    },
+    {
+      // Wie draagt de scheidsrechterskosten (kwitantie: €13 + km-vergoeding, lib/vergoeding.ts)? Dat
+      // staat niet in het reglement van dit project; de federatie kiest. Leeg = nog niet ingesteld,
+      // dan tonen de clubs hun kosten niet als "te betalen".
+      name: 'scheidsrechterKostenBetaler',
+      label: 'Scheidsrechterskosten betaald door',
+      type: 'select',
+      options: [
+        { label: 'De federatie', value: 'federatie' },
+        { label: 'De thuisclub', value: 'thuisclub' },
+        { label: 'Beide clubs, elk de helft', value: 'gedeeld' },
+      ],
+      admin: { description: 'Bepaalt wat elke club ziet onder "Scheidsrechterskosten" op haar boete-overzicht.' },
+    },
+    {
+      name: 'forfaitKostenBetaler',
+      label: 'Kosten bij forfait betaald door',
+      type: 'select',
+      options: [
+        { label: 'De federatie', value: 'federatie' },
+        { label: 'De ploeg die forfait gaf', value: 'forfaitploeg' },
+      ],
+      admin: { description: 'Het forfait-onkostenblad van de scheidsrechter (€13 + km).' },
     },
   ],
 }

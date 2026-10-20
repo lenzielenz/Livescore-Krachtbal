@@ -147,6 +147,9 @@ Daaromheen, per feature-cluster:
 | **Training & voeding** | `/training`, `/opstelling` | `training-plan`, `training-metrics`, `nutrition-plan`, `calorie-tracker`, `food-database`, `gameplan` |
 | **Engagement** | `/hub`, `/pronostiek`, `/fans`, `/profiel`, `/wrapped`, `/superster`, `/recap` | `badges`, `fan-score`, `pronostiek-*`, `prediction-score`, `scorecard`, `mvp-vote`, `tribune`, `checkins`, `weekly-recap`, `team-of-the-week`, `match-report` |
 | **Clubs & federatie** | `/clubs`, `/club`, `/federatie`, `/scheidsrechter`, `/vergoedingen`, `/bekerfinale` | `club-colors`, `reeksen`, `reeks-standings`, `referee-credentials`, `vergoeding`, `sanctions` |
+| **Wedstrijddag** | `/scheidsrechter/[id]`, `/match/[id]`, `/scorekeeper/[id]` | `aftrap` (aftrap verschuiven + meeschuiven), `afgelasting`, `blessure`, `use-action-queue` (wachtrij, hartslag), `score-trust` (overnemen), `submit/pdf-noodblad` |
+| **Planning** | `/beheer/inschrijvingen`, `/club/inschrijving`, `/beheer/planner`, `/beheer/kalender` | `inschrijving`, `kalender-planner` (Berger + koppels + lokale zoektocht, puur), `kalender-plan-server`, `kalender-generator`, `verplaatsing` |
+| **Boetes & kosten** | `/beheer/boetes`, `/club/boetes` | `boetes` (voorstellen, opleggen, betwisten, scheidsrechterskosten) |
 | **Nieuws & info** | `/nieuws`, `/reglement`, `/uitleg`, `/demo`, `/prijzen` | `reglement`, `demo`, `krachtbal-quotes` |
 
 ## Live-laag (waarom de SSE-hub bestaat)
@@ -164,8 +167,13 @@ doorgeven. Om dat betrouwbaar te houden zonder de drempel te verhogen:
 
 - **Eén official scorer per wedstrijd.** Wie als eerste aantekent, claimt de match
   automatisch; anderen worden geweigerd door `mayScoreMatch` (`api-auth.ts`) en
-  kunnen enkel nog bevestigen of betwisten. De claim vervalt na 45 min stilte, zodat
-  een lege batterij een wedstrijd nooit blokkeert.
+  kunnen enkel nog bevestigen of betwisten. Vóór de aftrap vervalt de claim na 45 min
+  stilte; op een lopende wedstrijd vervalt ze niet vanzelf. Valt het toestel uit (lege
+  batterij), dan kan iemand anders **overnemen** (actie `overnemen`): de scheidsrechter of
+  de federatie meteen, een andere aantekenaar na 3 min zonder teken van leven (het
+  aantekenscherm stuurt elke minuut een hartslag `aanwezig`). Zie `overneemWeigering` in
+  `score-trust.ts`. Lukt ook dat niet: het noodblad (`/api/matchsheet/[id]/pdf?nood=1`)
+  en achteraf de eindstand van papier door de federatie (`papierenuitslag`).
 - **Gewogen consensus.** Andere kijkers stemmen via `/api/match/[id]/trust`; het
   gewicht van een stem hangt af van de (onzichtbare) trust-score van de stemmer.
 - **Label op de stand.** `buildMatchState` en `buildScoreboards` geven een

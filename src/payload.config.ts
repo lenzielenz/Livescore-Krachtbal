@@ -12,6 +12,15 @@ import { TornooiFotos } from './collections/TornooiFotos'
 import { Clubs } from './collections/Clubs'
 import { Teams } from './collections/Teams'
 import { Players } from './collections/Players'
+import { MedischeAttesten } from './collections/MedischeAttesten'
+import { OngevalDocumenten } from './collections/OngevalDocumenten'
+import { AfgelastingFotos, Afgelastingen } from './collections/Afgelastingen'
+import { AftrapWijzigingen } from './collections/AftrapWijzigingen'
+import { BoeteSoorten, Boetes } from './collections/Boetes'
+import { InschrijvingsRondes, Inschrijvingen } from './collections/Inschrijvingen'
+import { Verplaatsingsaanvragen } from './collections/Verplaatsingsaanvragen'
+import { MedischeKaartAanvragen } from './collections/MedischeKaartAanvragen'
+import { Meldingen } from './collections/Meldingen'
 import { Matches } from './collections/Matches'
 import { FieldScreens } from './collections/FieldScreens'
 import { Possessions } from './collections/Possessions'
@@ -25,6 +34,8 @@ import { CupFinals } from './collections/CupFinals'
 import { Kampioenen } from './collections/Kampioenen'
 import { Bekerwinnaars } from './collections/Bekerwinnaars'
 import { ReferendumAwards } from './collections/ReferendumAwards'
+import { ReferendumRondes, ReferendumStemmen } from './collections/Referendum'
+import { Competitieregels, Eindrondes, Reglementen, ReglementVerslagen } from './collections/Reglement'
 import { Sanctions } from './collections/Sanctions'
 import { Tournaments } from './collections/Tournaments'
 import { TournamentMatches } from './collections/TournamentMatches'
@@ -113,6 +124,18 @@ export default buildConfig({
     Clubs,
     Teams,
     Players,
+    MedischeAttesten,
+    OngevalDocumenten,
+    Afgelastingen,
+    AfgelastingFotos,
+    AftrapWijzigingen,
+    BoeteSoorten,
+    Boetes,
+    InschrijvingsRondes,
+    Inschrijvingen,
+    Verplaatsingsaanvragen,
+    MedischeKaartAanvragen,
+    Meldingen,
     Matches,
     FieldScreens,
     MatchSheets,
@@ -122,6 +145,12 @@ export default buildConfig({
     Kampioenen,
     Bekerwinnaars,
     ReferendumAwards,
+    ReferendumRondes,
+    ReferendumStemmen,
+    Reglementen,
+    ReglementVerslagen,
+    Competitieregels,
+    Eindrondes,
     Sanctions,
     Tournaments,
     TournamentMatches,

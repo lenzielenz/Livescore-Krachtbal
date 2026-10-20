@@ -3,6 +3,10 @@ import Link from 'next/link'
 import { FlowNietNodig } from '@/components/FlowNietNodig'
 import { MatchDayNav } from '@/components/MatchDayNav'
 import { SiteHeader } from '@/components/SiteHeader'
+import { BlessureMelden } from '@/components/BlessureMelden'
+import type { AuthedUser } from '@/lib/api-auth'
+import { getAuthUser } from '@/lib/auth-user'
+import { blessureKanten } from '@/lib/blessure'
 import { buildMatchSheet } from '@/lib/match-engine'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -44,6 +48,10 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
   }
 
   const sheet = await getOrCreateMatchSheet(payload, matchId)
+  const user = await getAuthUser()
+  const blessureKantenLijst = await blessureKanten(payload, user as unknown as AuthedUser | null, Number(matchId))
+  const forfait = ((sheet.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen') !== 'geen'
+  const afgelopen = match.status === 'finished' || forfait
   const built = await buildMatchSheet(payload, Number(matchId)).catch(() => null)
 
   // Vooraf gekende namen zodat niemand z'n naam hoeft te typen: kapiteins uit de wedstrijd, de
@@ -75,18 +83,19 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
         </p>
       )}
 
-      {/* Kwetsuren horen bij het einde van de wedstrijd: registreer ze vóór het aftekenen. */}
-      <section className="wb-card" style={{ marginBottom: 16 }}>
-        <h2>Kwetsuur / ongeval</h2>
-        <p className="wb-sub">Was er een kwetsuur? Registreer ze vóór het aftekenen — ze hoort bij het blad.</p>
-        <a className="wb-btn" href="/admin/collections/accidents/create" target="_blank" rel="noreferrer">
-          🚑 Kwetsuur / ongeval registreren
-        </a>
-      </section>
+      {/* Kwetsuren horen op het blad: geef ze door vóór het aftekenen. */}
+      {blessureKantenLijst.length > 0 && <BlessureMelden matchId={matchId} kanten={blessureKantenLijst} />}
+
+      {!afgelopen && (
+        <p className="wb-intro" style={{ color: '#e0a23d' }}>
+          De wedstrijd is nog niet afgelopen. Aftekenen kan na het eindsignaal.
+        </p>
+      )}
 
       <AftekenenPanel
         matchId={matchId}
         initialStatus={(sheet.status as string) ?? 'concept'}
+        afgelopen={afgelopen}
         homeTeam={built?.teams.home.name}
         awayTeam={built?.teams.away.name}
         defaultNames={defaultNames}

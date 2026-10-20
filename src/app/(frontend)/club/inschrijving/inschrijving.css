@@ -1,0 +1,26 @@
+/* Inschrijving ploegen (InschrijvingFormulier.tsx): kaarten per ploeg, grote knoppen. */
+.ins { display: grid; gap: 16px; max-width: 900px; }
+.ins-toelichting { padding: 10px 14px; border-radius: 10px; background: var(--panel, rgba(255, 255, 255, 0.04)); border: 1px solid var(--line); }
+.ins-status { margin: 0; font-weight: 800; }
+.ins-ingediend, .ins-verwerkt { color: var(--accent, #0b7a55); }
+.ins-blok { display: grid; gap: 10px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel, rgba(255, 255, 255, 0.03)); }
+.ins-blok h2 { margin: 0; font-size: 1.02rem; }
+.ins-uitleg { margin: 0; font-size: 0.88rem; color: var(--dim); }
+.ins-ploegen { display: grid; gap: 10px; }
+.ins-ploeg { display: grid; gap: 8px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); }
+.ins-rij { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.ins-veld { display: grid; gap: 4px; font-size: 0.78rem; color: var(--dim); min-width: 120px; }
+.ins-breed { flex: 1 1 220px; }
+.ins input, .ins select, .ins textarea { min-height: 44px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--txt); font-size: 0.95rem; }
+.ins textarea { padding: 10px; width: 100%; box-sizing: border-box; }
+.ins-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.ins-toggle button { min-height: 44px; padding: 0 14px; border: 0; background: transparent; color: var(--txt); font-weight: 700; cursor: pointer; }
+.ins-toggle button.aan { background: var(--accent, #0b7a55); color: #fff; }
+.ins-onb { align-items: center; }
+.ins-onb input { flex: 1 1 160px; }
+.ins-datum { font-weight: 800; min-width: 96px; }
+.ins-weg { justify-self: start; min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--dim); cursor: pointer; }
+.ins-acties { display: flex; flex-wrap: wrap; gap: 10px; }
+.ins-knop { min-height: 50px; padding: 0 20px; border-radius: 12px; border: 0; background: var(--accent, #0b7a55); color: #fff; font-weight: 800; font-size: 1rem; cursor: pointer; }
+.ins-knop:disabled { opacity: 0.55; cursor: default; }
+.ins-zacht { background: transparent; color: var(--txt); border: 1px solid var(--line); }

@@ -30,7 +30,7 @@ export default async function RechtenPage() {
     return (
       <>
         <SiteHeader active="federatie" />
-        <div className="site">
+        <div className="site site-breed">
           <h1 className="page-title"><span className="brand">Rechten</span></h1>
           <p className="empty">
             Enkel de federatie/admin kan functies toekennen.{' '}
@@ -60,7 +60,7 @@ export default async function RechtenPage() {
   return (
     <>
       <SiteHeader active="federatie" />
-      <div className="site">
+      <div className="site site-breed">
         <h1 className="page-title"><span className="brand">Rechten</span></h1>
         <p className="acc-page-intro">
           Ken één functie toe aan één gebruiker, zonder hem de volledige rol te geven — bv. iemand die

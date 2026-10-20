@@ -1,6 +1,9 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
+import { isFederationLevel } from '@/lib/access'
+import { mayScoreMatch, type AuthedUser } from '@/lib/api-auth'
+import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchState } from '@/lib/match-engine'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -22,12 +25,17 @@ type Row = {
   refereeOk: boolean
   // Supporters-wedstrijd: vrije livescore, geen scheidsrechter-/aftekenflow.
   supportersMode: boolean
+  /** Wie deze lopende wedstrijd al aantekent (een ander), of null: dan geen aanteken-link. */
+  andereTafel: string | null
 }
 
 export default async function ScorekeeperHub() {
   const payload = await getPayloadClient()
   // Eén knop voor alle wedstrijden: staat het platform in supporters-modus (vrije livescore)?
   const supportersMode = await isSupportersMode(payload)
+  const user = (await getAuthUser()) as unknown as AuthedUser | null
+  const userId = user ? Number(user.id) : null
+  const federatie = isFederationLevel(user)
   const matches = await payload.find({
     collection: 'matches',
     where: { status: { in: ['scheduled', 'live'] } },
@@ -42,6 +50,9 @@ export default async function ScorekeeperHub() {
     // Analyse-only wedstrijden start je via de analysemodule.
     if ((m as { isDemo?: boolean }).isDemo || (m as { analyseOnly?: boolean }).analyseOnly) continue
     try {
+      // Federatieflow: enkel de wedstrijden die jij mag aantekenen (zie mayScoreMatch). Anders
+      // stond hier elke wedstrijd voor elke bezoeker, met een knop die toch op 403 uitkwam.
+      if (!supportersMode && !(await mayScoreMatch(payload, user, m.id))) continue
       const s = await buildMatchState(payload, m.id)
       const isLive = s.match.status === 'live'
       const r = isLive ? null : await getMatchReadiness(payload, m.id)
@@ -56,6 +67,10 @@ export default async function ScorekeeperHub() {
         opstellingOk: isLive ? true : Boolean(r?.homeOk && r?.awayOk),
         refereeOk: isLive ? true : Boolean(r?.refereeOk),
         supportersMode,
+        andereTafel:
+          s.trust.claimActive && s.trust.scorerId != null && Number(s.trust.scorerId) !== userId && !federatie
+            ? (s.trust.scorerName ?? 'Iemand anders')
+            : null,
       })
     } catch {
       // Wedstrijd met ontbrekende ploeg-referentie overslaan.
@@ -72,7 +87,11 @@ export default async function ScorekeeperHub() {
       <h1 className="page-title">
         Aantekenen <span className="brand">·</span> Scorekeeper
       </h1>
-      <p className="empty">Kies een wedstrijd om te starten of bij te werken. Open dit scherm op een tablet bij het veld.</p>
+      <p className="empty">
+        {!supportersMode && !user
+          ? 'Log in om de wedstrijden te zien die jij mag aantekenen.'
+          : 'Kies een wedstrijd om te starten of bij te werken. Open dit scherm op een tablet bij het veld.'}
+      </p>
 
       <Section title="Live — nu aan het aantekenen" rows={live} empty="Geen lopende wedstrijden." />
       {/* In supportersmodus valt er niets klaar te zetten: tik en begin. */}
@@ -96,13 +115,13 @@ function Section({ title, rows, empty }: { title: string; rows: Row[]; empty: st
         <div className="match-list">
           {rows.map((m) => (
             <div key={m.id} className="mh-item">
-              <Link href={`/scorekeeper/${m.id}`} className="match-card">
+              <Link href={m.andereTafel ? `/match/${m.id}` : `/scorekeeper/${m.id}`} className="match-card">
                 <span className="home">{m.home}</span>
                 <span className="mid">
                   {m.status === 'live' ? (
                     <>
                       <div className="mc-score">{m.score.home} – {m.score.away}</div>
-                      <span className="badge-live">LIVE · aantekenen</span>
+                      <span className="badge-live">{m.andereTafel ? `🔒 ${m.andereTafel} tekent aan` : 'LIVE · aantekenen'}</span>
                     </>
                   ) : (
                     <span className="mc-meta">

@@ -116,7 +116,8 @@ export const AANTEKEN_STAPPEN: UitlegStap[] = [
     tekst:
       'Onder de stand staan per ploeg twee tellers: Kruisjes en Minuten (de minuten die de '
       + 'scheidsrechter toekende). Zet ze bij met de min- en plusknoppen. Moet de klok even stil, '
-      + 'druk dan op Pauze; met Klok loopt hij weer verder.',
+      + 'druk dan op Pauze; met Klok loopt hij weer verder. Vergeten de klok te starten of te laat '
+      + 'getikt? Onder de klok tel je er per minuut bij of af met - 1 min en + 1 min.',
     knop: '⏸ Pauze · ▶ Klok',
     scherm: 'tellers',
     oefening: { soort: 'knop', doel: 'kruisje-thuis-plus' },
