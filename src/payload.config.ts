@@ -16,6 +16,7 @@ import { MedischeAttesten } from './collections/MedischeAttesten'
 import { OngevalDocumenten } from './collections/OngevalDocumenten'
 import { AfgelastingFotos, Afgelastingen } from './collections/Afgelastingen'
 import { AftrapWijzigingen } from './collections/AftrapWijzigingen'
+import { BoeteSoorten, Boetes } from './collections/Boetes'
 import { MedischeKaartAanvragen } from './collections/MedischeKaartAanvragen'
 import { Meldingen } from './collections/Meldingen'
 import { Matches } from './collections/Matches'
@@ -126,6 +127,8 @@ export default buildConfig({
     Afgelastingen,
     AfgelastingFotos,
     AftrapWijzigingen,
+    BoeteSoorten,
+    Boetes,
     MedischeKaartAanvragen,
     Meldingen,
     Matches,

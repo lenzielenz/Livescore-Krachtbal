@@ -287,6 +287,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
       {hasRole(user, 'club-beheerder', 'club-medewerker') && (
         <p className="myteams-focusbar">
           <Link href="/club/leden" className="myteams-link">🪪 Leden &amp; registratie — wie mag spelen →</Link>
+          <Link href="/club/boetes" className="myteams-link">💶 Boetes &amp; scheidsrechterskosten →</Link>
         </p>
       )}
       {isBeheerder && (

@@ -47,3 +47,9 @@ export async function accountsVanSpeler(payload: Payload, playerId: number): Pro
 }
 
 export { relId }
+
+/** De accounts van de federatie (voor "de federatie moet het weten"). */
+export async function federatieAccounts(payload: Payload): Promise<number[]> {
+  const res = await payload.find({ collection: 'users', where: { roles: { contains: 'federatie' } }, depth: 0, limit: 25, overrideAccess: true })
+  return res.docs.map((u) => Number(u.id))
+}

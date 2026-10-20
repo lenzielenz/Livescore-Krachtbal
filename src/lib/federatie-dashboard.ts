@@ -34,6 +34,9 @@ const COMPETITIE: Where[] = [{ analyseOnly: { not_equals: true } }, { isDemo: { 
 
 export async function federatieTaken(payload: Payload, nu: Date = new Date()): Promise<Taak[]> {
   const t = nu.getTime()
+  const boetesOpen = await payload
+    .count({ collection: 'boetes', where: { status: { in: ['voorstel', 'betwist', 'betaling_gemeld'] } }, overrideAccess: true })
+    .catch(() => ({ totalDocs: 0 }))
   const iso = (ms: number) => new Date(ms).toISOString()
 
   const [registraties, komend, live, recentAf, clubs, beheerders, kaarten, ongevallen, ongevallenOpen, afgelast] = await Promise.all([
@@ -130,6 +133,17 @@ export async function federatieTaken(payload: Payload, nu: Date = new Date()): P
       href: '/federatie/reglement',
       actie: 'Bekijken',
       items: eindItems.slice(0, 4),
+    },
+    {
+      sleutel: 'boetes',
+      icoon: '💶',
+      titel: 'Boetes te beoordelen',
+      uitleg: 'Voorstellen van het systeem (forfait, blad te laat, aftrap later), betwistingen en gemelde betalingen.',
+      aantal: boetesOpen.totalDocs,
+      dringend: kleur(boetesOpen.totalDocs, false),
+      href: '/beheer/boetes',
+      actie: 'Beoordelen',
+      items: [],
     },
     {
       sleutel: 'afgelastingen',

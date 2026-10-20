@@ -75,6 +75,8 @@ export interface Config {
     afgelastingen: Afgelastingen;
     'afgelasting-fotos': AfgelastingFoto;
     'aftrap-wijzigingen': AftrapWijzigingen;
+    'boete-soorten': BoeteSoorten;
+    boetes: Boete;
     'medische-kaart-aanvragen': MedischeKaartAanvragen;
     meldingen: Meldingen;
     matches: Match;
@@ -137,6 +139,8 @@ export interface Config {
     afgelastingen: AfgelastingenSelect<false> | AfgelastingenSelect<true>;
     'afgelasting-fotos': AfgelastingFotosSelect<false> | AfgelastingFotosSelect<true>;
     'aftrap-wijzigingen': AftrapWijzigingenSelect<false> | AftrapWijzigingenSelect<true>;
+    'boete-soorten': BoeteSoortenSelect<false> | BoeteSoortenSelect<true>;
+    boetes: BoetesSelect<false> | BoetesSelect<true>;
     'medische-kaart-aanvragen': MedischeKaartAanvragenSelect<false> | MedischeKaartAanvragenSelect<true>;
     meldingen: MeldingenSelect<false> | MeldingenSelect<true>;
     matches: MatchesSelect<false> | MatchesSelect<true>;
@@ -1237,6 +1241,58 @@ export interface AftrapWijzigingen {
    * Gezet als deze wedstrijd mee verschoof met een eerdere op hetzelfde terrein.
    */
   aanleiding?: (number | null) | AftrapWijzigingen;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "boete-soorten".
+ */
+export interface BoeteSoorten {
+  id: number;
+  naam: string;
+  /**
+   * Bv. "Huishoudelijk reglement art. 12" — staat bij de boete op het overzicht van de club.
+   */
+  artikel?: string | null;
+  bedrag: number;
+  /**
+   * Het systeem maakt een VOORSTEL; de federatie beslist altijd zelf of het opgelegd wordt.
+   */
+  trigger?: ('geen' | 'forfait' | 'blad_te_laat' | 'te_laat') | null;
+  /**
+   * Voor "blad niet tijdig ingediend": zoveel dagen na de wedstrijd. Voor "aftrap later": vanaf hoeveel minuten (leeg = elke vertraging).
+   */
+  termijnDagen?: number | null;
+  actief?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "boetes".
+ */
+export interface Boete {
+  id: number;
+  club: number | Club;
+  soort?: (number | null) | BoeteSoorten;
+  match?: (number | null) | Match;
+  omschrijving: string;
+  /**
+   * Vastgezet bij het voorstel: een latere wijziging van de boetelijst raakt deze boete niet.
+   */
+  bedrag: number;
+  status?: ('voorstel' | 'opgelegd' | 'betaling_gemeld' | 'betaald' | 'betwist' | 'vernietigd') | null;
+  bron?: ('automatisch' | 'manueel') | null;
+  /**
+   * Voorkomt dat hetzelfde automatische voorstel twee keer gemaakt wordt.
+   */
+  sleutel?: string | null;
+  opgelegdOp?: string | null;
+  betalingGemeldOp?: string | null;
+  betaaldOp?: string | null;
+  clubOpmerking?: string | null;
+  federatieOpmerking?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -2602,6 +2658,14 @@ export interface PayloadLockedDocument {
         value: number | AftrapWijzigingen;
       } | null)
     | ({
+        relationTo: 'boete-soorten';
+        value: number | BoeteSoorten;
+      } | null)
+    | ({
+        relationTo: 'boetes';
+        value: number | Boete;
+      } | null)
+    | ({
         relationTo: 'medische-kaart-aanvragen';
         value: number | MedischeKaartAanvragen;
       } | null)
@@ -3010,6 +3074,41 @@ export interface AftrapWijzigingenSelect<T extends boolean = true> {
   gemeldDoor?: T;
   gemeldDoorNaam?: T;
   aanleiding?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "boete-soorten_select".
+ */
+export interface BoeteSoortenSelect<T extends boolean = true> {
+  naam?: T;
+  artikel?: T;
+  bedrag?: T;
+  trigger?: T;
+  termijnDagen?: T;
+  actief?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "boetes_select".
+ */
+export interface BoetesSelect<T extends boolean = true> {
+  club?: T;
+  soort?: T;
+  match?: T;
+  omschrijving?: T;
+  bedrag?: T;
+  status?: T;
+  bron?: T;
+  sleutel?: T;
+  opgelegdOp?: T;
+  betalingGemeldOp?: T;
+  betaaldOp?: T;
+  clubOpmerking?: T;
+  federatieOpmerking?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -4138,6 +4237,14 @@ export interface Setting {
    * Bij dit aantal of meer openstaande knipjes kan een speler niet geselecteerd worden.
    */
   knipjesDrempel: number;
+  /**
+   * Bepaalt wat elke club ziet onder "Scheidsrechterskosten" op haar boete-overzicht.
+   */
+  scheidsrechterKostenBetaler?: ('federatie' | 'thuisclub' | 'gedeeld') | null;
+  /**
+   * Het forfait-onkostenblad van de scheidsrechter (€13 + km).
+   */
+  forfaitKostenBetaler?: ('federatie' | 'forfaitploeg') | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -4187,6 +4294,8 @@ export interface SettingsSelect<T extends boolean = true> {
   veldMatchId?: T;
   emailVerplichtVanaf?: T;
   knipjesDrempel?: T;
+  scheidsrechterKostenBetaler?: T;
+  forfaitKostenBetaler?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

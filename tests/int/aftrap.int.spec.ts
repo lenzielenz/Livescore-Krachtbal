@@ -58,7 +58,7 @@ describe('aftrap verschuiven', () => {
     const th = [await ploeg('Th Heren', ids.thuis), await ploeg('Th Dames', ids.thuis), await ploeg('Th Belofte', ids.thuis)]
     const ui = [await ploeg('Ui Heren', ids.uit), await ploeg('Ui Dames', ids.uit), await ploeg('Ui Belofte', ids.uit)]
     const wedstrijd = async (h: number, a: number, iso: string) =>
-      Number((await payload.create({ collection: 'matches', data: { reeks: 'LH', homeTeam: h, awayTeam: a, date: iso, status: 'scheduled' }, overrideAccess: true })).id)
+      Number((await payload.create({ collection: 'matches', data: { reeks: 'LH', homeTeam: h, awayTeam: a, date: iso, status: 'scheduled', goalAreaDepth: 10 }, overrideAccess: true })).id)
     // Drie wedstrijden na elkaar op het terrein van de thuisclub.
     ids.m1 = await wedstrijd(th[0], ui[0], uur(13))
     ids.m2 = await wedstrijd(th[1], ui[1], uur(15))

@@ -86,5 +86,29 @@ export const Settings: GlobalConfig = {
         description: 'Bij dit aantal of meer openstaande knipjes kan een speler niet geselecteerd worden.',
       },
     },
+    {
+      // Wie draagt de scheidsrechterskosten (kwitantie: €13 + km-vergoeding, lib/vergoeding.ts)? Dat
+      // staat niet in het reglement van dit project; de federatie kiest. Leeg = nog niet ingesteld,
+      // dan tonen de clubs hun kosten niet als "te betalen".
+      name: 'scheidsrechterKostenBetaler',
+      label: 'Scheidsrechterskosten betaald door',
+      type: 'select',
+      options: [
+        { label: 'De federatie', value: 'federatie' },
+        { label: 'De thuisclub', value: 'thuisclub' },
+        { label: 'Beide clubs, elk de helft', value: 'gedeeld' },
+      ],
+      admin: { description: 'Bepaalt wat elke club ziet onder "Scheidsrechterskosten" op haar boete-overzicht.' },
+    },
+    {
+      name: 'forfaitKostenBetaler',
+      label: 'Kosten bij forfait betaald door',
+      type: 'select',
+      options: [
+        { label: 'De federatie', value: 'federatie' },
+        { label: 'De ploeg die forfait gaf', value: 'forfaitploeg' },
+      ],
+      admin: { description: 'Het forfait-onkostenblad van de scheidsrechter (€13 + km).' },
+    },
   ],
 }
