@@ -15,6 +15,7 @@ import { Players } from './collections/Players'
 import { MedischeAttesten } from './collections/MedischeAttesten'
 import { OngevalDocumenten } from './collections/OngevalDocumenten'
 import { AfgelastingFotos, Afgelastingen } from './collections/Afgelastingen'
+import { AftrapWijzigingen } from './collections/AftrapWijzigingen'
 import { MedischeKaartAanvragen } from './collections/MedischeKaartAanvragen'
 import { Meldingen } from './collections/Meldingen'
 import { Matches } from './collections/Matches'
@@ -124,6 +125,7 @@ export default buildConfig({
     OngevalDocumenten,
     Afgelastingen,
     AfgelastingFotos,
+    AftrapWijzigingen,
     MedischeKaartAanvragen,
     Meldingen,
     Matches,

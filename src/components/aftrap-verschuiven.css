@@ -1,0 +1,26 @@
+/* Aftrap verschuiven (AftrapVerschuiven.tsx): grote knoppen, werkt met de duim op een gsm. */
+.av { margin: 14px 0; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line, #d5dae1); background: var(--panel, rgba(255, 255, 255, 0.03)); display: grid; gap: 10px; }
+.av-kop { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.av-h { margin: 0; font-size: 1rem; font-weight: 800; }
+.av-sub { margin: 2px 0 0; font-size: 0.85rem; color: var(--dim, #5c6370); }
+.av-form { display: grid; gap: 10px; }
+.av-lbl { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--dim, #5c6370); }
+.av-redenen, .av-stappen { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.av-chip, .av-stap { min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line, #c9ced6); background: transparent; color: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer; }
+.av-stap { min-width: 84px; }
+.av-chip.aan, .av-stap.aan { border-color: var(--accent, #0b7a55); background: var(--accent, #0b7a55); color: #fff; }
+.av-uur { display: inline-flex; gap: 6px; align-items: center; font-size: 0.85rem; color: var(--dim, #5c6370); }
+.av-uur input { min-height: 44px; font-size: 1rem; padding: 0 8px; border-radius: 10px; border: 1px solid var(--line, #c9ced6); background: transparent; color: inherit; }
+.av-nieuw { margin: 0; font-size: 1rem; }
+.av-mee { display: flex; gap: 10px; align-items: flex-start; font-size: 0.9rem; }
+.av-mee input { width: 22px; height: 22px; margin-top: 2px; flex: 0 0 auto; }
+.av-mee ul { margin: 4px 0 0; padding-left: 18px; }
+.av-toel { min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line, #c9ced6); background: transparent; color: inherit; font-size: 0.95rem; }
+.av-acties { display: flex; gap: 8px; flex-wrap: wrap; }
+.av-knop { min-height: 48px; padding: 0 18px; border-radius: 12px; border: 0; background: var(--accent, #0b7a55); color: #fff; font-weight: 800; font-size: 0.95rem; cursor: pointer; }
+.av-knop:disabled { opacity: 0.55; cursor: default; }
+.av-zacht { min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line, #c9ced6); background: transparent; color: inherit; font-weight: 700; cursor: pointer; }
+.av-ok { margin: 0; color: var(--accent, #0b7a55); font-weight: 700; }
+.av-fout { margin: 0; color: #c0392b; font-weight: 700; }
+.av-log { margin: 0; padding-left: 18px; font-size: 0.85rem; display: grid; gap: 4px; }
+.av-door { color: var(--dim, #5c6370); }

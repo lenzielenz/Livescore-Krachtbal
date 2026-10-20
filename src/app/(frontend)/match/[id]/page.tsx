@@ -16,7 +16,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { mayScoreMatch, type AuthedUser } from '@/lib/api-auth'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
-import { dateStrBE, formatDateTimeBE } from '@/lib/datetime'
+import { dateStrBE, formatDateTimeBE, formatTimeBE } from '@/lib/datetime'
 import { buildExpectedScore } from '@/lib/expected-score'
 import { googleCalendarUrl } from '@/lib/google-calendar'
 import { matchTitel } from '@/lib/match-ics'
@@ -38,6 +38,8 @@ import { LiveStream } from './LiveStream'
 import { MatchScorers } from './MatchScorers'
 import { MatchActivitySummary } from './MatchActivitySummary'
 import { PronostiekWidget } from './PronostiekWidget'
+import { AftrapVerschuiven } from '@/components/AftrapVerschuiven'
+import { aftrapGeschiedenis, aftrapRechten, volgendeOpTerrein } from '@/lib/aftrap'
 import { PapierenUitslag } from './PapierenUitslag'
 import { ReportResult } from './ReportResult'
 import { ScoreTrust } from './ScoreTrust'
@@ -142,6 +144,14 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const magVeldschermVoorAftrap = state.match.status === 'scheduled' && isVeldschermPreMatchLead(matchDoc?.date as string | undefined)
   const magKoppelen = Boolean(me) && (state.match.status === 'live' || magVeldschermVoorAftrap)
   const datum = matchDoc?.date ? formatDateTimeBE(matchDoc.date as string) : null
+  // Aftrap verschoven op de wedstrijddag (lib/aftrap.ts): iedereen ziet het nieuwe uur en waarom;
+  // wie mag (scheidsrechter, federatie, beide clubs/coach) kan het hier zelf verschuiven.
+  const aftrapLog = matchDoc ? await aftrapGeschiedenis(payload, matchId) : []
+  const aftrapRecht =
+    matchDoc && me && state.match.status === 'scheduled' && !matchDoc.afgelast
+      ? await aftrapRechten(payload, me as never, matchDoc as never)
+      : { wijzigen: false, meeschuiven: false, rol: '' }
+  const aftrapVolgende = aftrapRecht.meeschuiven && matchDoc ? await volgendeOpTerrein(payload, matchDoc as never) : []
   // Wie de wedstrijd mag rechtzetten (tijdstip + ploegnaam/club): de federatie, en nooit op een
   // analysewedstrijd — die is privé en wordt onder /analyse/beheer beheerd.
   const magBeheren =
@@ -412,6 +422,24 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       {/* Afgelast door de scheidsrechter (terrein, weer): de wedstrijd gaat niet door op dit uur. */}
       {Boolean(matchDoc?.afgelast) && state.match.status === 'scheduled' && (
         <p className="match-afgelast">⛈️ Afgelast — de federatie plant een nieuwe datum.</p>
+      )}
+      {aftrapLog.length > 0 && state.match.status === 'scheduled' && !matchDoc?.afgelast && (
+        <p className="match-afgelast">
+          ⏱️ Aftrap verschoven naar {formatTimeBE(aftrapLog[0].naar)} ({aftrapLog[0].redenTekst}).
+        </p>
+      )}
+      {aftrapRecht.wijzigen && matchDoc?.date && (
+        <AftrapVerschuiven
+          matchId={matchId}
+          aftrap={String(matchDoc.date)}
+          magMeeschuiven={aftrapRecht.meeschuiven}
+          volgende={aftrapVolgende.map((v) => ({
+            id: v.id,
+            titel: `${(v.homeTeam as { name?: string } | null)?.name ?? '?'} – ${(v.awayTeam as { name?: string } | null)?.name ?? '?'}`,
+            aftrap: String(v.date),
+          }))}
+          geschiedenis={aftrapLog}
+        />
       )}
       {toonAantekenen && !matchDoc?.afgelast && (
         <Link href={`/scorekeeper/${matchId}`} className="match-score-cta">

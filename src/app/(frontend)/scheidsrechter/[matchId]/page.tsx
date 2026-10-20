@@ -4,7 +4,9 @@ import { FlowNietNodig } from '@/components/FlowNietNodig'
 import { MatchDayNav } from '@/components/MatchDayNav'
 import { SiteHeader } from '@/components/SiteHeader'
 import { hasRole, isFederationLevel } from '@/lib/access'
+import { AftrapVerschuiven } from '@/components/AftrapVerschuiven'
 import { BlessureMelden } from '@/components/BlessureMelden'
+import { aftrapGeschiedenis, aftrapRechten, volgendeOpTerrein } from '@/lib/aftrap'
 import { refereeMayHandleMatch, type AuthedUser } from '@/lib/api-auth'
 import { afgelastingenLijst, magAfgelasten } from '@/lib/afgelasting'
 import { blessureKanten } from '@/lib/blessure'
@@ -104,6 +106,11 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
   // of net herpland werd.
   const afgelastingen = await afgelastingenLijst(payload, { match: { equals: Number(matchId) } }, 1)
   const afgelasting = afgelastingen[0] && (match.afgelast || afgelastingen[0].status === 'herpland') ? afgelastingen[0] : null
+  // Aftrap verschuiven (file, ziekte, uitloop, of vroeger als een wedstrijd ervoor wegvalt).
+  const aftrapMatch = match.status === 'scheduled' && !match.afgelast ? await payload.findByID({ collection: 'matches', id: Number(matchId), depth: 1, overrideAccess: true }) : null
+  const aftrapRecht = aftrapMatch ? await aftrapRechten(payload, user as unknown as AuthedUser | null, aftrapMatch as never) : null
+  const aftrapVolgende = aftrapRecht?.meeschuiven && aftrapMatch ? await volgendeOpTerrein(payload, aftrapMatch as never) : []
+  const aftrapLog = aftrapRecht?.wijzigen ? await aftrapGeschiedenis(payload, Number(matchId)) : []
   const blessureKantenLijst = await blessureKanten(payload, user as unknown as AuthedUser | null, Number(matchId))
   const backupRef = sheet?.backupReferee as { name?: string } | number | null | undefined
   const backupRefereeName = backupRef && typeof backupRef === 'object' ? (backupRef.name ?? null) : null
@@ -156,6 +163,20 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
             <Afgelasten matchId={matchId} />
           </section>
         )
+      )}
+
+      {aftrapRecht?.wijzigen && aftrapMatch?.date && (
+        <AftrapVerschuiven
+          matchId={Number(matchId)}
+          aftrap={String(aftrapMatch.date)}
+          magMeeschuiven={aftrapRecht.meeschuiven}
+          volgende={aftrapVolgende.map((v) => ({
+            id: v.id,
+            titel: `${(v.homeTeam as { name?: string } | null)?.name ?? '?'} – ${(v.awayTeam as { name?: string } | null)?.name ?? '?'}`,
+            aftrap: String(v.date),
+          }))}
+          geschiedenis={aftrapLog}
+        />
       )}
 
       {!released && !magControleren ? (

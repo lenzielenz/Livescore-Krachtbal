@@ -74,6 +74,7 @@ export interface Config {
     'ongeval-documenten': OngevalDocumenten;
     afgelastingen: Afgelastingen;
     'afgelasting-fotos': AfgelastingFoto;
+    'aftrap-wijzigingen': AftrapWijzigingen;
     'medische-kaart-aanvragen': MedischeKaartAanvragen;
     meldingen: Meldingen;
     matches: Match;
@@ -135,6 +136,7 @@ export interface Config {
     'ongeval-documenten': OngevalDocumentenSelect<false> | OngevalDocumentenSelect<true>;
     afgelastingen: AfgelastingenSelect<false> | AfgelastingenSelect<true>;
     'afgelasting-fotos': AfgelastingFotosSelect<false> | AfgelastingFotosSelect<true>;
+    'aftrap-wijzigingen': AftrapWijzigingenSelect<false> | AftrapWijzigingenSelect<true>;
     'medische-kaart-aanvragen': MedischeKaartAanvragenSelect<false> | MedischeKaartAanvragenSelect<true>;
     meldingen: MeldingenSelect<false> | MeldingenSelect<true>;
     matches: MatchesSelect<false> | MatchesSelect<true>;
@@ -1216,6 +1218,27 @@ export interface AfgelastingFoto {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "aftrap-wijzigingen".
+ */
+export interface AftrapWijzigingen {
+  id: number;
+  match: number | Match;
+  clubs?: (number | Club)[] | null;
+  van: string;
+  naar: string;
+  reden: 'file' | 'ziekte' | 'uitloop' | 'vervroegen' | 'terrein' | 'scheidsrechter' | 'ander';
+  toelichting?: string | null;
+  gemeldDoor?: (number | null) | User;
+  gemeldDoorNaam?: string | null;
+  /**
+   * Gezet als deze wedstrijd mee verschoof met een eerdere op hetzelfde terrein.
+   */
+  aanleiding?: (number | null) | AftrapWijzigingen;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2575,6 +2598,10 @@ export interface PayloadLockedDocument {
         value: number | AfgelastingFoto;
       } | null)
     | ({
+        relationTo: 'aftrap-wijzigingen';
+        value: number | AftrapWijzigingen;
+      } | null)
+    | ({
         relationTo: 'medische-kaart-aanvragen';
         value: number | MedischeKaartAanvragen;
       } | null)
@@ -2968,6 +2995,23 @@ export interface AfgelastingFotosSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "aftrap-wijzigingen_select".
+ */
+export interface AftrapWijzigingenSelect<T extends boolean = true> {
+  match?: T;
+  clubs?: T;
+  van?: T;
+  naar?: T;
+  reden?: T;
+  toelichting?: T;
+  gemeldDoor?: T;
+  gemeldDoorNaam?: T;
+  aanleiding?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
