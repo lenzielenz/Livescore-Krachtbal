@@ -18,6 +18,7 @@ import { claimHeld, sanitizeTrust } from '@/lib/score-trust'
 import { clubActies, primaireActie } from '@/lib/wedstrijddag-acties'
 import { ClaimButton } from './ClaimButton'
 import { MyTeamsPicker } from './MyTeamsPicker'
+import { ClubMenu } from './ClubMenu'
 import { InstagramWeekendCard } from './InstagramWeekendCard'
 import { formatDateBE } from '@/lib/datetime'
 
@@ -72,13 +73,15 @@ type Row = {
   claimedByName: string | null
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+// `menu` vervangt de gewone snelkoppelingen door het tegelmenu van de club (enkel als we weten
+// wie er kijkt); zonder geldt de oude strook knoppen.
+function Shell({ children, menu }: { children: React.ReactNode; menu?: React.ReactNode }) {
   return (
     <>
       <SiteHeader active="clubs" />
       <div className="site">
         <h1 className="page-title"><span className="brand">Mijn club</span></h1>
-        <ProfileTools profile={getProfile('clubs')} currentHref="/club" />
+        {menu ?? <ProfileTools profile={getProfile('clubs')} currentHref="/club" />}
         {children}
       </div>
     </>
@@ -280,22 +283,9 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
   champs.sort((a, b) => Number(b.clinched) - Number(a.clinched))
 
   return (
-    <Shell>
+    <Shell menu={<ClubMenu staf={clubStaf} beheerder={isBeheerder || isFederationLevel(user)} />}>
+      <h2 className="cmenu-titel cmenu-titel-wedstrijden">Wedstrijden</h2>
       <MyTeamsPicker teams={allTeams} initial={myTeams} />
-      <InstagramWeekendCard />
-
-      {hasRole(user, 'club-beheerder', 'club-medewerker') && (
-        <p className="myteams-focusbar">
-          <Link href="/club/leden" className="myteams-link">🪪 Leden &amp; registratie — wie mag spelen →</Link>
-          <Link href="/club/boetes" className="myteams-link">💶 Boetes &amp; scheidsrechterskosten →</Link>
-          <Link href="/club/inschrijving" className="myteams-link">📝 Inschrijving ploegen nieuw seizoen →</Link>
-        </p>
-      )}
-      {isBeheerder && (
-        <p className="myteams-focusbar">
-          <Link href="/beheer/club-team" className="myteams-link">👥 Clubteam beheren — leden een rol geven →</Link>
-        </p>
-      )}
 
       {mySet.size > 0 && (
         <p className="myteams-focusbar">
@@ -417,6 +407,13 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
         </section>
         ))
       )}
+
+      {/* De weekend-Story is leuk, maar geen dagelijks werk: ingeklapt onderaan i.p.v. een grote
+          kaart bovenaan die het menu en de wedstrijden naar beneden duwt. */}
+      <details className="cmenu-extra">
+        <summary>📸 Weekendplan als Instagram-Story</summary>
+        <InstagramWeekendCard />
+      </details>
     </Shell>
   )
 }

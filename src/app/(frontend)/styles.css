@@ -1761,3 +1761,42 @@ body.kb-scherm .site-foot { display: none; }
 
 /* Afgelaste wedstrijd (lib/afgelasting.ts) */
 .match-afgelast { margin: 8px 0 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid #e0a23d; background: rgba(224, 162, 61, 0.12); font-weight: 700; }
+
+/* ── Mijn club: tegelmenu (ClubMenu.tsx) ── */
+.cmenu { display: grid; gap: 14px; margin: 0 0 22px; }
+.cmenu-titel {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.cmenu-titel-wedstrijden { margin-top: 4px; }
+.cmenu-raster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 720px) {
+  .cmenu { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
+}
+.cmenu-tegel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: border-color 0.14s ease, color 0.14s ease;
+}
+.cmenu-tegel:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); color: var(--accent); }
+.cmenu-icoon { font-size: 1.25rem; flex: 0 0 auto; }
+.cmenu-label { min-width: 0; overflow-wrap: anywhere; }
+.cmenu-extra { margin: 28px 0 0; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--panel); }
+.cmenu-extra > summary { cursor: pointer; font-weight: 700; color: var(--dim); }
+.cmenu-extra[open] > summary { margin-bottom: 12px; }
+
