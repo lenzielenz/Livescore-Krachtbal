@@ -1,0 +1,65 @@
+/* Gedeelde stijl voor de federatietools: scheidsrechters, wedstrijden, clubs, kalender. */
+.ft-wrap { display: flex; flex-direction: column; gap: 14px; }
+.ft-balk { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; position: sticky; top: 0; z-index: 5; padding: 8px 0; background: var(--bg); }
+.ft-balk input,
+.ft-balk select,
+.ft-veld input,
+.ft-veld select,
+.ft-rij select,
+.ft-rij input {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.86rem;
+  min-width: 0;
+}
+.ft-zoek { flex: 1 1 180px; }
+.ft-btn {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ft-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ft-primair { background: var(--accent); border-color: var(--accent); color: #06140d; font-weight: 700; }
+.ft-dag { display: flex; flex-direction: column; gap: 6px; }
+.ft-dag h2 { margin: 6px 0 2px; font-size: 0.95rem; }
+.ft-dag h2 small { color: var(--dim); font-weight: 600; }
+.ft-rij {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 220px);
+  gap: 10px;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.ft-rij.ft-gewijzigd { border-color: var(--accent); }
+.ft-rij.ft-conflict { border-color: #e0533d; }
+.ft-rij.ft-leeg { border-left: 4px solid #f6c544; }
+.ft-wedstrijd { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ft-wedstrijd strong { font-size: 0.9rem; overflow-wrap: anywhere; }
+.ft-wedstrijd small { color: var(--dim); font-size: 0.76rem; }
+.ft-fout { color: #e0533d; font-size: 0.76rem; font-weight: 700; }
+.ft-stat { font-size: 0.82rem; color: var(--dim); }
+.ft-kaart { padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); display: flex; flex-direction: column; gap: 8px; }
+.ft-kaart h2, .ft-kaart h3 { margin: 0; font-size: 0.98rem; }
+.ft-veld { display: flex; flex-direction: column; gap: 4px; font-size: 0.76rem; color: var(--dim); }
+.ft-velden { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.ft-link { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 8px; border: 1px dashed var(--accent); border-radius: 8px; font-size: 0.8rem; overflow-wrap: anywhere; }
+.ft-tabel { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.ft-tabel th, .ft-tabel td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.ft-tabel tr.ft-bestaat td { color: var(--dim); text-decoration: line-through; }
+.ft-tabel-wrap { overflow-x: auto; }
+@media (max-width: 560px) {
+  .ft-rij { grid-template-columns: 1fr; }
+}

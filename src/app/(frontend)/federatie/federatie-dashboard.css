@@ -1,0 +1,48 @@
+/* Federatiedashboard (/federatie): wat er te doen is, en de tools om het te doen. */
+.fd-taken, .fd-tools { margin: 6px 0 22px; }
+.fd-kop { font-size: 1.05rem; margin: 0 0 10px; }
+.fd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.fd-taak {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left-width: 5px;
+  border-radius: 12px;
+  background: var(--panel);
+}
+.fd-rood { border-left-color: #e0533d; }
+.fd-oranje { border-left-color: #f6c544; }
+.fd-groen { border-left-color: #0fe0a6; opacity: 0.7; }
+.fd-taak-kop { display: flex; align-items: center; gap: 8px; }
+.fd-icoon { font-size: 1.2rem; }
+.fd-aantal { font-size: 1.5rem; font-weight: 800; line-height: 1; }
+.fd-rood .fd-aantal { color: #e0533d; }
+.fd-oranje .fd-aantal { color: #f6c544; }
+.fd-groen .fd-aantal { color: #0fe0a6; }
+.fd-titel { font-weight: 700; font-size: 0.92rem; }
+.fd-uitleg { margin: 0; font-size: 0.78rem; color: var(--dim); }
+.fd-items { margin: 0; padding-left: 16px; font-size: 0.78rem; display: flex; flex-direction: column; gap: 2px; }
+.fd-items a { color: var(--txt); }
+.fd-actie { align-self: flex-start; margin-top: auto; font-weight: 700; font-size: 0.85rem; color: var(--accent); }
+.fd-toolgroepen { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.fd-toolgroep { display: flex; flex-direction: column; gap: 8px; }
+.fd-toolgroep h3 { margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); }
+.fd-tool {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--txt);
+  text-decoration: none;
+}
+.fd-tool:hover { border-color: var(--accent); }
+.fd-tool-icoon { font-size: 1.5rem; }
+.fd-tool strong { display: block; font-size: 0.92rem; }
+.fd-tool small { display: block; font-size: 0.76rem; color: var(--dim); }
+.fd-inorde { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0 0; font-size: 0.78rem; color: var(--dim); }
+.fd-chip { padding: 3px 9px; border: 1px solid color-mix(in srgb, #0fe0a6 40%, var(--line)); border-radius: 999px; color: #0fe0a6; }
