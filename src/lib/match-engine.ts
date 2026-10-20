@@ -1130,8 +1130,10 @@ export async function setLineup(
   const teamPlayerIds = new Set(res.docs.map((p) => p.id))
   // Ontdubbel en behoud enkel toegelaten spelers.
   const chosen = Array.from(new Set(playerIds)).filter((id) => teamPlayerIds.has(id))
-  if (chosen.length !== FIELD_PLAYERS) {
-    throw new Error(`Kies precies ${FIELD_PLAYERS} veldspelers.`)
+  // 4 veldspelers; zijn er maar 3 aanwezig, dan speelt de ploeg met 3 (reglement §4).
+  const nodig = Math.min(FIELD_PLAYERS, teamPlayerIds.size)
+  if (nodig < 3 || chosen.length !== nodig) {
+    throw new Error(nodig < 3 ? 'Minstens 3 spelers nodig om te spelen (§4).' : `Kies precies ${nodig} veldspelers.`)
   }
 
   // De kapitein (door de coach aangeduid in de selectie) mag ook op de bank zitten; enkel als hij

@@ -9,6 +9,10 @@
 
 // Een volledige opstelling telt 4 veldspelers (= FIELD_PLAYERS in match-engine).
 export const LINEUP_MIN = 4
+// Reglement §4: 4 veldspelers per ploeg, minimum 3 om te spelen, max. 4 wisselspelers. Op het blad
+// staan dus minstens 3 en hoogstens 8 spelers; met 3 aanwezigen wordt er gewoon gespeeld.
+export const SELECTIE_MIN = 3
+export const SELECTIE_MAX = 8
 
 export type Readiness = {
   homeCount: number
@@ -40,8 +44,8 @@ export function computeReadiness(opts: {
 }): Readiness {
   const homeCount = countLineup(opts.homeLineup)
   const awayCount = countLineup(opts.awayLineup)
-  const homeOk = homeCount >= LINEUP_MIN
-  const awayOk = awayCount >= LINEUP_MIN
+  const homeOk = homeCount >= SELECTIE_MIN
+  const awayOk = awayCount >= SELECTIE_MIN
   const refereeOk = Boolean(opts.refereeAkkoord)
   const isDemo = Boolean(opts.isDemo)
   const analyseOnly = Boolean(opts.analyseOnly)

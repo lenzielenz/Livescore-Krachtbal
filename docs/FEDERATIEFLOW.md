@@ -64,7 +64,7 @@ Elke stap bewaakt de volgende; het wedstrijdblad volgt de wedstrijd vanzelf
      staat in het rood en komt niet op de speellijst — ook de scheidsrechter kan dat niet overschrijven,
      enkel de federatie;
    - hij bevestigt de materiële keuring;
-   - dan geeft hij vrij met zijn QR of code. Dat kan pas met twee volledige opstellingen (min. 4), alle
+   - dan geeft hij vrij met zijn QR of code. Dat kan pas met twee opstellingen (min. 3 spelers, reglement §4), alle
      spelers gecontroleerd en in orde, en een bevestigde keuring.
    Enkel de toegewezen (of backup-)scheidsrechter kan iets aan déze wedstrijd doen.
 3. **Aantekenen — tafel** (`/scorekeeper/[id]`): kiest uit de selectie van de coach, met de rugnummers

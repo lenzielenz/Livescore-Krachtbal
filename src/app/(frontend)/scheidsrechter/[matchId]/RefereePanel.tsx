@@ -184,7 +184,7 @@ export function RefereePanel({
 
   // Alles wat in orde moet zijn vóór de wedstrijd kan starten — geen losse statuskeuzes meer.
   const klaarChecks = [
-    { ok: lineupReady.homeOk && lineupReady.awayOk, label: 'Opstellingen (min. 4 per ploeg)' },
+    { ok: lineupReady.homeOk && lineupReady.awayOk, label: 'Opstellingen (min. 3 per ploeg)' },
     { ok: validation.ok, label: 'Officials volledig en geldig' },
     { ok: keuringBevestigd, label: 'Keuring bevestigd' },
     { ok: spelersNietInOrde === 0, label: 'Spelers gecontroleerd' },
@@ -265,7 +265,7 @@ export function RefereePanel({
         </p>
         {startBlokkers.length > 0 && (
           <p className="wb-sub" style={{ color: '#e0533d' }}>
-            Nog in orde te brengen vóór je vrijgeeft: {startBlokkers.join(', ')}. Een opstelling telt minstens 4 spelers.
+            Nog in orde te brengen vóór je vrijgeeft: {startBlokkers.join(', ')}. Op het blad staan minstens 3 spelers per ploeg (reglement §4).
           </p>
         )}
         {backupRefereeName && (

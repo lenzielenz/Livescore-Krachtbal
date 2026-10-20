@@ -9,7 +9,7 @@ import { refereeMayHandleMatch, type AuthedUser } from '@/lib/api-auth'
 import { afgelastingenLijst, magAfgelasten } from '@/lib/afgelasting'
 import { blessureKanten } from '@/lib/blessure'
 import { buildMatchState } from '@/lib/match-engine'
-import { countLineup, LINEUP_MIN } from '@/lib/match-readiness'
+import { countLineup, SELECTIE_MIN } from '@/lib/match-readiness'
 import { buildRoster, getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { isReleaseTime } from '@/lib/matchsheet-workflow'
 import { getAuthUser } from '@/lib/auth-user'
@@ -203,8 +203,8 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
         awayTeam={liveState?.teams.away.name ?? 'Uit'}
         spelersNietInOrde={[...controle.home, ...controle.away].filter((r) => !r.gecontroleerd || r.blokkade).length}
         lineupReady={{
-          homeOk: countLineup(sheet?.homeLineup) >= LINEUP_MIN,
-          awayOk: countLineup(sheet?.awayLineup) >= LINEUP_MIN,
+          homeOk: countLineup(sheet?.homeLineup) >= SELECTIE_MIN,
+          awayOk: countLineup(sheet?.awayLineup) >= SELECTIE_MIN,
         }}
         officialsHint={match.reeks ? vereisteOfficialsTekst(match.reeks as Reeks) : null}
         isFederation={isFederation}

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { toast } from '@/components/Toaster'
-import { LINEUP_MIN } from '@/lib/match-readiness'
+import { LINEUP_MIN, SELECTIE_MAX, SELECTIE_MIN } from '@/lib/match-readiness'
 
 const setsEqual = (a: Set<number>, b: Set<number>) => a.size === b.size && [...a].every((x) => b.has(x))
 
@@ -95,7 +95,7 @@ export function OpstellingEditor({
   // zodra beide opstellingen in orde zijn. Zelfde definitie als de groene indicator hieronder.
   useEffect(() => {
     if (!data || data.error) return
-    onReadyChange?.(confirmed || Boolean(data.vergrendeld) || (selected.size >= LINEUP_MIN && setsEqual(selected, savedSet) && !extraGewijzigd))
+    onReadyChange?.(confirmed || Boolean(data.vergrendeld) || (selected.size >= SELECTIE_MIN && setsEqual(selected, savedSet) && !extraGewijzigd))
   }, [data, confirmed, selected, savedSet, extraGewijzigd, onReadyChange])
 
   // ⭐ Favoriet aan/uit: meteen bewaard op de ploeg, en de lijst herschikt (favorieten bovenaan).
@@ -191,7 +191,7 @@ export function OpstellingEditor({
   const favSet = new Set(favorites)
   const sameAsFav = favorites.length > 0 && favorites.length === selected.size && favorites.every((id) => selected.has(id))
 
-  const enough = selected.size >= LINEUP_MIN
+  const enough = selected.size >= SELECTIE_MIN && selected.size <= SELECTIE_MAX
 
   return (
     <section className={`wb-card side-${side}${confirmed ? ' ops-locked' : ''}`}>
@@ -215,7 +215,7 @@ export function OpstellingEditor({
           if (enough && dirty) {
             return <div className="ops-ready todo">{selected.size} spelers gekozen — tik op “Opstelling bewaren” om te bevestigen.</div>
           }
-          return <div className="ops-ready need">Nog spelers nodig: {selected.size}/{LINEUP_MIN} minimum.</div>
+          return <div className="ops-ready need">{selected.size > SELECTIE_MAX ? `Te veel: ${selected.size}/${SELECTIE_MAX} (4 veldspelers + 4 wissels).` : `Nog spelers nodig: ${selected.size}/${SELECTIE_MIN} minimum (${LINEUP_MIN} is een volledige ploeg).`}</div>
         })()
       )}
 
@@ -349,7 +349,7 @@ export function OpstellingEditor({
             onClick={() => save(false, true)}
             disabled={saving || !enough}
             className="wb-btn wb-btn-confirm"
-            title={enough ? 'Bevestig en vergrendel deze opstelling' : `Minstens ${LINEUP_MIN} spelers nodig om te bevestigen`}
+            title={enough ? 'Bevestig en vergrendel deze opstelling' : `Tussen ${SELECTIE_MIN} en ${SELECTIE_MAX} spelers nodig om te bevestigen`}
           >
             🔒 Bevestigen &amp; vergrendelen
           </button>

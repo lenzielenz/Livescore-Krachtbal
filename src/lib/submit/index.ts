@@ -116,16 +116,20 @@ export async function submitMatchSheet(
 
   // Pas na het eindsignaal (of een forfait) valt er iets in te dienen.
   const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
-  const forfait = ((sheet.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen') !== 'geen'
+  const forfaitUitslag = (sheet.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen'
+  const forfait = forfaitUitslag !== 'geen'
   if (matchDoc?.status !== 'finished' && !forfait) {
     return { ok: false, error: 'De wedstrijd is nog niet afgelopen.' }
   }
 
-  // Beide kapiteins én de scheidsrechter moeten aftekenen.
+  // De kapiteins van de ploegen die er waren, én de scheidsrechter, moeten aftekenen. Bij forfait
+  // tekent de afwezige ploeg niet (er is niemand); bij dubbel forfait enkel de scheidsrechter.
   const kapThuis = sigOf(sheet.kapiteinThuis)
   const kapUit = sigOf(sheet.kapiteinUit)
-  if (!kapThuis.akkoord || !kapUit.akkoord) {
-    return { ok: false, error: 'Beide kapiteins moeten eerst aftekenen.' }
+  const thuisAanwezig = forfaitUitslag !== 'thuis' && forfaitUitslag !== 'dubbel'
+  const uitAanwezig = forfaitUitslag !== 'uit' && forfaitUitslag !== 'dubbel'
+  if ((thuisAanwezig && !kapThuis.akkoord) || (uitAanwezig && !kapUit.akkoord)) {
+    return { ok: false, error: forfait ? 'De kapitein van de aanwezige ploeg moet eerst aftekenen.' : 'Beide kapiteins moeten eerst aftekenen.' }
   }
   if (!sigOf(sheet.scheidsrechter).akkoord) {
     return { ok: false, error: 'De scheidsrechter moet eerst aftekenen.' }

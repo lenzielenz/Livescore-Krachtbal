@@ -1,6 +1,7 @@
 import { hasRole, isFederationLevel, userRoles } from '@/lib/access'
 import { authUser, refereeMayHandleMatch } from '@/lib/api-auth'
 import { magOpstellingVoor } from '@/lib/club-functies'
+import { SELECTIE_MAX } from '@/lib/match-readiness'
 import { clubsMayEditLineup, type MatchSheetStatus } from '@/lib/matchsheet-workflow'
 import { buildRoster, getOrCreateMatchSheet, type Side } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -151,6 +152,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
       deelgenomen: false,
       ibGecontroleerd: false,
     }))
+    // Reglement §4: 4 veldspelers + max. 4 wisselspelers.
+    if (rows.length > SELECTIE_MAX) {
+      return Response.json({ error: `Maximaal ${SELECTIE_MAX} spelers op het blad (4 veldspelers en 4 wissels).` }, { status: 400 })
+    }
     const nummers = rows.map((r) => r.rugnummer).filter((n): n is number => typeof n === 'number')
     if (new Set(nummers).size !== nummers.length) {
       return Response.json({ error: 'Twee spelers hebben hetzelfde rugnummer.' }, { status: 400 })

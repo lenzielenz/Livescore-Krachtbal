@@ -3,7 +3,9 @@ import type { Payload } from 'payload'
 import { hasRole, isFederationLevel } from '@/lib/access'
 import { refereeMayHandleMatch, type AuthedUser } from '@/lib/api-auth'
 import { volgBladStatus } from '@/lib/blad-status'
-import { countLineup, LINEUP_MIN } from '@/lib/match-readiness'
+import { KEURING_ITEMS } from '@/lib/keuring'
+import { clubStaf, meld } from '@/lib/meldingen'
+import { countLineup, SELECTIE_MIN } from '@/lib/match-readiness'
 import { buildRoster, getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import type { MatchSheetStatus } from '@/lib/matchsheet-workflow'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -161,6 +163,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
         user,
         overrideAccess: false,
       })
+      // Bevestigd met een of meer punten NIET OK: de thuisclub (die het terrein inricht) en de
+      // federatie horen het meteen — het staat ook op het blad. Wat er volgt (een boete), beslist de
+      // federatie volgens haar boetelijst.
+      if (body.bevestigd === true) {
+        const nietOk = KEURING_ITEMS.filter((k) => (updated.keuring as Record<string, string> | undefined)?.[k.name] === 'niet_ok').map((k) => k.label)
+        if (nietOk.length) await meldKeuringNietOk(payload, matchId, nietOk)
+      }
       return Response.json({ ok: true, keuring: updated.keuring, bevestigd: Boolean(updated.keuringBevestigd) })
     }
 
@@ -217,11 +226,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
 
       if (akkoord) {
         // Vrijgeven = de wedstrijd mag starten. Dat kan pas als er iets te controleren viel: beide
-        // opstellingen (min. 4 spelers) en een bevestigde materiële keuring. Ook voor de federatie:
+        // opstellingen (min. 3 spelers, reglement §4) en een bevestigde materiële keuring. Ook voor de federatie:
         // die kan bij de start nog bewust overslaan (allowUnready), maar een akkoord blijft een akkoord.
         const tekort: string[] = []
-        if (countLineup(sheet.homeLineup) < LINEUP_MIN) tekort.push('opstelling thuis')
-        if (countLineup(sheet.awayLineup) < LINEUP_MIN) tekort.push('opstelling uit')
+        if (countLineup(sheet.homeLineup) < SELECTIE_MIN) tekort.push('opstelling thuis')
+        if (countLineup(sheet.awayLineup) < SELECTIE_MIN) tekort.push('opstelling uit')
         if (!sheet.keuringBevestigd) tekort.push('materiële keuring bevestigen')
         // Elke speler op de lijst: door de scheidsrechter gecontroleerd ("jij bent die speler") én
         // nog altijd speelgerechtigd volgens het reglement (vergunning, keuring, knipjes, vastspelen).
@@ -324,4 +333,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }
+}
+
+/** Keuring met NIET OK: melding aan de thuisclub en de federatie. */
+async function meldKeuringNietOk(payload: Payload, matchId: string, nietOk: string[]) {
+  const m = await payload.findByID({ collection: 'matches', id: matchId, depth: 1, overrideAccess: true }).catch(() => null)
+  if (!m) return
+  const thuis = m.homeTeam && typeof m.homeTeam === 'object' ? (m.homeTeam as { club?: unknown; name?: string }) : null
+  const club = thuis?.club && typeof thuis.club === 'object' ? Number((thuis.club as { id: number }).id) : (thuis?.club as number | null) ?? null
+  const fed = await payload.find({ collection: 'users', where: { roles: { contains: 'federatie' } }, depth: 0, limit: 25, overrideAccess: true })
+  await meld(payload, [...(await clubStaf(payload, club)), ...fed.docs.map((u) => Number(u.id))], {
+    titel: `⚠️ Keuring niet in orde: ${String(m.title ?? '')}`,
+    tekst: `Niet in orde volgens de scheidsrechter: ${nietOk.join(', ')}.`,
+    url: `/scheidsrechter/${matchId}`,
+  })
 }
