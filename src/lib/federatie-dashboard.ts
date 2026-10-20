@@ -35,7 +35,7 @@ export async function federatieTaken(payload: Payload, nu: Date = new Date()): P
   const t = nu.getTime()
   const iso = (ms: number) => new Date(ms).toISOString()
 
-  const [registraties, komend, live, recentAf, clubs, beheerders] = await Promise.all([
+  const [registraties, komend, live, recentAf, clubs, beheerders, kaarten] = await Promise.all([
     payload.count({ collection: 'players', where: { registratieStatus: { equals: 'ingediend' } }, overrideAccess: true }),
     payload.find({
       collection: 'matches',
@@ -64,6 +64,7 @@ export async function federatieTaken(payload: Payload, nu: Date = new Date()): P
     }),
     payload.find({ collection: 'clubs', where: { analyseOnly: { not_equals: true } }, depth: 0, limit: 500, pagination: false, overrideAccess: true }),
     payload.find({ collection: 'users', where: { roles: { contains: 'club-beheerder' } }, depth: 0, limit: 2000, pagination: false, overrideAccess: true }),
+    payload.count({ collection: 'medische-kaart-aanvragen', where: { status: { equals: 'aangevraagd' } }, overrideAccess: true }),
   ])
 
   const matchIds = [...komend.docs, ...recentAf.docs].map((m) => Number(m.id))
@@ -99,6 +100,17 @@ export async function federatieTaken(payload: Payload, nu: Date = new Date()): P
       dringend: kleur(registraties.totalDocs, registraties.totalDocs > 20),
       href: '/beheer/leden',
       actie: 'Keuren',
+      items: [],
+    },
+    {
+      sleutel: 'kaarten',
+      icoon: '🩺',
+      titel: 'Medische kaarten aangevraagd',
+      uitleg: 'Door een lid of zijn club; lid en club krijgen bericht zodra je ze behandelt.',
+      aantal: kaarten.totalDocs,
+      dringend: kleur(kaarten.totalDocs, false),
+      href: '/beheer/leden#kaarten',
+      actie: 'Behandelen',
       items: [],
     },
     {

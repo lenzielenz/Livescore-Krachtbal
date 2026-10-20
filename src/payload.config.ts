@@ -13,6 +13,8 @@ import { Clubs } from './collections/Clubs'
 import { Teams } from './collections/Teams'
 import { Players } from './collections/Players'
 import { MedischeAttesten } from './collections/MedischeAttesten'
+import { MedischeKaartAanvragen } from './collections/MedischeKaartAanvragen'
+import { Meldingen } from './collections/Meldingen'
 import { Matches } from './collections/Matches'
 import { FieldScreens } from './collections/FieldScreens'
 import { Possessions } from './collections/Possessions'
@@ -116,6 +118,8 @@ export default buildConfig({
     Teams,
     Players,
     MedischeAttesten,
+    MedischeKaartAanvragen,
+    Meldingen,
     Matches,
     FieldScreens,
     MatchSheets,

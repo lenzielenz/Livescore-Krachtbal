@@ -22,6 +22,7 @@ const gegevens = (extra: Record<string, unknown> = {}) => ({
   achternaam: `Registratie${STAMP}`,
   birthDate: '2002-06-15',
   geslacht: 'v',
+  email: `lotte-${STAMP}-${Math.random().toString(36).slice(2, 8)}@test.be`,
   soortLid: 'speler',
   medischeKeuringOp: vandaag,
   ...extra,

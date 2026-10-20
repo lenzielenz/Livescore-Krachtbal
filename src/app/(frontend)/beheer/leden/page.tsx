@@ -7,6 +7,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 import { LedenManager, type Lid } from './LedenManager'
+import { KaartAanvragenLijst, type KaartAanvraag } from './KaartAanvragenLijst'
 import { RegistratieWachtrij, type Aanvraag } from './RegistratieWachtrij'
 import '../../club/leden/club-leden.css'
 import './leden.css'
@@ -92,6 +93,26 @@ export default async function LedenPage() {
     }
   })
 
+  const kaartRes = await payload.find({
+    collection: 'medische-kaart-aanvragen',
+    where: { status: { equals: 'aangevraagd' } },
+    sort: 'createdAt',
+    depth: 2,
+    limit: 500,
+    pagination: false,
+    overrideAccess: true,
+  })
+  const kaarten: KaartAanvraag[] = kaartRes.docs.map((a) => {
+    const speler = a.player && typeof a.player === 'object' ? a.player : null
+    return {
+      id: Number(a.id),
+      naam: String(speler?.name ?? '—'),
+      clubNaam: a.club && typeof a.club === 'object' ? String(a.club.name ?? '—') : '—',
+      via: a.via === 'club' ? 'club' : 'lid',
+      op: String(a.createdAt),
+    }
+  })
+
   return (
     <>
       <SiteHeader active="federatie" />
@@ -103,6 +124,7 @@ export default async function LedenPage() {
           en bij de scheidsrechter: enkel gekeurde, vergunde leden kunnen opgesteld worden.
         </p>
         <RegistratieWachtrij aanvragen={aanvragen} />
+        <KaartAanvragenLijst aanvragen={kaarten} />
         <LedenManager leden={leden} />
       </div>
     </>

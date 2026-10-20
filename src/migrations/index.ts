@@ -140,6 +140,7 @@ import * as migration_20261017_120000_virtuele_metingen from './20261017_120000_
 import * as migration_20261020_060000_spelersregistratie from './20261020_060000_spelersregistratie'
 import * as migration_20261020_080000_club_functies from './20261020_080000_club_functies'
 import * as migration_20261020_100000_referendum from './20261020_100000_referendum'
+import * as migration_20261020_120000_meldingen_medische_kaart from './20261020_120000_meldingen_medische_kaart'
 
 export const migrations = [
   {
@@ -846,5 +847,10 @@ export const migrations = [
     up: migration_20261020_100000_referendum.up,
     down: migration_20261020_100000_referendum.down,
     name: '20261020_100000_referendum',
+  },
+  {
+    up: migration_20261020_120000_meldingen_medische_kaart.up,
+    down: migration_20261020_120000_meldingen_medische_kaart.down,
+    name: '20261020_120000_meldingen_medische_kaart',
   },
 ];

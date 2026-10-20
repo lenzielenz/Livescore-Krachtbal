@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { playerSelectability } from '@/lib/lineup'
 import {
   clubMagBewerken,
+  emailVerplicht,
   isSpeelgerechtigd,
   keuringGeldig,
   ontbreektVoorIndienen,
@@ -16,6 +17,7 @@ const volledig = {
   achternaam: 'Peeters',
   birthDate: '2001-03-04',
   geslacht: 'm',
+  email: 'jan@voorbeeld.be',
   soortLid: 'speler',
   medischeKeuringOp: '2026-09-01',
   heeftAttest: true,
@@ -67,6 +69,18 @@ describe('spelersregistratie', () => {
     expect(clubMagBewerken('ingediend')).toBe(false)
     expect(clubMagBewerken('afgekeurd')).toBe(true)
     expect(clubMagBewerken(null)).toBe(true)
+  })
+
+  it('e-mailadres verplicht vanaf 13 jaar (instelbaar)', () => {
+    const zonder = { ...volledig, email: '' }
+    expect(ontbreektVoorIndienen(zonder, nu)).toEqual(['e-mailadres'])
+    // 12 jaar: niet verplicht
+    expect(ontbreektVoorIndienen({ ...zonder, birthDate: '2014-01-01' }, nu)).toEqual([])
+    // grens op 16 gezet: een 14-jarige hoeft niet
+    expect(ontbreektVoorIndienen({ ...zonder, birthDate: '2012-01-01' }, nu, 16)).toEqual([])
+    expect(emailVerplicht('2013-10-20', 13, nu)).toBe(true)
+    expect(emailVerplicht('2013-10-21', 13, nu)).toBe(false)
+    expect(ontbreektVoorIndienen({ ...volledig, email: 'geen-adres' }, nu)).toEqual(['e-mailadres'])
   })
 
   it('volledige naam zonder dubbele spaties', () => {

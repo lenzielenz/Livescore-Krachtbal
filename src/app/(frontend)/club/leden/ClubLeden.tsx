@@ -3,7 +3,9 @@
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
+import { Herstellink } from '@/components/Herstellink'
 import { toast } from '@/components/Toaster'
+import { KaartAanvragen } from '../../profiel/KaartAanvragen'
 import {
   clubMagBewerken,
   ontbreektVoorIndienen,
@@ -28,6 +30,11 @@ export type ClubLid = {
   vergunningsstatus: string
   medischAttest: boolean
   actief: boolean
+  email: string
+  /** Account gekoppeld aan dit dossier (eigen login), of null. */
+  login: { id: number; email: string } | null
+  /** Ligt er een aanvraag voor een medische kaart bij de federatie? */
+  kaartOpen: boolean
 }
 
 type Team = { id: number; naam: string; reeks: string }
@@ -41,6 +48,7 @@ const input = (l: ClubLid): RegistratieInput => ({
   geslacht: l.geslacht,
   soortLid: l.soortLid,
   medischeKeuringOp: l.medischeKeuringOp,
+  email: l.email,
   heeftAttest: Boolean(l.attestUrl),
   registratieStatus: l.registratieStatus,
   vergunningsstatus: l.vergunningsstatus,
@@ -72,11 +80,13 @@ function LidFormulier({
   teams,
   standaardTeam,
   onKlaar,
+  emailVanaf,
 }: {
   lid: ClubLid | null
   teams: Team[]
   standaardTeam: number
   onKlaar: () => void
+  emailVanaf?: number
 }) {
   const [vn0, an0] = lid
     ? lid.voornaam || lid.achternaam
@@ -92,6 +102,7 @@ function LidFormulier({
     soortLid: lid?.soortLid ?? 'speler',
     shirtNumber: lid ? String(lid.shirtNumber) : '',
     medischeKeuringOp: lid?.medischeKeuringOp ?? '',
+    email: lid?.email ?? '',
   })
   const [bestand, setBestand] = useState<File | null>(null)
   const [bezig, setBezig] = useState(false)
@@ -154,6 +165,16 @@ function LidFormulier({
           </select>
         </label>
         <label>
+          E-mailadres{emailVanaf != null ? ` (verplicht vanaf ${emailVanaf} jaar)` : ''}
+          <input
+            type="email"
+            value={v.email}
+            onChange={set('email')}
+            autoComplete="off"
+            placeholder="voor de eigen login"
+          />
+        </label>
+        <label>
           Soort
           <select value={v.soortLid} onChange={set('soortLid')}>
             <option value="speler">Speler (met vergunning)</option>
@@ -213,7 +234,17 @@ function LidFormulier({
   )
 }
 
-export function ClubLeden({ teams, leden }: { teams: Team[]; leden: ClubLid[] }) {
+export function ClubLeden({
+  teams,
+  leden,
+  emailVanaf,
+  magLinks,
+}: {
+  teams: Team[]
+  leden: ClubLid[]
+  emailVanaf: number
+  magLinks: boolean
+}) {
   const router = useRouter()
   const [zoek, setZoek] = useState('')
   const [filter, setFilter] = useState<'alle' | 'todo' | 'wacht' | 'ok'>('alle')
@@ -230,7 +261,7 @@ export function ClubLeden({ teams, leden }: { teams: Team[]; leden: ClubLid[] })
     const q = norm(zoek.trim())
     const map = new Map<number, ClubLid[]>()
     for (const l of leden) {
-      const ic = registratieIcoon(input(l))
+      const ic = registratieIcoon(input(l), undefined, emailVanaf)
       if (filter === 'todo' && ic.toon !== 'todo' && ic.toon !== 'fout') continue
       if (filter === 'wacht' && ic.toon !== 'wacht') continue
       if (filter === 'ok' && ic.toon !== 'ok') continue
@@ -247,7 +278,7 @@ export function ClubLeden({ teams, leden }: { teams: Team[]; leden: ClubLid[] })
   const tel = useMemo(() => {
     const c = { ok: 0, wacht: 0, todo: 0 }
     for (const l of leden) {
-      const t = registratieIcoon(input(l)).toon
+      const t = registratieIcoon(input(l), undefined, emailVanaf).toon
       if (t === 'ok') c.ok += 1
       else if (t === 'wacht') c.wacht += 1
       else if (t === 'todo' || t === 'fout') c.todo += 1
@@ -259,8 +290,8 @@ export function ClubLeden({ teams, leden }: { teams: Team[]; leden: ClubLid[] })
   // opnieuw in na een nieuwe keuring (dan is de datum veranderd); die staat dan niet als ✅.
   const indienbaar = (l: ClubLid) =>
     clubMagBewerken(l.registratieStatus) &&
-    ontbreektVoorIndienen(input(l)).length === 0 &&
-    registratieIcoon(input(l)).toon !== 'ok'
+    ontbreektVoorIndienen(input(l), undefined, emailVanaf).length === 0 &&
+    registratieIcoon(input(l), undefined, emailVanaf).toon !== 'ok'
   const klaarVoorIndienen = leden.filter(indienbaar)
 
   const dienIn = async (ids: number[]) => {
@@ -343,7 +374,13 @@ export function ClubLeden({ teams, leden }: { teams: Team[]; leden: ClubLid[] })
       </div>
 
       {bewerk === 'nieuw' && (
-        <LidFormulier lid={null} teams={teams} standaardTeam={teams[0]?.id ?? 0} onKlaar={klaar} />
+        <LidFormulier
+          lid={null}
+          teams={teams}
+          standaardTeam={teams[0]?.id ?? 0}
+          onKlaar={klaar}
+          emailVanaf={emailVanaf}
+        />
       )}
 
       {perPloeg.length === 0 ? (
@@ -357,7 +394,7 @@ export function ClubLeden({ teams, leden }: { teams: Team[]; leden: ClubLid[] })
                 <span className="acc-count">· {lijst.length}</span>
               </h2>
               {lijst.map((l) => {
-                const ic = registratieIcoon(input(l))
+                const ic = registratieIcoon(input(l), undefined, emailVanaf)
                 const kan = indienbaar(l)
                 return (
                   <div key={l.id} className={`cl-rij cl-${ic.toon}`}>
@@ -392,6 +429,29 @@ export function ClubLeden({ teams, leden }: { teams: Team[]; leden: ClubLid[] })
                         >
                           📄 attest
                         </a>
+                      )}
+                      {/* Eigen login van het lid: klaar na goedkeuring als er een e-mailadres is. De
+                          club-beheerder kan de (nieuwe) link doorgeven. */}
+                      {l.login ? (
+                        magLinks ? (
+                          <Herstellink
+                            userId={l.login.id}
+                            email={l.login.email}
+                            chipClassName="cl-btn"
+                          />
+                        ) : (
+                          <span className="cl-sub">🔑 login</span>
+                        )
+                      ) : l.email ? (
+                        <span
+                          className="cl-sub"
+                          title="De login wordt aangemaakt bij de goedkeuring"
+                        >
+                          ✉️ {l.email}
+                        </span>
+                      ) : null}
+                      {l.soortLid !== 'lid' && (
+                        <KaartAanvragen open={l.kaartOpen} playerId={l.id} klein />
                       )}
                       {clubMagBewerken(l.registratieStatus) && (
                         <button

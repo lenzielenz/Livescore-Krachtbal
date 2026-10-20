@@ -264,6 +264,15 @@ export const Players: CollectionConfig = {
           ],
         },
         {
+          // Verplicht vanaf de leeftijd in Settings.emailVerplichtVanaf (standaard 13). Na goedkeuring
+          // krijgt het lid hiermee een eigen login (lib/registratie-server.ts → zorgVoorLogin).
+          name: 'email',
+          label: 'E-mailadres',
+          type: 'email',
+          access: { read: sensitiveFieldRead },
+          admin: { description: 'Verplicht vanaf 13 jaar (instelbaar). Hiermee krijgt het lid een eigen login.' },
+        },
+        {
           type: 'row',
           fields: [
             {

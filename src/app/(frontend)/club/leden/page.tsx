@@ -4,6 +4,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { hasRole, userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
+import { emailVanaf } from '@/lib/registratie-server'
 import { ClubLeden, type ClubLid } from './ClubLeden'
 import './club-leden.css'
 
@@ -62,6 +63,29 @@ export default async function ClubLedenPage() {
       })
     : { docs: [] }
 
+  // Wie heeft al een login (account gekoppeld aan het dossier)? En wie heeft een open aanvraag voor
+  // een medische kaart?
+  const spelerIds = playersRes.docs.map((p) => Number(p.id))
+  const [accounts, aanvragen, vanaf] = await Promise.all([
+    spelerIds.length
+      ? payload.find({ collection: 'users', where: { player: { in: spelerIds } }, depth: 0, limit: 3000, pagination: false, overrideAccess: true })
+      : { docs: [] },
+    spelerIds.length
+      ? payload.find({
+          collection: 'medische-kaart-aanvragen',
+          where: { and: [{ player: { in: spelerIds } }, { status: { equals: 'aangevraagd' } }] },
+          depth: 0,
+          limit: 3000,
+          pagination: false,
+          overrideAccess: true,
+        })
+      : { docs: [] },
+    emailVanaf(payload),
+  ])
+  const loginVan = new Map(accounts.docs.map((u) => [relId(u.player), { id: Number(u.id), email: String(u.email ?? '') }]))
+  const kaartOpen = new Set(aanvragen.docs.map((a) => relId(a.player)))
+  const magLinks = hasRole(me, 'club-beheerder')
+
   const leden: ClubLid[] = playersRes.docs.map((p) => {
     const attest = p.medischAttestBestand && typeof p.medischAttestBestand === 'object' ? p.medischAttestBestand : null
     return {
@@ -81,6 +105,9 @@ export default async function ClubLedenPage() {
       vergunningsstatus: String(p.vergunningsstatus ?? 'geen'),
       medischAttest: Boolean(p.medischAttest),
       actief: p.actief !== false,
+      email: String(p.email ?? ''),
+      login: loginVan.get(Number(p.id)) ?? null,
+      kaartOpen: kaartOpen.has(Number(p.id)),
     }
   })
 
@@ -98,7 +125,7 @@ export default async function ClubLedenPage() {
         {teams.length === 0 ? (
           <p className="empty">Je club heeft nog geen ploegen. Vraag de federatie om je ploegen aan te maken.</p>
         ) : (
-          <ClubLeden teams={teams} leden={leden} />
+          <ClubLeden teams={teams} leden={leden} emailVanaf={vanaf} magLinks={magLinks} />
         )}
       </div>
     </>

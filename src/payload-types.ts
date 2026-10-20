@@ -71,6 +71,8 @@ export interface Config {
     teams: Team;
     players: Player;
     'medische-attesten': MedischeAttesten;
+    'medische-kaart-aanvragen': MedischeKaartAanvragen;
+    meldingen: Meldingen;
     matches: Match;
     'field-screens': FieldScreen;
     matchsheets: Matchsheet;
@@ -123,6 +125,8 @@ export interface Config {
     teams: TeamsSelect<false> | TeamsSelect<true>;
     players: PlayersSelect<false> | PlayersSelect<true>;
     'medische-attesten': MedischeAttestenSelect<false> | MedischeAttestenSelect<true>;
+    'medische-kaart-aanvragen': MedischeKaartAanvragenSelect<false> | MedischeKaartAanvragenSelect<true>;
+    meldingen: MeldingenSelect<false> | MeldingenSelect<true>;
     matches: MatchesSelect<false> | MatchesSelect<true>;
     'field-screens': FieldScreensSelect<false> | FieldScreensSelect<true>;
     matchsheets: MatchsheetsSelect<false> | MatchsheetsSelect<true>;
@@ -620,6 +624,10 @@ export interface Player {
   achternaam?: string | null;
   geslacht?: ('m' | 'v') | null;
   /**
+   * Verplicht vanaf 13 jaar (instelbaar). Hiermee krijgt het lid een eigen login.
+   */
+  email?: string | null;
+  /**
    * Een gewoon lid speelt geen wedstrijden en heeft geen vergunning nodig.
    */
   soortLid?: ('speler' | 'lid') | null;
@@ -681,6 +689,36 @@ export interface Official {
   user?: (number | null) | User;
   type: 'scheidsrechter' | 'grensrechter' | 'aantekenaar' | 'tijdopnemer';
   federationNumber?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "medische-kaart-aanvragen".
+ */
+export interface MedischeKaartAanvragen {
+  id: number;
+  player: number | Player;
+  club?: (number | null) | Club;
+  aangevraagdDoor?: (number | null) | User;
+  via: 'lid' | 'club';
+  status: 'aangevraagd' | 'verstuurd' | 'geweigerd';
+  opmerking?: string | null;
+  behandeldOp?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "meldingen".
+ */
+export interface Meldingen {
+  id: number;
+  user: number | User;
+  titel: string;
+  tekst?: string | null;
+  url?: string | null;
+  gelezen?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -2323,6 +2361,14 @@ export interface PayloadLockedDocument {
         value: number | MedischeAttesten;
       } | null)
     | ({
+        relationTo: 'medische-kaart-aanvragen';
+        value: number | MedischeKaartAanvragen;
+      } | null)
+    | ({
+        relationTo: 'meldingen';
+        value: number | Meldingen;
+      } | null)
+    | ({
         relationTo: 'matches';
         value: number | Match;
       } | null)
@@ -2598,6 +2644,7 @@ export interface PlayersSelect<T extends boolean = true> {
   voornaam?: T;
   achternaam?: T;
   geslacht?: T;
+  email?: T;
   soortLid?: T;
   vergunningsnummer?: T;
   medischeKeuringOp?: T;
@@ -2631,6 +2678,34 @@ export interface MedischeAttestenSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "medische-kaart-aanvragen_select".
+ */
+export interface MedischeKaartAanvragenSelect<T extends boolean = true> {
+  player?: T;
+  club?: T;
+  aangevraagdDoor?: T;
+  via?: T;
+  status?: T;
+  opmerking?: T;
+  behandeldOp?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "meldingen_select".
+ */
+export interface MeldingenSelect<T extends boolean = true> {
+  user?: T;
+  titel?: T;
+  tekst?: T;
+  url?: T;
+  gelezen?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -3651,6 +3726,10 @@ export interface Setting {
    */
   veldMatchId?: string | null;
   /**
+   * Jonger dan deze leeftijd mag een lid zonder e-mailadres geregistreerd worden.
+   */
+  emailVerplichtVanaf?: number | null;
+  /**
    * Bij dit aantal of meer openstaande knipjes kan een speler niet geselecteerd worden.
    */
   knipjesDrempel: number;
@@ -3701,6 +3780,7 @@ export interface SettingsSelect<T extends boolean = true> {
   releaseMinutesBefore?: T;
   kantineMatchIds?: T;
   veldMatchId?: T;
+  emailVerplichtVanaf?: T;
   knipjesDrempel?: T;
   updatedAt?: T;
   createdAt?: T;

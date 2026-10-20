@@ -61,6 +61,18 @@ export const Settings: GlobalConfig = {
       admin: { hidden: true, description: 'Beheerd via de cast-pagina (/cast).' },
     },
     {
+      // Spelersregistratie (lib/registratie.ts): vanaf deze leeftijd is een e-mailadres verplicht —
+      // daarmee krijgt het lid een eigen login. Jonger mag (het adres van een ouder), hoeft niet:
+      // in België geeft een kind pas vanaf 13 zelf toestemming voor online diensten (GDPR).
+      name: 'emailVerplichtVanaf',
+      label: 'E-mailadres verplicht vanaf (leeftijd)',
+      type: 'number',
+      defaultValue: 13,
+      min: 0,
+      max: 99,
+      admin: { description: 'Jonger dan deze leeftijd mag een lid zonder e-mailadres geregistreerd worden.' },
+    },
+    {
       // Drempel waarboven een speler door administratieve knipjes geblokkeerd wordt (fase 8).
       // Defaults; echte waarde komt van de federatie-boetelijst.
       name: 'knipjesDrempel',
