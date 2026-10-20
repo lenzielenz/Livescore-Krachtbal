@@ -70,6 +70,46 @@ export function Klaarzetten({ klaar }: { klaar: boolean }) {
   )
 }
 
+// Enkel het referendum opnieuw klaarzetten (stemmen en uitslag weg, verse open ronde), zonder de
+// rest van de demo te wissen: om het stemmen of de bekendmaking nog eens te tonen.
+export function ReferendumReset() {
+  const router = useRouter()
+  const [bezig, setBezig] = useState(false)
+  const [melding, setMelding] = useState<{ ok: boolean; tekst: string } | null>(null)
+  return (
+    <div className="dr-reset">
+      <button
+        type="button"
+        className="dr-knop dr-knop-klein"
+        disabled={bezig}
+        onClick={async () => {
+          if (!window.confirm('Het referendum resetten? Alle stemmen en de bekendgemaakte uitslag van dit seizoen verdwijnen.')) return
+          setBezig(true)
+          setMelding(null)
+          try {
+            const res = await fetch('/api/demoruimte/referendum', { method: 'POST' })
+            const j = (await res.json().catch(() => ({}))) as { ok?: boolean; melding?: string; error?: string }
+            setMelding({ ok: Boolean(j.ok), tekst: j.ok ? String(j.melding ?? 'Gereset.') : String(j.error ?? 'Resetten mislukt.') })
+            router.refresh()
+          } catch {
+            setMelding({ ok: false, tekst: 'Geen verbinding.' })
+          } finally {
+            setBezig(false)
+          }
+        }}
+      >
+        {bezig ? '⏳ Bezig…' : '↻ Referendum resetten'}
+      </button>
+      {melding && (
+        <span className={melding.ok ? 'dr-reset-ok' : 'dr-reset-fout'} role="status">
+          {melding.ok ? '✅ ' : '⚠️ '}
+          {melding.tekst}
+        </span>
+      )}
+    </div>
+  )
+}
+
 export function RolKiezer({ huidig, rollen }: { huidig: string | null; rollen: { sleutel: string; label: string; naam: string; icoon: string; start: string }[] }) {
   const [bezig, setBezig] = useState<string | null>(null)
   const [fout, setFout] = useState<string | null>(null)

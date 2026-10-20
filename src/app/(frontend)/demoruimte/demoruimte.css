@@ -36,3 +36,7 @@
   .dr-rollen { grid-template-columns: 1fr 1fr; gap: 8px; }
   .dr-rol { min-height: 64px; padding: 10px; }
 }
+.dr-reset { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.dr-knop-klein { min-height: 42px; padding: 0 16px; font-size: 0.92rem; background: color-mix(in srgb, #6a4bec 70%, var(--panel)); }
+.dr-reset-ok { color: #2ec27e; font-weight: 600; font-size: 0.88rem; }
+.dr-reset-fout { color: #ff8a8a; font-weight: 600; font-size: 0.88rem; }

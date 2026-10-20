@@ -24,7 +24,10 @@ export function ClubDashboard({
         <TeamLogo name={club.naam} logoUrl={club.logoUrl} logoFit={club.logoFit as never} size={52} />
         <div className="cdash-kop-tekst">
           <h2 className="cdash-naam">{club.naam}</h2>
-          {seizoen && <span className="cdash-sub">Seizoen {seizoen}</span>}
+          <span className="cdash-sub">
+            {seizoen ? `Seizoen ${seizoen} · ` : ''}
+            <Link href="/club/seizoen" className="cdash-knop">📊 Seizoensstatistieken →</Link>
+          </span>
         </div>
       </header>
 

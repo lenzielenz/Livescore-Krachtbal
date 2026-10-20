@@ -14,6 +14,7 @@ import { kaartAanvragen } from '../medische-kaart'
 import { SYSTEEM_STATUS, volgBladStatus } from '../blad-status'
 import { advanceSimpleHalf, recordSimpleGoal } from '../simple-match-engine'
 import { verplaatsingAanvragen, verplaatsingBeantwoorden } from '../verplaatsing'
+import { demoReferendumKlaarzetten } from './referendum'
 import { DEMO_ROLLEN, demoEmail, isDemoAccount } from './rollen'
 
 // De demowereld (zie docs/DEMORUIMTE.md): wist de demodatabank en zet een volledige, geloofwaardige
@@ -517,6 +518,9 @@ export async function demoKlaarzetten(payload: Payload, opties: { forceer?: bool
     // ── Medische kaart door de ouder ───────────────────────────────────────────────────────────
     await kaartAanvragen(payload, gebruiker.ouder, spelers['SM-U14'][1].id).catch(() => null)
     stap('Medische kaart aangevraagd door de ouder van Robbe Peeters')
+
+    // ── Referendum: open stemronde, de demo-speler mag stemmen ─────────────────────────────────
+    stap(await demoReferendumKlaarzetten(payload))
 
     return { ok: true, stappen, duurMs: Date.now() - begin }
   } catch (e) {

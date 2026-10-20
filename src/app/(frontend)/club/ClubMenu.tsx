@@ -20,6 +20,7 @@ const NODIG: Tegel[] = [
   { href: '/club/inschrijving', icoon: '📝', label: 'Inschrijving seizoen', staf: true },
 ]
 const MEER: Tegel[] = [
+  { href: '/club/seizoen', icoon: '📊', label: 'Seizoensstatistieken' },
   { href: '/club/veldscherm', icoon: '🏟️', label: 'Veldscherm', staf: true },
   { href: '/kantine', icoon: '🍻', label: 'Kantinescherm', staf: true },
   { href: '/cast', icoon: '📺', label: 'Naar tv', staf: true },
@@ -55,7 +56,7 @@ export function ClubMenu({ staf, beheerder }: { staf: boolean; beheerder: boolea
       )}
       {meer.length > 0 && (
         <details className="cmenu-meer">
-          <summary>Meer: schermen, pronostiek, referendum</summary>
+          <summary>Meer: seizoensstatistieken, schermen, referendum</summary>
           <Raster tegels={meer} />
         </details>
       )}

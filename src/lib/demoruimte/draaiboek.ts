@@ -95,6 +95,25 @@ export function draaiboek(ids: DemoIds): Hoofdstuk[] {
       ],
     },
     {
+      sleutel: 'seizoen',
+      icoon: '📊',
+      titel: 'Het seizoen van de club',
+      verhaal: 'Op het einde van het seizoen heeft elke club haar eigen cijfers: per ploeg de plaats, punten, doelsaldo en vorm, de topscorers van de club en wie het meest speelde.',
+      stappen: [{ rol: 'clubbeheer', href: '/club/seizoen', tekst: 'Seizoensstatistieken van Sint-Michiels' }],
+    },
+    {
+      sleutel: 'referendum',
+      icoon: '🏅',
+      titel: 'Referendum: speler en speelster van het jaar',
+      verhaal:
+        'Wie genoeg wedstrijden speelde, stemt: 5, 4, 3, 2 en 1 punt voor spelers van andere clubs. Acht spelers per competitie stemden al. De federatie volgt de tussenstand, sluit de ronde en maakt de winnaars bekend — die komen in de erelijst. Met "Referendum resetten" begin je opnieuw.',
+      stappen: [
+        { rol: 'speler', href: '/referendum', tekst: 'De speler stemt (hij speelde genoeg wedstrijden)' },
+        { rol: 'federatie', href: '/federatie/referendum', tekst: 'Federatie: tussenstand, sluiten en bekendmaken' },
+        { rol: 'publiek', href: '/erelijst', tekst: 'De winnaars in de erelijst' },
+      ],
+    },
+    {
       sleutel: 'publiek',
       icoon: '📣',
       titel: 'Voor iedereen',

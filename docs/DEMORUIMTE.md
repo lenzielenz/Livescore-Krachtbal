@@ -45,6 +45,12 @@ klaarzetten, toegang), `src/app/(frontend)/demoruimte/`, `src/app/api/demoruimte
 - Inschrijvingen voor volgend seizoen: Baasrode en Zandberg ingediend (Baasrode met een kermisweekend),
   Lebbeke in concept, Sint-Michiels nog niets (dat toon je zelf).
 - Een medische kaart, aangevraagd door de ouder van een U14-speler.
+- Een open **referendum** (RHA/RDA, minimum 3 wedstrijden): 16 spelers stemden al, de demo-speler
+  (Jens Aerts) mag nog stemmen. De federatie ziet de tussenstand, sluit en maakt bekend (erelijst).
+  **↻ Referendum resetten** (in dat hoofdstuk van het draaiboek) wist enkel de stemmen en de uitslag
+  van dit seizoen en zet de ronde opnieuw open — de rest van de demo blijft staan.
+- De **seizoensstatistieken** van de club (`/club/seizoen`): per ploeg plaats, punten, W–G–V, saldo en
+  vorm; topscorers en meeste wedstrijden over de hele club.
 
 Alles wat een rol "doet", gebeurt via dezelfde routes als in de echte app (selectie, controle,
 vrijgave, start, blessure, afgelasting, aftrap, verplaatsing): de demo toont nooit iets wat de app

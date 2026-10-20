@@ -1861,3 +1861,28 @@ body.kb-scherm .site-foot { display: none; }
 .cdash-tabel tbody th { font-weight: 700; }
 .cdash-ploeg { display: block; }
 .cdash-reeks { display: block; font-size: 0.74rem; color: var(--dim); font-weight: 500; }
+
+/* ── Seizoen van de club (/club/seizoen) ── */
+.cs-terug { margin: 0 0 12px; font-size: 0.88rem; }
+.cs-terug a { color: var(--accent); text-decoration: none; font-weight: 700; }
+.cs-cijfers { margin: 16px 0 6px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 900px) { .cs-cijfers { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.cs-titel { margin-top: 22px; }
+.cs-ploegen { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.cs-ploeg { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 12px 14px; display: grid; gap: 10px; }
+.cs-ploeg-kop { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.cs-ploeg-kop h3 { margin: 0; font-size: 1rem; }
+.cs-plaats { font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+.cs-plaats small { font-size: 0.8rem; color: var(--dim); font-weight: 600; }
+.cs-rij { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0; }
+.cs-rij div { display: grid; gap: 2px; }
+.cs-rij dt { font-size: 0.7rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }
+.cs-rij dd { margin: 0; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cs-vorm { display: flex; gap: 4px; }
+.cs-v { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; font-size: 0.72rem; font-weight: 800; color: #0b0f14; }
+.cs-v-W { background: #2ec27e; }
+.cs-v-G { background: #c9ced6; }
+.cs-v-V { background: #ff6b6b; }
+.cs-lijsten { display: grid; gap: 4px 18px; }
+@media (min-width: 900px) { .cs-lijsten { grid-template-columns: 1fr 1fr; } }
+.cs-sterk { font-weight: 800; }
