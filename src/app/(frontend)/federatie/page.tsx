@@ -35,6 +35,7 @@ const TOOLGROEPEN: { titel: string; tools: { href: string; icoon: string; label:
   {
     titel: 'Seizoen',
     tools: [
+      { href: '/federatie/statistieken', icoon: '📊', label: 'Statistieken', uitleg: 'Leden, jeugd, meisjes/jongens, forfaits, scheidsrechters, per club.' },
       { href: '/federatie/referendum', icoon: '🏅', label: 'Speler van het jaar', uitleg: 'Stemronde openen, sluiten en uitslag bekendmaken.' },
       { href: '/knipjes', icoon: '✂️', label: 'Knipjes', uitleg: 'Sancties en schorsingen.' },
       { href: '/bekerfinale', icoon: '🏆', label: 'Bekerfinale', uitleg: 'Finaledag voorbereiden.' },
