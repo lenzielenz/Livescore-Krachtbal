@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { segmentArcs, SPINS_PER_WEEK, type RadSegment } from '@/lib/pronostiek-rad'
 import './rad.css'
+import { logoBron } from '@/lib/logo-bron'
 
 const fmt = (v: number) => `×${Number.isInteger(v) ? v : String(v).replace('.', ',')}`
 
@@ -300,7 +301,7 @@ export function Wheel({
           <span className="rad-hub-disc">
             {clubLogoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={clubLogoUrl} alt="" className="rad-hub-logo" />
+              <img src={logoBron(clubLogoUrl) ?? undefined} alt="" className="rad-hub-logo" />
             ) : (
               <span className="rad-hub-fallback">🎰</span>
             )}

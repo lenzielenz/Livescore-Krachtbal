@@ -9,6 +9,7 @@ import { duurVan, naStap, volgendeFoto, type NaStap } from '@/lib/kantine-fotosh
 import type { LogoFit } from '@/lib/logo-fit'
 import type { GroepData, GroepMatch } from '@/lib/tornooi-groep'
 import { fmtClock, useTicking } from '../../../useTournament'
+import { logoBron } from '@/lib/logo-bron'
 
 // ── Het zelfaanpassende kantinescherm van een tornooidag ─────────────────────────────────────
 // Eén link die je 's ochtends opent en de hele dag laat staan:
@@ -564,7 +565,7 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
       <header className="gk-kop">
         <span className="gk-titel">
           {data.host?.logoUrl && (
-            <img className="gk-hostlogo" src={data.host.logoUrl} alt={data.host.name || 'Organiserende club'} />
+            <img className="gk-hostlogo" src={logoBron(data.host.logoUrl) ?? undefined} alt={data.host.name || 'Organiserende club'} />
           )}
           <span className="gk-titel-tekst">
             <span className="gk-merk">Krachtbal Live</span>

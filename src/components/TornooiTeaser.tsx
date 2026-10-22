@@ -8,6 +8,7 @@ import { loadGroepData } from '@/lib/tornooi-groep'
 import { TornooiAftel } from './TornooiAftel'
 import { TornooiLive, type TornooiLiveData } from './TornooiLive'
 import './tornooi-teaser.css'
+import { logoBron } from '@/lib/logo-bron'
 
 type LiveBlok = { data: TornooiLiveData; magScoren: boolean }
 
@@ -94,7 +95,7 @@ export async function TornooiTeaser() {
     <Link href={beste.d.href} className={`tteaser${beste.bezig ? ' live' : ''}`}>
       {beste.d.logoUrl && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img className="tteaser-logo" src={beste.d.logoUrl} alt="" />
+        <img className="tteaser-logo" src={logoBron(beste.d.logoUrl) ?? undefined} alt="" />
       )}
       <span className="tteaser-tekst">
         <span className="tteaser-titel">🏆 {beste.d.titel}</span>

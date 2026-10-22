@@ -6,6 +6,7 @@ import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { formatDateBE } from '@/lib/datetime'
+import { logoBron } from '@/lib/logo-bron'
 
 // Auto-gegenereerde social-preview voor een wedstrijd: wie de matchlink in WhatsApp/Insta plakt,
 // krijgt meteen een verzorgde deelkaart (score, logo's, reeks) i.p.v. een grijze placeholder.
@@ -27,7 +28,8 @@ const shortName = (name: string, max = 16) => {
 
 // Logo als data-URI inladen (server-side), met origin uit de request voor relatieve paden.
 // Mislukt het inladen, dan valt de kaart terug op de initialen in een gekleurde cirkel.
-async function logoDataUri(url: string | null, origin: string): Promise<string | null> {
+async function logoDataUri(ruw: string | null, origin: string): Promise<string | null> {
+  const url = logoBron(ruw)
   if (!url) return null
   try {
     const abs = url.startsWith('http') ? url : `${origin}${url.startsWith('/') ? '' : '/'}${url}`
