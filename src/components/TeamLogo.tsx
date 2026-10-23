@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 
 import { type LogoFit, logoFitStyle } from '@/lib/logo-fit'
 import './team-logo.css'
+import { logoBron } from '@/lib/logo-bron'
 
 type NamedSize = 'xs' | 'sm' | 'md' | 'lg'
 
@@ -78,7 +79,7 @@ export function TeamLogo({ name, logoUrl, logoFit, side, size = 'md', float, rin
     logoUrl && !failed ? (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={logoUrl}
+        src={logoBron(logoUrl) ?? undefined}
         alt=""
         style={logoFitStyle(logoFit)}
         onError={() => setFailed(true)}

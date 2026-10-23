@@ -7,6 +7,8 @@
 // is (in de handen van een speler of in de lucht) en welke ploeg balbezit heeft. De 3D-weergave
 // zit in src/app/(frontend)/virtueel/[slug]/VirtueelViewer.tsx.
 
+import { logoBron } from './logo-bron'
+
 export type Veld = { length_m: number; width_m: number; goal_a: number; goal_b: number }
 export type Ploeg = { id: number; naam: string; thuis: boolean; tenue: string[] }
 
@@ -373,7 +375,7 @@ export function stadionThema(club: { naam: string; primair: string | null; secun
     primair,
     secundair,
     tekstOpPrimair: lp > 0.45 ? '#0b1220' : '#ffffff',
-    logoUrl: club.logoUrl,
+    logoUrl: logoBron(club.logoUrl),
     reclames,
   }
 }

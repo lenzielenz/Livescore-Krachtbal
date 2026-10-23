@@ -14,6 +14,7 @@ import { reeksNaam } from '@/lib/reeksen'
 import type { Club, Match, Team } from '@/payload-types'
 import './analyse.css'
 import './hub-app.css'
+import { logoBron } from '@/lib/logo-bron'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,7 +77,7 @@ export default async function AnalysePage() {
       const c = club as { displayTitle?: unknown; name?: unknown }
       const nm = (typeof c.displayTitle === 'string' && c.displayTitle.trim()) || (typeof c.name === 'string' && c.name.trim())
       if (nm) heroClubName = nm
-      heroLogo = clubLogoUrl({ club })
+      heroLogo = logoBron(clubLogoUrl({ club }))
     }
   }
 

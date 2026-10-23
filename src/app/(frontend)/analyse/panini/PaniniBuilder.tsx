@@ -7,6 +7,7 @@ import { TeamLogo } from '@/components/TeamLogo'
 import { KrachtbalIcon } from '@/components/KrachtbalIcon'
 import type { RadarPlayer } from '@/lib/radar-stats'
 import { PlayerShareCard } from './PlayerShareCard'
+import { logoBron } from '@/lib/logo-bron'
 
 type ClubInfo = { name: string; logoUrl: string | null; primary: string | null; secondary: string | null }
 
@@ -106,7 +107,7 @@ export function PaniniBuilder({ reeks, reeksLabel, options, players, clubs }: { 
 
   // Logo zonder wit voorbereiden zodra de speler/club wijzigt.
   const [cleanLogo, setCleanLogo] = useState<string | null>(null)
-  const rawLogo = club?.logoUrl ?? null
+  const rawLogo = logoBron(club?.logoUrl)
   useEffect(() => {
     setCleanLogo(null)
     if (!rawLogo) return

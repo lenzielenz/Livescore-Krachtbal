@@ -2,6 +2,8 @@
 // export niet "tainted" raakt (anders mislukt de export op gsm). Externe logo's zonder CORS gaan
 // via onze eigen same-origin proxy. Gebruikt door de match-, speler- en ploeg-deelkaarten.
 
+import { logoBron } from './logo-bron'
+
 export function blobToDataUrl(blob: Blob): Promise<string | null> {
   return new Promise((resolve) => {
     const r = new FileReader()
@@ -24,7 +26,8 @@ async function tryFetchDataUrl(url: string): Promise<string | null> {
 }
 
 /** Een (mogelijk externe) afbeeldings-URL als data-URL — taint-vrij voor de canvas-export. */
-export async function urlToDataUrl(url: string): Promise<string | null> {
+export async function urlToDataUrl(ruw: string): Promise<string | null> {
+  const url = logoBron(ruw) ?? ruw
   // 1) Rechtstreeks (werkt voor eigen/CORS-vriendelijke logo's).
   const direct = await tryFetchDataUrl(url)
   if (direct) return direct
