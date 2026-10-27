@@ -1,6 +1,5 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import { useRef, useState } from 'react'
 
 import { ErrorCatch } from '@/components/ErrorCatch'
@@ -10,9 +9,6 @@ import { saveOrShareBlob, slugFilename, svgToPngBlob } from '@/lib/client-downlo
 import type { ShotPoint } from '@/lib/match-engine'
 import type { MatchStats as Stats } from '@/lib/stats'
 import './match-stats.css'
-
-// Het 3D-wedstrijdverloop laadt three pas als je het opent (grote bundel, enkel op de client).
-const Verloop3D = dynamic(() => import('@/components/Verloop3D').then((m) => m.Verloop3D), { ssr: false, loading: () => <p className="empty">3D laden…</p> })
 
 const OUTCOME_COLOR: Record<string, string> = {
   goal: '#06d6a0',
@@ -43,7 +39,6 @@ export function MatchStats({
   stats,
   shots,
   teams,
-  colors,
   goalAreaDepth = 10,
   speelveldM,
   focusPlayerId,
@@ -53,8 +48,6 @@ export function MatchStats({
   stats: Stats
   shots: ShotPoint[]
   teams: { home: string; away: string }
-  /** Clubkleuren (hex) voor het 3D-wedstrijdverloop; leeg = standaardkleuren. */
-  colors?: { home?: string | null; away?: string | null }
   goalAreaDepth?: number
   /** Echte speelveldlengte (m); leeg = reglementair 26 m. */
   speelveldM?: number
@@ -67,7 +60,7 @@ export function MatchStats({
 }) {
   const [playerFilter, setPlayerFilter] = useState<number | 'all'>(focusPlayerId ?? 'all')
   const [goalsOnly, setGoalsOnly] = useState(false)
-  const [view, setView] = useState<'dots' | 'flow' | 'heat' | 'video' | 'verloop'>('dots')
+  const [view, setView] = useState<'dots' | 'flow' | 'heat' | 'video'>('dots')
   const [orderFilter, setOrderFilter] = useState<'all' | 'first' | 'second' | 'last'>('all')
   const [playerView, setPlayerView] = useState<'table' | 'cards'>('table')
   // Veldweergave (Punten/Flow/Heatmap) als afbeelding downloaden i.p.v. een screenshot.
@@ -139,10 +132,9 @@ export function MatchStats({
             <button type="button" className={view === 'dots' ? 'on' : ''} onClick={() => setView('dots')}>Punten</button>
             <button type="button" className={view === 'flow' ? 'on' : ''} onClick={() => setView('flow')}>Flow</button>
             <button type="button" className={view === 'video' ? 'on' : ''} onClick={() => setView('video')}>🎬 Video</button>
-            <button type="button" className={view === 'verloop' ? 'on' : ''} onClick={() => setView('verloop')}>🏟️ Verloop 3D</button>
             <button type="button" className={view === 'heat' ? 'on' : ''} onClick={() => setView('heat')}>Heatmap</button>
           </div>
-          {view !== 'heat' && view !== 'video' && view !== 'verloop' && (
+          {view !== 'heat' && view !== 'video' && (
             <>
               <div className="shotmap-controls">
                 <button type="button" className={!goalsOnly ? 'on' : ''} onClick={() => setGoalsOnly(false)}>Alle worpen</button>
@@ -156,12 +148,7 @@ export function MatchStats({
               </div>
             </>
           )}
-          {view === 'verloop' ? (
-            // Het deelbare 3D-beeld: veld in de clubkleuren, pieken per doelpoging, stand en tijdlijn.
-            <ErrorCatch label="Het 3D-wedstrijdverloop" fallback={(err) => <p className="empty">Het 3D-wedstrijdverloop kon niet laden. {err.message}</p>}>
-              <Verloop3D shots={shots} teams={teams} colors={colors} goalAreaDepth={goalAreaDepth} speelveldM={speelveldM} matchLabel={matchLabel} />
-            </ErrorCatch>
-          ) : view === 'video' ? (
+          {view === 'video' ? (
             // De "video": speelt de hele wedstrijd chronologisch af (filters niet van toepassing).
             // In een error-boundary zodat een hapering hier niet de hele analysepagina platlegt.
             <ErrorCatch

@@ -10,6 +10,7 @@ import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { VeldschermKoppelen } from '@/components/VeldschermKoppelen'
+import { Verloop3DKnop } from '@/components/Verloop3DKnop'
 import { hasRole, isFederationLevel } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
@@ -639,6 +640,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         momentumGoals={share?.goals}
         momentumTimeouts={share?.timeouts}
       />
+      {/* Extra, los van de rest: het wedstrijdverloop in 3D opent pas als je erop tikt. */}
+      <Verloop3DKnop matchId={matchId} />
       {me && state.match.status === 'finished' && (
         <MatchActivitySummary
           reactions={(matchDoc?.liveReactions as Record<string, number> | null) ?? {}}
@@ -748,7 +751,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               stats={share.stats}
               shots={share.shots}
               teams={{ home: state.teams.home.name, away: state.teams.away.name }}
-              colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
               goalAreaDepth={(matchDoc as { goalAreaDepth?: number } | null)?.goalAreaDepth ?? undefined}
               speelveldM={(matchDoc as { veldSpeelveld?: number | null } | null)?.veldSpeelveld ?? undefined}
               matchLabel={`${share.reeks}${share.datum ? ` · ${share.datum}` : ''}`}

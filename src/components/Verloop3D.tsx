@@ -338,9 +338,10 @@ export function Verloop3D({
       setFout((err as Error).message || 'WebGL kon niet starten.')
       return
     }
-    tijdRef.current = 0
-    setTijd(0)
-    teken(0)
+    // Openen op het eindbeeld: meteen alle pieken en de eindstand. Afspelen begint dan van voren.
+    tijdRef.current = 1
+    setTijd(1)
+    teken(1)
     return () => {
       scene.current?.dispose()
       scene.current = null
