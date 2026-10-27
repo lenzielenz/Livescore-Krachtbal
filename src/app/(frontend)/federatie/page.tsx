@@ -20,6 +20,7 @@ const TOOLGROEPEN: { titel: string; tools: { href: string; icoon: string; label:
     tools: [
       { href: '/beheer/kalender', icoon: '🗓️', label: 'Kalender opmaken', uitleg: 'Per reeks heen en terug, met vrije weekends.' },
       { href: '/beheer/wedstrijden', icoon: '🔁', label: 'Wedstrijden verplaatsen', uitleg: 'Datum en uur aanpassen; clubs krijgen een melding.' },
+      { href: '/beheer/weekend', icoon: '📆', label: 'Speelweekend verplaatsen', uitleg: 'Een uitgesteld weekend (bv. week 43) in één keer naar een ander weekend; elke wedstrijd houdt dag en uur.' },
       { href: '/beheer/afgelastingen', icoon: '⛈️', label: 'Afgelastingen', uitleg: "Door de scheidsrechter afgelast, met foto's; nieuwe datum plannen." },
       { href: '/beheer/inschrijvingen', icoon: '📝', label: 'Inschrijvingen & kalender', uitleg: 'Ronde openen, inschrijvingen van de clubs verwerken, seizoenskalender met hun voorkeuren maken.' },
       { href: '/beheer/planner', icoon: '🧩', label: 'Planner', uitleg: 'Wedstrijden per weekend verslepen; botsingen meteen zichtbaar; verplaatsingsaanvragen beslissen.' },

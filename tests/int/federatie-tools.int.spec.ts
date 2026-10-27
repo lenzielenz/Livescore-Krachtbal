@@ -20,7 +20,10 @@ import { POST as clubsRoute } from '@/app/api/federatie/clubs/route'
 import { POST as kalenderRoute } from '@/app/api/federatie/kalender/route'
 import { POST as toewijzingenRoute } from '@/app/api/federatie/toewijzingen/route'
 import { POST as verplaatsenRoute } from '@/app/api/federatie/verplaatsen/route'
+import { POST as weekendRoute } from '@/app/api/federatie/weekend-verplaatsen/route'
+import { brusselsParts, dateStrBE, shiftDateStr, zaterdagVan } from '@/lib/datetime'
 import { federatieTaken } from '@/lib/federatie-dashboard'
+import { weekendGrenzen } from '@/lib/weekend-verplaatsen'
 
 let payload: Payload
 const STAMP = Date.now()
@@ -49,6 +52,7 @@ describe('federatietools', () => {
     expect((await kalenderRoute(req(null, { reeks: REEKS }))).status).toBe(401)
     expect((await kalenderRoute(req('club', { reeks: REEKS }))).status).toBe(403)
     expect((await verplaatsenRoute(req('club', { wijzigingen: [] }))).status).toBe(403)
+    expect((await weekendRoute(req('club', { van: '2026-10-24', naar: '2026-11-07' }))).status).toBe(403)
   })
 
   it('kalender: eerst een voorstel, dan aanmaken, en nooit dubbel', async () => {
@@ -74,6 +78,29 @@ describe('federatietools', () => {
     expect(r.overgeslagen[0].reden).toBe('is al gespeeld')
     const na = await payload.findByID({ collection: 'matches', id: eerste.id })
     expect(new Date(String(na.date)).toISOString()).toBe(nieuw)
+  })
+
+  it('weekend verplaatsen: alle geplande wedstrijden van het weekend, elk op haar eigen dag en uur', async () => {
+    const m = (await payload.find({ collection: 'matches', where: { and: [{ reeks: { equals: REEKS } }, { status: { equals: 'scheduled' } }] }, sort: '-date', limit: 1 })).docs[0]
+    const dag = dateStrBE(new Date(String(m.date)))
+    const van = zaterdagVan(dag)
+    const naar = shiftDateStr(van, 14)
+    const g = weekendGrenzen(van)
+    const inWeekend = (await payload.find({ collection: 'matches', where: { and: [{ reeks: { equals: REEKS } }, { date: { greater_than_equal: g.start } }, { date: { less_than: g.einde } }] }, limit: 50 })).docs
+    const gepland = inWeekend.filter((x) => x.status === 'scheduled')
+    const r = (await (await weekendRoute(req('federatie', { van, naar }))).json()) as { verplaatst: number; dagen: number; overgeslagen: unknown[]; error?: string }
+    expect(r.error).toBeUndefined()
+    expect(r.dagen).toBe(14)
+    expect(r.verplaatst).toBe(gepland.length)
+    for (const x of gepland) {
+      const na = await payload.findByID({ collection: 'matches', id: x.id })
+      const voor = brusselsParts(new Date(String(x.date)))
+      const nu = brusselsParts(new Date(String(na.date)))
+      expect([nu.hour, nu.minute, nu.weekdayMon0]).toEqual([voor.hour, voor.minute, voor.weekdayMon0])
+      expect(na.afgelast).toBe(false)
+    }
+    expect((await weekendRoute(req('federatie', { van, naar: van }))).status).toBe(400)
+    expect((await weekendRoute(req('federatie', { van: 'morgen', naar }))).status).toBe(400)
   })
 
   it('toewijzen en het dashboard telt mee', async () => {

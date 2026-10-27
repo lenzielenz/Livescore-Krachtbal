@@ -1553,6 +1553,14 @@ export interface ShotPoint {
   period: number
   /** Worpafstand in meters (afgeleid), indien beschikbaar. */
   distance: number | null
+  /** Wedstrijdklok (seconden in de helft) op het moment van de worp, als de aantekenaar die had. */
+  gameClock?: number | null
+  /** Vrije worp (altijd 1 punt, §48.1). */
+  freeThrow?: boolean
+  /** Punten die deze worp opleverde voor de werpende ploeg (0, 1 of 2). */
+  points?: number
+  /** Punten voor de tegenpartij (eigen doelpunt: 1). */
+  ownGoalPoints?: number
 }
 
 /**
@@ -1621,6 +1629,10 @@ export async function loadMatchThrowData(
       isLastThrow: t.throwNumber >= allowed,
       period: t.period ?? 1,
       distance: t.distance ?? null,
+      gameClock: t.gameClock ?? null,
+      freeThrow: poss?.freeThrow === true,
+      points: pointsForThrow({ type: t.type, outcome: t.outcome, freeThrow: poss?.freeThrow === true }),
+      ownGoalPoints: ownGoalPointsForThrow({ outcome: t.outcome }),
     })
     lastLanding.set(possId, { x: t.landingX, y: t.landingY })
   }

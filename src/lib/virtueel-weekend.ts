@@ -82,6 +82,7 @@ export function weekendZaal(
       status,
       score: status === 'live' || status === 'gespeeld' ? { ...m.score } : null,
       eigen: o.clubId != null && (m.home.clubId === o.clubId || m.away.clubId === o.clubId),
+      kant: o.clubId == null ? null : m.home.clubId === o.clubId ? 'thuis' : m.away.clubId === o.clubId ? 'uit' : null,
     }
   })
   const aftrap = new Map(wedstrijden.map((m) => [m.id, m.kickoff]))

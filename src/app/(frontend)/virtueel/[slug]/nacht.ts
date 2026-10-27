@@ -29,6 +29,8 @@ export function hoogteVerloop<T extends THREE.Material>(mat: T, o: { van?: numbe
   const min = (o.min ?? 0.55).toFixed(2)
   const vorige = mat.onBeforeCompile
   const vorigeSleutel = mat.customProgramCacheKey()
+  // Rekent enkel met de wereldhoogte: veilig om samen te voegen (zie samenvoegen.ts).
+  if (vorige === THREE.Material.prototype.onBeforeCompile || mat.userData.wereldPatch === true) mat.userData.wereldPatch = true
   mat.onBeforeCompile = (shader, renderer) => {
     vorige.call(mat, shader, renderer)
     shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying float vHoogteN;').replace(

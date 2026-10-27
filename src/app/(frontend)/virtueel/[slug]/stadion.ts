@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
-import { eigenHerkomst, lichtshow, type StadionThema, type Veld } from '@/lib/virtueel'
+import { eigenHerkomst, lichtshow, type StadionThema, type Veld, type WeekendBord } from '@/lib/virtueel'
 import { hoogteVerloop } from './nacht'
 
 // Het stadion rond het veld van Virtueel krachtbal, in de kleuren van de club die kijkt: tribunes
@@ -22,12 +22,33 @@ export type ScoreInfo = {
   ploegen: { naam: string; kleur: string }[]
 }
 
+/** Wat het scorebord van een echte wedstrijd toont (een bord uit de weekendzaal). */
+export type Wedstrijdbord = Pick<WeekendBord, 'id' | 'thuis' | 'uit' | 'thuisKleur' | 'uitKleur' | 'status' | 'score' | 'dag' | 'uur' | 'reeks' | 'kant'>
+
+/** De initialen van een clubnaam (voor een club zonder logo op het bord). */
+export function initialen(naam: string): string {
+  return naam
+    .split(/\s+/)
+    .filter((w) => /[A-Za-z]/.test(w))
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 3)
+    .toUpperCase()
+}
+
 /** Een rechthoek op de grond (wereldcoördinaten) waar je niet door kan lopen. */
 export type Obstakel = { x0: number; x1: number; z0: number; z1: number }
 
 export type Stadion = {
   update: (seconden: number, info: ScoreInfo) => void
   obstakels: Obstakel[]
+  /**
+   * De echte wedstrijd van de club op het scorebord (live, komend of gespeeld), of null: dan toont
+   * het bord het fragment zelf. Het bord wordt bij de eerstvolgende update hertekend.
+   */
+  zetWedstrijd: (bord: Wedstrijdbord | null) => void
+  /** Het scorebord zelf (om een tik erop te herkennen). */
+  scorebord: THREE.Mesh
   /** Het clublogo (of null), één keer geladen en gedeeld met de buitenkant. */
   logo: Promise<HTMLImageElement | null>
   /** Het grote ledscherm achter de westtribune (midden, breedte, hoogte), voor de video erop. */
@@ -228,6 +249,25 @@ export function bouwStadion(
   const neutraal = ['#1f2937', '#e5e7eb', '#374151', '#0f172a', '#7c2d12', '#334155'].map((c) => new THREE.Color(c))
   const huidtinten = ['#f1c9a5', '#e0ac69', '#c68642', '#8d5524', '#ffdbac'].map((c) => new THREE.Color(c))
   const bezetting = licht ? 0.45 : 0.78
+  /** De kleur van een supporter op plaats (i, r) van een tribune, naargelang het vak. */
+  const shirtVoor = (vak: 'hoofd' | 'kern' | 'gemengd', i: number, r: number, toeval: number) => {
+    // Blokken van 8 stoelen bij 4 rijen: zo ontstaan vakken in plaats van confetti.
+    const blok = (Math.floor(i / 8) + Math.floor(r / 4)) % 3
+    if (vak === 'kern') {
+      // De harde kern: bijna iedereen in clubkleur, per blok de eerste of de tweede kleur.
+      if (toeval < 0.86) return blok === 1 ? secundair : primair
+      return neutraal[Math.floor(toeval * 97) % neutraal.length]
+    }
+    if (vak === 'gemengd') {
+      if (toeval < 0.3) return primair
+      if (toeval < 0.42) return secundair
+      return neutraal[Math.floor(toeval * 97) % neutraal.length]
+    }
+    // De hoofdtribune: overwegend clubkleur, met een band in de tweede kleur per blok.
+    if (toeval < (blok === 2 ? 0.3 : 0.55)) return primair
+    if (toeval < (blok === 2 ? 0.7 : 0.72)) return secundair
+    return neutraal[Math.floor(toeval * 97) % neutraal.length]
+  }
 
   const obstakels: Obstakel[] = []
   const tijd = { value: 0 }
@@ -280,7 +320,13 @@ export function bouwStadion(
   const ledTexen: THREE.Texture[] = []
   const ledMats: THREE.MeshBasicMaterial[] = []
 
-  const tribune = (lengte: number, rijen: number, pos: THREE.Vector3, ry: number, dak: boolean, extra: { tifo?: boolean; spandoeken?: string[] } = {}) => {
+  /**
+   * Eén tribune. `dak`: 'volledig' (overdekte hoofdtribune met spanten, lichtrij en palen),
+   * 'luifel' (een lichte, uitkragende kap vanaf de achterwand) of false. `vak` bepaalt wie er
+   * zit: 'hoofd' (gemengd publiek in clubkleur), 'kern' (de harde kern: bijna iedereen in
+   * clubkleur, in blokken, met meer vlaggen) of 'gemengd' (ook veel neutrale kleding).
+   */
+  const tribune = (lengte: number, rijen: number, pos: THREE.Vector3, ry: number, dak: 'volledig' | 'luifel' | false, extra: { tifo?: boolean; spandoeken?: string[]; vak?: 'hoofd' | 'kern' | 'gemengd' } = {}) => {
     const groep = new THREE.Group()
     groep.position.copy(pos)
     groep.rotation.y = ry
@@ -295,7 +341,7 @@ export function bouwStadion(
       b.translate(0, h / 2, -r * RIJ_DIEP - RIJ_DIEP / 2)
       treden.push(b)
     }
-    const achterH = voet + rijen * RIJ_HOOG + (dak ? 5.2 : 1.6)
+    const achterH = voet + rijen * RIJ_HOOG + (dak === 'volledig' ? 5.2 : 1.6)
     const muur = new THREE.BoxGeometry(lengte, achterH, 0.4)
     muur.translate(0, achterH / 2, -rijen * RIJ_DIEP - 0.2)
     treden.push(muur)
@@ -322,6 +368,22 @@ export function bouwStadion(
         }
       }
       groep.add(new THREE.Mesh(mergeGeometries(treeGeo), trapMat), new THREE.Mesh(mergeGeometries(geelGeo), geelMat))
+      // Tunnelopeningen (vomitoria) halverwege elk gangpad: zo komt het publiek vanuit de gangen
+      // de tribune op. Een donkere opening met een lichte betonnen omlijsting en een lampje erboven.
+      if (rijen >= 6) {
+        const rt = Math.floor(rijen / 2)
+        const ht = voet + rt * RIJ_HOOG
+        const zt = -rt * RIJ_DIEP
+        const gaten: THREE.BufferGeometry[] = []
+        const lijsten: THREE.BufferGeometry[] = []
+        const lampjes: THREE.BufferGeometry[] = []
+        for (const gx of gangen) {
+          gaten.push(new THREE.BoxGeometry(1.5, 2.0, 2.2).translate(gx, ht + 1.0, zt - 1.0))
+          lijsten.push(new THREE.BoxGeometry(1.9, 0.18, 0.5).translate(gx, ht + 2.09, zt - 0.1), new THREE.BoxGeometry(0.2, 2.1, 0.5).translate(gx - 0.85, ht + 1.05, zt - 0.1), new THREE.BoxGeometry(0.2, 2.1, 0.5).translate(gx + 0.85, ht + 1.05, zt - 0.1))
+          lampjes.push(new THREE.BoxGeometry(0.5, 0.08, 0.12).translate(gx, ht + 2.22, zt + 0.12))
+        }
+        groep.add(new THREE.Mesh(mergeGeometries(gaten), donker), new THREE.Mesh(mergeGeometries(lijsten), neusMat), new THREE.Mesh(mergeGeometries(lampjes), new THREE.MeshBasicMaterial({ color: '#fff1d0', toneMapped: false })))
+      }
     }
     // Vooraan: een glazen balustrade met een geborstelde leuning, en een ledband in de voormuur
     // waarover een lichtpuls loopt (zie update).
@@ -356,7 +418,7 @@ export function bouwStadion(
     wand.position.set(0, voet + rijen * RIJ_HOOG + wandH / 2 + 0.3, -rijen * RIJ_DIEP + 0.01)
     groep.add(wand)
 
-    if (dak) {
+    if (dak === 'volledig') {
       const diep = rijen * RIJ_DIEP + 3
       const dakH = achterH + 0.2
       const plaat = new THREE.Mesh(new THREE.BoxGeometry(lengte + 2, 0.3, diep), new THREE.MeshLambertMaterial({ color: '#1f2937' }))
@@ -367,11 +429,63 @@ export function bouwStadion(
       const lichtlijn = new THREE.Mesh(new THREE.BoxGeometry(lengte, 0.18, 0.2), new THREE.MeshBasicMaterial({ color: '#fff7e0', toneMapped: false }))
       lichtlijn.position.set(0, dakH - 0.55, 2.55)
       groep.add(plaat, rand, lichtlijn)
+      // Stalen spanten onder het dak, van de palen achteraan tot de dakrand, met dwarsliggers: zo
+      // leest het dak als een constructie en niet als een zwevende plaat.
+      const spanten: THREE.BufferGeometry[] = []
+      const dakLijn = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, r: number) => {
+        const a = new THREE.Vector3(x0, y0, z0)
+        const b = new THREE.Vector3(x1, y1, z1)
+        const l = a.distanceTo(b)
+        const g = new THREE.CylinderGeometry(r, r, l, 6)
+        g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()))
+        g.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2)
+        spanten.push(g)
+      }
+      const achterZ = -rijen * RIJ_DIEP - 0.5
       for (let x = -lengte / 2 + 4; x <= lengte / 2 - 4; x += 12) {
         const paal = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, dakH, 8), metaal)
-        paal.position.set(x, dakH / 2, -rijen * RIJ_DIEP - 0.5)
+        paal.position.set(x, dakH / 2, achterZ)
         groep.add(paal)
+        // De hoofdligger onder de plaat en een schuine trekstang naar de dakrand.
+        dakLijn(x, dakH - 0.45, achterZ, x, dakH - 0.45 + 0.06 * (2.6 - achterZ), 2.4, 0.09)
+        dakLijn(x, dakH - 2.6, achterZ, x, dakH - 0.5, 2.2, 0.05)
+        for (let k = 1; k <= 3; k++) dakLijn(x, dakH - 0.45 - k * 0.5, achterZ + ((2.4 - achterZ) * k) / 4, x, dakH - 0.42, achterZ + ((2.4 - achterZ) * k) / 4, 0.035)
       }
+      // Dwarsliggers over de hele lengte, op drie dieptes.
+      for (const t of [0.25, 0.55, 0.85]) {
+        const z = achterZ + (2.4 - achterZ) * t
+        dakLijn(-lengte / 2 - 0.8, dakH - 0.46, z, lengte / 2 + 0.8, dakH - 0.46, z, 0.045)
+      }
+      groep.add(new THREE.Mesh(mergeGeometries(spanten), metaal))
+      // Een rij schijnwerpers aan de dakrand, gericht op het veld: donkere kasten met een lichtvlak.
+      const kasten: THREE.BufferGeometry[] = []
+      const vlakken: THREE.BufferGeometry[] = []
+      for (let x = -lengte / 2 + 3; x <= lengte / 2 - 3; x += 3) {
+        kasten.push(new THREE.BoxGeometry(0.7, 0.5, 0.35).rotateX(0.55).translate(x, dakH - 0.95, 2.45))
+        vlakken.push(new THREE.PlaneGeometry(0.56, 0.36).rotateX(-0.55 - Math.PI / 2 + 1.2).translate(x, dakH - 1.02, 2.62))
+      }
+      groep.add(new THREE.Mesh(mergeGeometries(kasten), donker), new THREE.Mesh(mergeGeometries(vlakken), new THREE.MeshBasicMaterial({ color: '#fff7e0', toneMapped: false, side: THREE.DoubleSide })))
+    } else if (dak === 'luifel') {
+      // Een lichte kap die vanaf de achterwand over de bovenste rijen hangt, met een rand in
+      // clubkleur en kleine schoren naar de wand.
+      const diep = Math.min(6.5, rijen * RIJ_DIEP * 0.7)
+      const kapH = achterH + 0.1
+      const achterZ = -rijen * RIJ_DIEP - 0.2
+      const plaat = new THREE.Mesh(new THREE.BoxGeometry(lengte + 1, 0.2, diep), new THREE.MeshLambertMaterial({ color: '#1f2937' }))
+      plaat.position.set(0, kapH + 0.35, achterZ + diep / 2)
+      plaat.rotation.x = -0.08
+      const rand = new THREE.Mesh(new THREE.BoxGeometry(lengte + 1, 0.5, 0.25), clubMat)
+      rand.position.set(0, kapH + 0.55, achterZ + diep)
+      const lichtlijn = new THREE.Mesh(new THREE.BoxGeometry(lengte - 0.5, 0.12, 0.14), new THREE.MeshBasicMaterial({ color: '#fff7e0', toneMapped: false }))
+      lichtlijn.position.set(0, kapH + 0.2, achterZ + diep - 0.1)
+      const schoren: THREE.BufferGeometry[] = []
+      for (let x = -lengte / 2 + 2; x <= lengte / 2 - 2; x += 6) {
+        const g = new THREE.CylinderGeometry(0.05, 0.05, Math.hypot(diep * 0.8, 2.2), 6)
+        g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 2.2, diep * 0.8).normalize()))
+        g.translate(x, kapH - 0.8, achterZ + diep * 0.4)
+        schoren.push(g)
+      }
+      groep.add(plaat, rand, lichtlijn, new THREE.Mesh(mergeGeometries(schoren), metaal))
     }
     if (extra.tifo) {
       // Reuzentifo over de hele tribune, langs de helling van de treden, met het logo en een tekst.
@@ -488,25 +602,28 @@ export function bouwStadion(
             new THREE.Vector3(1, 0.9 + willekeur() * 0.2, 1),
           )
           mensen.push(m)
-          const k = willekeur()
-          shirt.push(k < 0.55 ? primair : k < 0.75 ? secundair : neutraal[Math.floor(willekeur() * neutraal.length)])
+          shirt.push(shirtVoor(extra.vak ?? 'hoofd', i, r, willekeur()))
           huid.push(huidtinten[Math.floor(willekeur() * huidtinten.length)])
           const w = willekeur()
-          if (w < kansVlag) vlagDragers.push(mensen.length - 1)
-          else if (w < kansVlag + kansSjaal) sjaalDragers.push(mensen.length - 1)
+          // In de kern wapperen dubbel zoveel vlaggen.
+          const vlag = extra.vak === 'kern' ? kansVlag * 2 : kansVlag
+          if (w < vlag) vlagDragers.push(mensen.length - 1)
+          else if (w < vlag + kansSjaal) sjaalDragers.push(mensen.length - 1)
         }
       }
     }
   }
 
   const voor = 1.4
-  tribune(2 * hx + 4, licht ? 12 : 16, new THREE.Vector3(0, 0, -hz - voor), 0, true, { spandoeken: ['ALLEZ ALLEZ!', thema.naam.toUpperCase(), 'TROTS OP ONZE CLUB'] })
-  tribune(2 * hx + 4, licht ? 8 : 11, new THREE.Vector3(0, 0, hz + voor), Math.PI, false, { spandoeken: ['WIJ ZIJN ER ALTIJD', '♥ ONZE CLUB ♥', 'NOOIT OPGEVEN'] })
+  // Noord: de overdekte hoofdtribune. Zuid: de harde kern, onder een lichte luifel.
+  tribune(2 * hx + 4, licht ? 12 : 16, new THREE.Vector3(0, 0, -hz - voor), 0, 'volledig', { spandoeken: ['ALLEZ ALLEZ!', thema.naam.toUpperCase(), 'TROTS OP ONZE CLUB'], vak: 'hoofd' })
+  tribune(2 * hx + 4, licht ? 8 : 11, new THREE.Vector3(0, 0, hz + voor), Math.PI, 'luifel', { spandoeken: ['WIJ ZIJN ER ALTIJD', '♥ ONZE CLUB ♥', 'NOOIT OPGEVEN'], vak: 'kern' })
   // Achter het oostelijke doelgebied: de tifo.
   tribune(2 * hz - 3, licht ? 6 : 8, new THREE.Vector3(hx + voor, 0, 0), -Math.PI / 2, false, { tifo: true })
   // De eindtribunes zijn iets korter: zo blijft er in elke hoek een doorgang van het veld naar de
-  // gangen achter de tribunes. Achter de westkant staat het grote ledscherm: daar een lagere tribune.
-  tribune(2 * hz - 3, licht ? 4 : 5, new THREE.Vector3(-hx - voor, 0, 0), Math.PI / 2, false)
+  // gangen achter de tribunes. Achter de westkant staat het grote ledscherm: daar een lagere
+  // tribune, met gemengd publiek (de bezoekers zitten daar).
+  tribune(2 * hz - 3, licht ? 4 : 5, new THREE.Vector3(-hx - voor, 0, 0), Math.PI / 2, false, { vak: 'gemengd' })
 
   const stoelGeo = mergeGeometries([
     new THREE.BoxGeometry(0.46, 0.08, 0.42).translate(0, 0.38, 0),
@@ -803,6 +920,79 @@ export function bouwStadion(
   bc.height = 400
   const bordTex = canvasTex(bc)
   let logoBeeld: HTMLImageElement | null = null
+  let wedstrijd: Wedstrijdbord | null = null
+  let bordSeconden = 0
+  /** Een ploegvak op het bord: een rondje (het clublogo of de initialen) met de naam eronder. */
+  const ploegVak = (g: CanvasRenderingContext2D, naam: string, kleur: string, x: number, eigen: boolean) => {
+    if (eigen) rondLogo(g, logoBeeld, thema, x, 178, 54)
+    else {
+      g.beginPath()
+      g.arc(x, 178, 54, 0, Math.PI * 2)
+      g.fillStyle = kleur
+      g.fill()
+      g.lineWidth = 5
+      g.strokeStyle = '#ffffff'
+      g.stroke()
+      g.fillStyle = '#ffffff'
+      g.font = '900 40px Inter, system-ui, sans-serif'
+      g.textAlign = 'center'
+      g.textBaseline = 'middle'
+      g.fillText(initialen(naam), x, 181)
+    }
+    g.fillStyle = '#ffffff'
+    g.font = '800 30px Inter, system-ui, sans-serif'
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    g.fillText(naam.toUpperCase(), x, 262, 300)
+  }
+  const tekenWedstrijd = (g: CanvasRenderingContext2D, w: Wedstrijdbord) => {
+    // Het clublogo aan de kant van de eigen club (de zaal zegt welke kant; anders op de naam).
+    const eigenThuis = w.kant ? w.kant === 'thuis' : w.thuis === thema.naam
+    const eigenUit = w.kant ? w.kant === 'uit' : w.uit === thema.naam
+    ploegVak(g, w.thuis, w.thuisKleur, 190, eigenThuis)
+    ploegVak(g, w.uit, w.uitKleur, 834, eigenUit)
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    if (w.score) {
+      // De stand, groot en geel, zoals op een echt bord.
+      g.fillStyle = '#fde047'
+      g.font = '900 150px "Courier New", monospace'
+      // Elk cijferblok groeit van het streepje weg: twee cijfers botsen zo niet op het midden.
+      g.textAlign = 'right'
+      g.fillText(`${w.score.home}`, 468, 190)
+      g.textAlign = 'left'
+      g.fillText(`${w.score.away}`, 556, 190)
+      g.textAlign = 'center'
+      g.fillStyle = 'rgba(255,255,255,.55)'
+      g.font = '900 70px Inter, system-ui, sans-serif'
+      g.fillText('–', 512, 186)
+    } else {
+      g.fillStyle = 'rgba(255,255,255,.85)'
+      g.font = '900 72px "Courier New", monospace'
+      g.fillText(w.uur || '--:--', 512, 170)
+      g.fillStyle = 'rgba(255,255,255,.6)'
+      g.font = '800 30px Inter, system-ui, sans-serif'
+      g.fillText(w.dag ? `${w.dag} · AFTRAP` : 'AFTRAP', 512, 236)
+    }
+    // De status onderaan: live (met een knipperende stip), eindstand, wacht op uitslag of gepland.
+    g.font = '800 30px Inter, system-ui, sans-serif'
+    if (w.status === 'live') {
+      g.fillStyle = '#fecaca'
+      g.fillText('LIVE', 512, 325)
+      if (Math.floor(bordSeconden * 1.5) % 2 === 0) {
+        g.fillStyle = '#ef4444'
+        g.beginPath()
+        g.arc(452, 325, 11, 0, Math.PI * 2)
+        g.fill()
+      }
+    } else {
+      g.fillStyle = 'rgba(255,255,255,.7)'
+      g.fillText(w.status === 'gespeeld' ? 'EINDSTAND' : w.status === 'wacht' ? 'WACHT OP DE UITSLAG' : 'DEZE WEDSTRIJD · DIT WEEKEND', 512, 325)
+    }
+    g.fillStyle = 'rgba(255,255,255,.45)'
+    g.font = '700 24px Inter, system-ui, sans-serif'
+    g.fillText(w.reeks.toUpperCase(), 512, 366, 700)
+  }
   const tekenScorebord = (info: ScoreInfo) => {
     const g = bc.getContext('2d')!
     g.fillStyle = '#05070c'
@@ -817,8 +1007,13 @@ export function bouwStadion(
     g.fillText(thema.naam.toUpperCase(), 92, 44, 640)
     g.textAlign = 'right'
     g.font = '800 26px Inter, system-ui, sans-serif'
-    g.fillText('VIRTUEEL KRACHTBAL', 1000, 44)
-    // Ploegen en klok.
+    g.fillText(wedstrijd ? 'KRACHTBAL LIVE' : 'VIRTUEEL KRACHTBAL', 1000, 44)
+    if (wedstrijd) {
+      tekenWedstrijd(g, wedstrijd)
+      bordTex.needsUpdate = true
+      return
+    }
+    // Zonder echte wedstrijd: het fragment zelf, met de klok en het balbezit.
     const [a, b] = info.ploegen
     g.textAlign = 'center'
     for (const [p, x] of [[a, 190], [b, 834]] as const) {
@@ -879,14 +1074,21 @@ export function bouwStadion(
   })
 
   let laatsteBord = -1
+  let bordVuil = true
   const wit = new THREE.Color('#fff7e0')
   const showKleur = new THREE.Color(thema.primair)
   return {
     obstakels,
     logo,
     scherm: { x: schermX + 0.2, y: 11, z: 0, b: 19.2, h: 10.8 },
+    scorebord,
+    zetWedstrijd(bord) {
+      wedstrijd = bord
+      bordVuil = true
+    },
     update(seconden, info) {
       tijd.value = seconden
+      bordSeconden = seconden
       const off = (seconden * 0.025) % 1
       reclameTex.offset.x = off
       reclameTexKort.offset.x = off
@@ -954,7 +1156,10 @@ export function bouwStadion(
           ;(plassen[i].material as THREE.MeshBasicMaterial).opacity = (licht ? 0.21 : 0.13) + 0.04 * adem
         }
       })
-      if (seconden - laatsteBord > 0.25) {
+      // Het fragment: vier keer per seconde (de klok loopt). Een echte wedstrijd verandert enkel
+      // bij een nieuwe stand; de live-stip knippert, dus dan twee keer per seconde.
+      if (bordVuil || seconden - laatsteBord > (wedstrijd ? (wedstrijd.status === 'live' ? 0.5 : 3600) : 0.25)) {
+        bordVuil = false
         laatsteBord = seconden
         tekenScorebord(info)
       }
