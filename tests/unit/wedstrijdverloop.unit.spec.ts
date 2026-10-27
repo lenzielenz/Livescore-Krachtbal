@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { ShotPoint } from '@/lib/match-engine'
-import { afkorting, bouwTijdwarp, bouwVerloop, cijfersTot, drukOp, gevaar, klokOp, momentumOp, standOp, tijdLabelOp, verwachtePunten } from '@/lib/wedstrijdverloop'
+import { afkorting, bouwTijdwarp, schotenUitDoelpunten, bouwVerloop, cijfersTot, drukOp, gevaar, klokOp, momentumOp, standOp, tijdLabelOp, verwachtePunten } from '@/lib/wedstrijdverloop'
 
 const worp = (o: Partial<ShotPoint>): ShotPoint => ({
   x: 0.5,
@@ -126,5 +126,43 @@ describe('wedstrijdverloop', () => {
     const rondDoel = w.naarR(g + 0.01) - w.naarR(g - 0.01)
     const leeg = w.naarR(0.3 + 0.01) - w.naarR(0.3 - 0.01)
     expect(rondDoel).toBeGreaterThan(leeg * 2)
+  })
+
+  it('maakt van snelscore-doelpunten pogingen in het doelgebied dat aangevallen werd', () => {
+    const goals = [
+      { half: 2, gameClock: 120, side: 'home' as const, points: 1 },
+      { half: 1, gameClock: 300, side: 'home' as const, points: 2 },
+      { half: 1, gameClock: 60, side: 'away' as const, points: 1 },
+    ]
+    const s = schotenUitDoelpunten(goals, { goalAreaDepth: 10 })
+    // Chronologisch: eerst de eerste helft.
+    expect(s.map((x) => [x.period, x.gameClock])).toEqual([
+      [1, 60],
+      [1, 300],
+      [2, 120],
+    ])
+    // Thuis valt in de eerste helft aan naar y = 1 (doelgebied voorbij 1 - 10/46), uit naar y = 0;
+    // de schatting blijft in of vlak voor dat doelgebied (tot 1,2 × de diepte).
+    const gl = (10 / 46) * 1.2
+    expect(s[0].teamSide).toBe('away')
+    expect(s[0].y).toBeLessThan(gl)
+    expect(s[1].y).toBeGreaterThan(1 - gl)
+    expect(s[1].type).toBe('rug')
+    // Na de rust wisselen de kanten.
+    expect(s[2].y).toBeLessThan(gl)
+    // Altijd hetzelfde beeld voor dezelfde wedstrijd.
+    expect(schotenUitDoelpunten(goals, { goalAreaDepth: 10 })).toEqual(s)
+    const v = bouwVerloop(s)
+    expect(v.stand).toEqual([3, 1])
+    expect(v.tijdas).toBe('klok')
+  })
+
+  it('loopt in volgorde als de snelscore geen klok had', () => {
+    const s = schotenUitDoelpunten([
+      { half: 1, gameClock: 0, side: 'home', points: 1 },
+      { half: 1, gameClock: 0, side: 'away', points: 1 },
+    ])
+    expect(s.every((x) => x.gameClock === null)).toBe(true)
+    expect(bouwVerloop(s).tijdas).toBe('volgorde')
   })
 })

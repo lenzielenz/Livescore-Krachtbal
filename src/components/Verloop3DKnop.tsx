@@ -26,6 +26,8 @@ type Gegevens = {
   speelveldM: number | null
   matchLabel: string
   shots: ShotPoint[]
+  /** Geen worpen, enkel doelpunten: de plaats op het veld is geschat. */
+  geschat?: boolean
 }
 
 export function Verloop3DKnop({ matchId }: { matchId: number }) {
@@ -101,6 +103,7 @@ export function Verloop3DKnop({ matchId }: { matchId: number }) {
                   teams={gegevens.teams}
                   colors={gegevens.colors}
                   logos={gegevens.logos}
+                  geschat={gegevens.geschat}
                   goalAreaDepth={gegevens.goalAreaDepth ?? undefined}
                   speelveldM={gegevens.speelveldM ?? undefined}
                   matchLabel={gegevens.matchLabel}

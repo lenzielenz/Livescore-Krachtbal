@@ -1,9 +1,10 @@
 import { formatDateTimeBE } from '@/lib/datetime'
 import { logoBron } from '@/lib/logo-bron'
-import { buildMatchState, loadMatchThrowData } from '@/lib/match-engine'
+import { buildMatchSheet, buildMatchState, loadMatchThrowData } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { clientIp, rateLimit } from '@/lib/sse-hub'
+import { schotenUitDoelpunten } from '@/lib/wedstrijdverloop'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +21,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const payload = await getPayloadClient()
     const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0, overrideAccess: true }).catch(() => null)
     if (!match || match.analyseOnly) return Response.json({ error: 'Wedstrijd niet gevonden' }, { status: 404 })
-    const [state, { shots }] = await Promise.all([buildMatchState(payload, matchId), loadMatchThrowData(payload, matchId)])
+    const [state, worpen] = await Promise.all([buildMatchState(payload, matchId), loadMatchThrowData(payload, matchId)])
+    // Zonder worpen (snelscore: enkel +1/+2 per ploeg) bouwen we het verloop uit de doelpunten van
+    // het wedstrijdblad, met een geschatte plaats in het doelgebied dat aangevallen werd.
+    let shots = worpen.shots
+    let geschat = false
+    if (!shots.length) {
+      const blad = await buildMatchSheet(payload, matchId).catch(() => null)
+      if (blad?.goals.length) {
+        shots = schotenUitDoelpunten(blad.goals, { goalAreaDepth: match.goalAreaDepth, maten: match.veldSpeelveld != null ? { speelveldM: match.veldSpeelveld } : null })
+        geschat = true
+      }
+    }
     // Het clublogo altijd van ons eigen domein: dan mag het canvas met het logo erop nog bewaard en
     // opgenomen worden (een afbeelding van een ander domein maakt het canvas 'besmet').
     const eigenLogo = (url: string | null) => {
@@ -47,6 +59,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         speelveldM: match.veldSpeelveld ?? null,
         matchLabel: `${reeks}${datum ? ` · ${datum}` : ''}`,
         shots,
+        geschat,
       },
       { headers: { 'Cache-Control': 'no-store' } },
     )
