@@ -344,6 +344,7 @@ function bouwScene(canvas: HTMLCanvasElement, verloop: Verloop, kleuren: Kleuren
     const x = (p.x - 0.5) * 14
     const z = (p.y - 0.5) * lengteM
     const buren = doelen.filter((d) => Math.hypot(d.x - x, d.z - z) < 1.6).length
+    if (buren >= 3) return
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: ringTex, transparent: true, depthTest: false, toneMapped: false }))
     sprite.renderOrder = 10
     sprite.visible = false
@@ -410,6 +411,7 @@ export function Verloop3D({
   goalAreaDepth = 10,
   speelveldM,
   matchLabel,
+  geschat = false,
 }: {
   shots: ShotPoint[]
   teams: { home: string; away: string }
@@ -419,6 +421,8 @@ export function Verloop3D({
   goalAreaDepth?: number
   speelveldM?: number
   matchLabel?: string
+  /** Enkel doelpunten zonder worpen (snelscore): de plaatsen zijn geschat; zo staat het ook in beeld. */
+  geschat?: boolean
 }) {
   const verloop = useMemo(() => bouwVerloop(shots), [shots])
   const warp = useMemo(() => bouwTijdwarp(verloop), [verloop])
@@ -430,6 +434,23 @@ export function Verloop3D({
     return { home: { a: ha, b: tweede(ha, geldig(colors?.homeB)) }, away: { a: aa, b: tweede(aa, geldig(colors?.awayB)) } }
   }, [colors?.home, colors?.away, colors?.homeB, colors?.awayB])
   const namen = useMemo(() => ({ home: afkorting(teams.home), away: afkorting(teams.away) }), [teams.home, teams.away])
+  // Veel pogingen op dezelfde plek stapelen; de hoogste piek mag nooit boven het beeld uitkomen
+  // (± 13 m in de camera hierboven). Zo nodig worden alle bulten in dezelfde verhouding lager.
+  const hoogteSchaal = useMemo(() => {
+    const L = totalLengthM(goalAreaDepth, { speelveldM })
+    const pk = verloop.pieken.slice(0, MAX_BULTEN)
+    let max = 0
+    for (const a of pk) {
+      let h = 0
+      for (const b of pk) {
+        const dx = (a.x - b.x) * 14
+        const dz = (a.y - b.y) * L
+        h += b.verwacht * BULT_M * Math.exp(-(dx * dx + dz * dz) / (2 * BULT_S * BULT_S))
+      }
+      max = Math.max(max, h)
+    }
+    return max > 13 ? 13 / max : 1
+  }, [verloop, goalAreaDepth, speelveldM])
 
   const zichtbaar = useRef<HTMLCanvasElement>(null)
   const scene = useRef<Scene3D | null>(null)
@@ -490,7 +511,7 @@ export function Verloop3D({
       const o = i * 4
       s.bulten[o] = (p.x - 0.5) * 14
       s.bulten[o + 1] = (p.y - 0.5) * s.lengteM
-      s.bulten[o + 2] = voor <= 0 ? 0 : veer(voor) * p.verwacht * BULT_M
+      s.bulten[o + 2] = voor <= 0 ? 0 : veer(voor) * p.verwacht * BULT_M * hoogteSchaal
       s.bulten[o + 3] = p.werper === 'home' ? BULT_S : -BULT_S
       aantal = i + 1
     })
@@ -685,9 +706,9 @@ export function Verloop3D({
     g.textAlign = 'right'
     g.font = `700 19px ${FONT}`
     g.fillStyle = 'rgba(255,255,255,.75)'
-    g.fillText('▲ hogere piek → gevaarlijker', 1020, 836)
+    g.fillText(geschat ? '▲ zonder worpen: plaats geschat' : '▲ hogere piek → gevaarlijker', 1020, 836)
     g.fillStyle = GEEL
-    g.fillText('○ doelpunt', 1020, 862)
+    g.fillText(geschat ? '○ doelpunt · hoogte = punten' : '○ doelpunt', 1020, 862)
     g.textAlign = 'left'
     g.globalAlpha = 1 - eind
     g.fillStyle = 'rgba(255,255,255,.6)'
@@ -714,9 +735,18 @@ export function Verloop3D({
         g.fillText(waarden[1], x + mid / 2, 872)
       }
       g.globalAlpha = eind
-      kolom('Doelpogingen', [String(c.pogingen[0]), String(c.pogingen[1])], 170)
-      kolom('Raak', [String(c.raak[0]), String(c.raak[1])], 390)
-      kolom('Verwachte punten', [c.verwacht[0].toFixed(1).replace('.', ','), c.verwacht[1].toFixed(1).replace('.', ',')], 610)
+      if (geschat) {
+        // Zonder worpen geen pogingen of verwachte punten: enkel wat gescoord werd.
+        const rug = [0, 1].map((i) => verloop.pieken.filter((p) => p.t <= t && p.soort === 'doelpunt' && p.werper === (i ? 'away' : 'home') && p.punten === 2).length)
+        const st = standOp(verloop, t)
+        kolom('Doelpunten', [String(c.raak[0]), String(c.raak[1])], 170)
+        kolom('Rugworpen (+2)', [String(rug[0]), String(rug[1])], 390)
+        kolom('Punten', [String(st[0]), String(st[1])], 610)
+      } else {
+        kolom('Doelpogingen', [String(c.pogingen[0]), String(c.pogingen[1])], 170)
+        kolom('Raak', [String(c.raak[0]), String(c.raak[1])], 390)
+        kolom('Verwachte punten', [c.verwacht[0].toFixed(1).replace('.', ','), c.verwacht[1].toFixed(1).replace('.', ',')], 610)
+      }
       g.globalAlpha = 1
     }
     g.fillStyle = 'rgba(255,255,255,.18)'
@@ -1015,7 +1045,8 @@ export function Verloop3D({
           <div className="replay-status">
             <span>
               <b className="replay-step">{tijdLabelOp(verloop, tijd)}</b>
-              {verloop.tijdas === 'volgorde' ? ' · zonder klok: in volgorde van de worpen' : ''}
+              {verloop.tijdas === 'volgorde' ? ' · zonder klok: in volgorde' : ''}
+              {geschat ? ' · aangetekend zonder veldschema: de plaats van de doelpunten is geschat' : ''}
             </span>
             <span className="verloop3d-knoppen">
               <button type="button" onClick={bewaarBeeld} disabled={!!opname}>🖼️ Beeld</button>

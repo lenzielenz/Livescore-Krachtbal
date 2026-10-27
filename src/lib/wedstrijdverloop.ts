@@ -1,3 +1,5 @@
+import { goalLineNorm, type VeldMaten } from '@/lib/field'
+import { attackDirForSide } from '@/lib/krachtbal-rules'
 import type { ShotPoint } from '@/lib/match-engine'
 
 // Het wedstrijdverloop als deelbaar beeld (zie components/Verloop3D.tsx): per doelpoging een piek
@@ -241,4 +243,51 @@ export function bouwTijdwarp(v: Verloop, rek = 2.5): Tijdwarp {
       return cum[i] + (cum[i + 1] - cum[i]) * (x - i)
     },
   }
+}
+
+/** Een vaste, herhaalbare "toevalswaarde" (0..1) per getal: dezelfde wedstrijd geeft altijd hetzelfde beeld. */
+function vast(n: number): number {
+  const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453
+  return x - Math.floor(x)
+}
+
+/**
+ * Doelpogingen uit enkel de doelpunten, voor een wedstrijd die zonder veldschema werd aangetekend
+ * (snelscore: +1/+2 per ploeg, geen landingsplek). De plaats is een schatting: in het doelgebied
+ * waarop die ploeg in die helft aanviel, verspreid over de breedte, telkens op dezelfde plek voor
+ * dezelfde wedstrijd. Ontbreekt de klok bij alle doelpunten, dan krijgen ze geen klok en loopt de
+ * tijdas in volgorde. Missers en worpen zijn er niet: enkel wat gescoord werd.
+ */
+export function schotenUitDoelpunten(
+  goals: { half: number; gameClock: number | null; side: 'home' | 'away'; points: number }[],
+  o: { goalAreaDepth?: number | null; maten?: Partial<VeldMaten> | null } = {},
+): ShotPoint[] {
+  const gl = goalLineNorm(o.goalAreaDepth ?? undefined, o.maten)
+  const metKlok = goals.some((g) => (g.gameClock ?? 0) > 0)
+  return goals
+    .map((g, i) => ({ g, i }))
+    .sort((a, b) => a.g.half - b.g.half || (a.g.gameClock ?? 0) - (b.g.gameClock ?? 0) || a.i - b.i)
+    .map(({ g, i }) => {
+      const omhoog = attackDirForSide(g.side, g.half === 2 ? 2 : 1) === 'up'
+      // Over het hele doelgebied en een stukje ervoor, zodat veel doelpunten niet op één punt stapelen.
+      const diep = gl * (0.1 + 1.1 * vast(i * 2 + 1))
+      return {
+        x: 0.08 + 0.84 * vast(i * 2),
+        y: omhoog ? 1 - diep : diep,
+        fromX: 0.5,
+        fromY: 0.5,
+        outcome: 'goal',
+        type: g.points === 2 ? 'rug' : 'nek',
+        playerId: 0,
+        shirtNumber: 0,
+        teamSide: g.side,
+        throwNumber: 1,
+        isLastThrow: true,
+        period: g.half === 2 ? 2 : 1,
+        // Geen echte afstand: een doelpunt van dichtbij, zodat de hoogte de puntwaarde volgt.
+        distance: 3,
+        gameClock: metKlok ? (g.gameClock ?? 0) : null,
+        points: g.points,
+      } satisfies ShotPoint
+    })
 }
