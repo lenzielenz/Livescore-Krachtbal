@@ -27,6 +27,12 @@ export type Piek = {
   type: ShotPoint['type']
   /** Stand ná dit moment. */
   stand: [number, number]
+  /** Wie wierp (bij een eigen doelpunt is dat niet `kant`). */
+  werper: Kant
+  /** Verwachte punten van deze poging (kans × puntwaarde): de hoogte van de bult, zoals xG. */
+  verwacht: number
+  /** Wedstrijdminuut (doorlopend over beide helften), als de klok bekend is. */
+  minuut: number | null
 }
 
 export type Verloop = {
@@ -48,11 +54,18 @@ export type Verloop = {
  * "hoe dicht het bij een doelpunt zat", niet als een exact cijfer.
  */
 export function gevaar(type: ShotPoint['type'], distance: number | null): number {
+  return Math.max(0.06, Math.min(0.6, verwachtePunten(type, distance) / 2))
+}
+
+/** Geschatte scoringskans op afstand: dichtbij ± 0,6, voorbij 15 m nog ± 0,1. */
+function kans(distance: number | null): number {
   const d = distance ?? 9
-  // Scoringskans: dichtbij ± 0,6, voorbij 15 m nog ± 0,1.
-  const kans = Math.max(0.08, Math.min(0.65, 0.75 - d * 0.045))
-  const waarde = type === 'rug' ? 2 : 1
-  return Math.max(0.06, Math.min(0.6, (kans * waarde) / 2))
+  return Math.max(0.08, Math.min(0.65, 0.75 - d * 0.045))
+}
+
+/** Verwachte punten van één poging: scoringskans × puntwaarde (rugworp 2, nekworp 1). */
+export function verwachtePunten(type: ShotPoint['type'], distance: number | null): number {
+  return kans(distance) * (type === 'rug' ? 2 : 1)
 }
 
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
@@ -93,6 +106,9 @@ export function bouwVerloop(shots: ShotPoint[]): Verloop {
       shirtNumber: s.shirtNumber,
       type: s.type,
       stand: [stand[0], stand[1]],
+      werper: s.teamSide,
+      verwacht: s.freeThrow ? 1 * kans(s.distance) : verwachtePunten(s.type, s.distance),
+      minuut: metKlok ? Math.floor(((helft === 1 ? helften[0] : 0) + (s.gameClock ?? 0)) / 60) + 1 : null,
     }
   })
   teller = [0, 0]
@@ -117,4 +133,54 @@ export function tijdLabelOp(v: Verloop, t: number): string {
   if (v.tijdas !== 'klok') return s < v.helften[0] ? '1e helft' : '2e helft'
   if (Math.abs(s - v.helften[0]) < 1) return 'rust'
   return s < v.helften[0] ? `1e helft ${mmss(s)}` : `2e helft ${mmss(s - v.helften[0])}`
+}
+
+/**
+ * De aanvalsdruk van elke ploeg rond moment `t` (0..1): de verwachte punten van de pogingen vlak
+ * ervoor en erna, zacht uitgesmeerd. Pogingen ná `tot` tellen niet mee (de lijn verraadt niets).
+ */
+export function drukOp(v: Verloop, t: number, tot = 1, breedte = 0.022): [number, number] {
+  const d: [number, number] = [0, 0]
+  for (const p of v.pieken) {
+    if (p.t > tot) break
+    const x = (t - p.t) / breedte
+    if (Math.abs(x) > 3) continue
+    d[p.werper === 'home' ? 0 : 1] += p.verwacht * Math.exp(-x * x)
+  }
+  return d
+}
+
+/** De cijfers tot moment `t`: doelpogingen, raak en verwachte punten per ploeg (thuis, uit). */
+export function cijfersTot(v: Verloop, t: number): { pogingen: [number, number]; raak: [number, number]; verwacht: [number, number] } {
+  const c = { pogingen: [0, 0] as [number, number], raak: [0, 0] as [number, number], verwacht: [0, 0] as [number, number] }
+  for (const p of v.pieken) {
+    if (p.t > t) break
+    const i = p.werper === 'home' ? 0 : 1
+    c.pogingen[i] += 1
+    c.verwacht[i] += p.verwacht
+    if (p.soort === 'doelpunt') c.raak[i] += 1
+  }
+  return c
+}
+
+/** De klok rechtsboven: de minuut en de helft, met de voortgang in die helft; op het einde "EINDE". */
+export function klokOp(v: Verloop, t: number): { groot: string; klein: string; voortgang: number } {
+  if (t >= 1) return { groot: 'EINDE', klein: 'Eindstand', voortgang: 1 }
+  const totaal = v.helften[0] + v.helften[1]
+  const s = t * totaal
+  const tweede = s >= v.helften[0]
+  const inHelft = tweede ? s - v.helften[0] : s
+  const voortgang = Math.min(1, inHelft / v.helften[tweede ? 1 : 0])
+  if (v.tijdas !== 'klok') return { groot: tweede ? '2e' : '1e', klein: 'helft', voortgang }
+  return { groot: `${Math.floor(s / 60) + 1}'`, klein: tweede ? '2e helft' : '1e helft', voortgang }
+}
+
+/** Een korte afkorting van een ploegnaam (zoals BAR, RMA): zonder clubvoorvoegsels als KV of KBK. */
+export function afkorting(naam: string): string {
+  const woorden = naam.split(/\s+/).filter(Boolean)
+  const kern = woorden.filter((w) => !/^[A-Z]{1,4}\.?$/.test(w))
+  const w = kern[0] ?? woorden[0] ?? ''
+  const delen = w.split('-').filter(Boolean)
+  const raw = delen.length > 1 ? `${delen[0][0]}${delen[1].slice(0, 2)}` : w.slice(0, 3)
+  return raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() || 'KB'
 }

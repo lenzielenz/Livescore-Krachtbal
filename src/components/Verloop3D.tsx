@@ -4,105 +4,77 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 
 import { saveOrShareBlob, slugFilename } from '@/lib/client-download'
-import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn } from '@/lib/club-colors'
+import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, readableOnDark, relativeLuminance } from '@/lib/club-colors'
 import { freeThrowNorm, goalLineNorm, totalLengthM } from '@/lib/field'
 import type { ShotPoint } from '@/lib/match-engine'
-import { bouwVerloop, standOp, tijdLabelOp, type Piek, type Verloop } from '@/lib/wedstrijdverloop'
+import { afkorting, bouwVerloop, cijfersTot, drukOp, klokOp, standOp, tijdLabelOp, type Verloop } from '@/lib/wedstrijdverloop'
 
-// Het wedstrijdverloop als deelbaar 3D-beeld: het veld in de kleuren van beide clubs (elke helft
-// in haar clubkleur, met banen), rondom wapperende vlaggen van beide clubs, op elke doelpoging een
-// piek zo hoog als de punten die ze opleverde (een misser: zo hoog als het gevaar dat ze had), de
-// stand bovenaan en de tijdlijn onderaan — afgespeeld over de wedstrijdtijd.
+// Het wedstrijdverloop in 3D, in de stijl van de bekende voetbalanimaties: het veld is één doek dat
+// golft, elke helft in de banen van haar club (primaire en secundaire kleur). Elke doelpoging duwt
+// een bult uit dat doek, zo hoog als het gevaar ervan (verwachte punten, zoals xG), in de kleuren
+// van de ploeg die wierp; bulten op dezelfde plek stapelen tot hoge pieken. Een doelpunt krijgt een
+// gele ring erboven. Waar de druk ligt, zwelt het doek op en lopen er rimpels door. Bovenaan de
+// stand met de doelpuntminuten en de klok; onderaan de aanvalsdruk van beide ploegen als lijn,
+// en op het einde de cijfers. Bij het openen speelt het af van de eerste minuut tot het einde.
 //
-// Alles beweegt vloeiend in één doorlopende tekenlus: de vlaggen wapperen altijd, de camera zweeft
-// zacht, een piek groeit met een kleine veerkracht en krijgt een lichtring als het een doelpunt
-// is, de stand klopt even op als ze verandert, en verschuiven op de tijdlijn glijdt in plaats van
-// te springen. Op een traag toestel tekent de lus de helft van de beelden; als de pagina verborgen
-// is, staat ze stil.
-//
-// Eén beeld van 1080 × 1350 (4:5, voor Instagram en WhatsApp): three tekent de 3D-laag in een
-// verborgen canvas, en elk beeld wordt met de kop en de tijdlijn samengesteld op het zichtbare
-// canvas. Dat ene canvas is ook wat opgenomen (video) of bewaard (PNG) wordt. Het model (pieken,
-// stand, tijdas) zit in lib/wedstrijdverloop.ts.
+// Het doek is één fijn raster; het golven en de bulten zitten in de vertex shader (de bulten als
+// kleine datatextuur), de kleuren en het licht in de fragment shader. Eén beeld van 1080 × 1080:
+// three tekent het veld op een doorzichtig canvas, kop en tijdlijn komen er in 2D overheen. Dat ene
+// canvas wordt ook opgenomen (video) of bewaard (PNG). Het model zit in lib/wedstrijdverloop.ts.
 
 const W = 1080
-const H = 1350
-const KOP = 250
-const VELD_H = 850
-const TIJDLIJN_Y = KOP + VELD_H
+const H = 1080
 /** Hoe lang de hele wedstrijd op de tijdas duurt bij snelheid 1, in seconden. */
-const AFSPEELDUUR = 18
+const AFSPEELDUUR = 22
 /** Even blijven staan op het eindbeeld (ook in de video). */
-const NAHOUD = 1.6
-/** Hoe lang een piek groeit, als deel van de tijdas. */
+const NAHOUD = 2.5
+/** Hoe lang een bult groeit, als deel van de tijdas. */
 const GROEI = 0.03
+/** Hoogte (m) van een bult per verwacht punt. */
+const BULT_M = 9.5
+/** Breedte (m) van een bult. */
+const BULT_S = 0.72
+const MAX_BULTEN = 512
+const GEEL = '#f5c518'
 const FONT = 'Inter, system-ui, -apple-system, "Segoe UI", sans-serif'
-const MAX_PIEK_M = 7
-/** Hoe lang de lichtring rond een doelpunt uitdijt, in seconden. */
-const RING_S = 1.2
 
-type Kleuren = { home: string; away: string }
+type Kleur2 = { a: string; b: string }
+type Kleuren = { home: Kleur2; away: Kleur2 }
 type Modus = 'stil' | 'speelt' | 'opname'
 
-const hex = (s: string | null | undefined, terugval: string) => (s && /^#[0-9a-fA-F]{6}$/.test(s) ? s : terugval)
+const geldig = (s: string | null | undefined) => (s && /^#[0-9a-fA-F]{6}$/.test(s) ? s.toLowerCase() : null)
 const meng = (a: string, b: string, t: number) => `#${new THREE.Color(a).lerp(new THREE.Color(b), t).getHexString()}`
 const klem = (x: number, a = 0, b = 1) => Math.max(a, Math.min(b, x))
-/** Zacht uitlopen. */
-const uitloop = (x: number) => 1 - Math.pow(1 - klem(x), 3)
-/** Uitlopen met een kleine overschot: de piek veert even door voor ze stilstaat. */
 const veer = (x: number) => {
   const k = klem(x)
-  const c = 1.55
-  return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2)
+  return 1 + 2.4 * Math.pow(k - 1, 3) + 1.4 * Math.pow(k - 1, 2)
 }
 const rgba = (kleur: string, a: number) => {
   const c = new THREE.Color(kleur)
   return `rgba(${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)},${a})`
 }
-const initialen = (naam: string) =>
-  naam
-    .split(/\s+/)
-    .filter((w) => /[A-Za-z]/.test(w))
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 3)
-    .toUpperCase()
+const afstand = (a: string, b: string) => {
+  const x = new THREE.Color(a)
+  const y = new THREE.Color(b)
+  return Math.abs(x.r - y.r) + Math.abs(x.g - y.g) + Math.abs(x.b - y.b)
+}
+/** De tweede baankleur: de secundaire clubkleur, of (ontbreekt die of lijkt ze te veel) een tint van de eerste. */
+const tweede = (a: string, b: string | null) => (b && afstand(a, b) > 0.35 ? b : relativeLuminance(a) > 0.45 ? meng(a, '#000000', 0.28) : meng(a, '#ffffff', 0.5))
 
-/** De grasmat als canvas: elke helft in haar clubkleur, met lichtere en donkere banen in de lengte. */
-function veldTextuur(kleuren: Kleuren, lengteM: number, goalAreaDepth: number, speelveldM?: number): THREE.CanvasTexture {
-  const PX = 32
+/** De lijnen van het krachtbalveld, wit op doorzichtig: rand, doellijnen, vrijeworplijnen, middellijn. */
+function lijnenTextuur(lengteM: number, goalAreaDepth: number, speelveldM?: number): THREE.CanvasTexture {
+  const PX = 40
   const w = 14 * PX
   const h = Math.round(lengteM * PX)
   const c = document.createElement('canvas')
   c.width = w
   c.height = h
   const g = c.getContext('2d')!
-  for (let i = 0; i < 7; i++) {
-    const licht = i % 2 === 0
-    const tint = (k: string) => meng(k, licht ? '#ffffff' : '#000000', licht ? 0.1 : 0.22)
-    const grad = g.createLinearGradient(0, 0, 0, h)
-    // Een lange, zachte overgang in het midden: de twee clubkleuren vloeien in elkaar over.
-    grad.addColorStop(0, tint(kleuren.home))
-    grad.addColorStop(0.4, tint(kleuren.home))
-    grad.addColorStop(0.6, tint(kleuren.away))
-    grad.addColorStop(1, tint(kleuren.away))
-    g.fillStyle = grad
-    g.fillRect(i * 2 * PX, 0, 2 * PX, h)
-  }
-  // Een zachte glans over het hele veld (licht in het midden, donkerder naar de randen).
-  const glans = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, h * 0.62)
-  glans.addColorStop(0, 'rgba(255,255,255,.06)')
-  glans.addColorStop(1, 'rgba(0,0,0,.22)')
-  g.fillStyle = glans
-  g.fillRect(0, 0, w, h)
-  const gl = goalLineNorm(goalAreaDepth, { speelveldM })
-  g.fillStyle = 'rgba(0,0,0,.16)'
-  g.fillRect(0, 0, w, gl * h)
-  g.fillRect(0, (1 - gl) * h, w, gl * h)
-  g.strokeStyle = 'rgba(255,255,255,.92)'
-  g.lineWidth = 0.12 * PX
+  g.strokeStyle = '#ffffff'
+  g.lineWidth = 0.13 * PX
   g.lineCap = 'round'
   g.strokeRect(g.lineWidth / 2, g.lineWidth / 2, w - g.lineWidth, h - g.lineWidth)
+  const gl = goalLineNorm(goalAreaDepth, { speelveldM })
   const ft = freeThrowNorm(goalAreaDepth, { speelveldM })
   for (const y of [gl, 1 - gl, ft, 1 - ft, 0.5]) {
     g.beginPath()
@@ -111,276 +83,242 @@ function veldTextuur(kleuren: Kleuren, lengteM: number, goalAreaDepth: number, s
     g.stroke()
   }
   const t = new THREE.CanvasTexture(c)
-  t.colorSpace = THREE.SRGBColorSpace
   t.anisotropy = 8
   return t
 }
 
-/** Een clubvlag: de clubkleur met een lichte diagonale baan, een zoom aan de stok en de initialen. */
-function vlagTextuur(kleur: string, naam: string): THREE.CanvasTexture {
+/** Een zachte schaduw onder het doek. */
+function schaduwTextuur(): THREE.CanvasTexture {
   const c = document.createElement('canvas')
-  c.width = 512
-  c.height = 320
+  c.width = 128
+  c.height = 256
   const g = c.getContext('2d')!
-  const grad = g.createLinearGradient(0, 0, 512, 320)
-  grad.addColorStop(0, meng(kleur, '#ffffff', 0.08))
-  grad.addColorStop(1, meng(kleur, '#000000', 0.18))
-  g.fillStyle = grad
-  g.fillRect(0, 0, 512, 320)
-  g.save()
-  g.translate(256, 160)
-  g.rotate(-0.42)
-  g.fillStyle = rgba(meng(kleur, '#ffffff', 0.55), 0.55)
-  g.fillRect(-400, -34, 800, 68)
-  g.restore()
-  g.fillStyle = meng(kleur, '#000000', 0.35)
-  g.fillRect(0, 0, 26, 320)
-  g.fillStyle = inkOn(kleur)
-  g.font = `900 132px ${FONT}`
-  g.textAlign = 'center'
-  g.textBaseline = 'middle'
-  g.shadowColor = 'rgba(0,0,0,.35)'
-  g.shadowBlur = 12
-  g.fillText(initialen(naam) || 'KB', 276, 168, 430)
-  const t = new THREE.CanvasTexture(c)
-  t.colorSpace = THREE.SRGBColorSpace
-  t.anisotropy = 4
-  return t
+  g.filter = 'blur(14px)'
+  g.fillStyle = 'rgba(0,0,0,.85)'
+  g.fillRect(24, 24, 80, 208)
+  return new THREE.CanvasTexture(c)
 }
 
-/** Een zachte, ronde lichtvlek (voor de gloed onder een piek). */
-function gloedTextuur(): THREE.CanvasTexture {
+/** De gele doelpuntring. */
+function ringTextuur(): THREE.CanvasTexture {
   const c = document.createElement('canvas')
   c.width = 128
   c.height = 128
   const g = c.getContext('2d')!
-  const r = g.createRadialGradient(64, 64, 0, 64, 64, 64)
-  r.addColorStop(0, 'rgba(255,255,255,1)')
-  r.addColorStop(0.35, 'rgba(255,255,255,.45)')
-  r.addColorStop(1, 'rgba(255,255,255,0)')
-  g.fillStyle = r
-  g.fillRect(0, 0, 128, 128)
-  return new THREE.CanvasTexture(c)
+  g.strokeStyle = GEEL
+  g.lineWidth = 12
+  g.beginPath()
+  g.arc(64, 64, 48, 0, Math.PI * 2)
+  g.stroke()
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
 }
 
-// Wapperen in de vertex shader: twee golven die van de stok weg lopen, sterker naar het vrije uiteinde;
-// het doek hangt daar ook een tikje door. De plooien krijgen licht en schaduw mee naar de fragment shader.
-const VLAG_VS = /* glsl */ `
+// Het doek: golven (een zachte wind over het hele veld), de zwelling waar de druk ligt met rimpels
+// eromheen, en de bulten van de pogingen. De normaal komt uit de hoogte vlak ernaast, zodat het
+// licht over elke plooi en elke piek loopt.
+const DOEK_VS = /* glsl */ `
+  uniform sampler2D uBulten;
+  uniform int uAantal;
   uniform float uTijd;
-  uniform float uFase;
+  uniform float uGolf;
+  uniform vec3 uZwel;
+  varying vec3 vNormaal;
+  varying float vH;
+  varying float vThuis;
+  varying float vUit;
   varying vec2 vUv;
-  varying float vPlooi;
+  varying vec2 vPos;
+
+  float golf(vec2 p) {
+    float w = uGolf * (sin(p.y * 0.2 - uTijd * 1.45) * 0.6 + sin(p.x * 0.34 + p.y * 0.08 - uTijd * 1.05) * 0.32);
+    float dz = p.y - uZwel.x;
+    float dx = p.x - uZwel.z;
+    float zwel = uZwel.y * exp(-dz * dz / 90.0) * (0.75 + 0.25 * exp(-dx * dx / 40.0));
+    float r = sqrt(dz * dz + dx * dx * 0.6);
+    float rimpel = uZwel.y * 0.24 * sin(r * 0.75 - uTijd * 3.1) * exp(-r * 0.11);
+    return w + zwel + rimpel;
+  }
+  void bulten(vec2 p, out float hT, out float hU) {
+    hT = 0.0;
+    hU = 0.0;
+    for (int i = 0; i < ${MAX_BULTEN}; i++) {
+      if (i >= uAantal) break;
+      vec4 b = texelFetch(uBulten, ivec2(i, 0), 0);
+      if (b.z < 0.002) continue;
+      float s = abs(b.w);
+      vec2 d = p - b.xy;
+      float q = dot(d, d) / (2.0 * s * s);
+      if (q > 7.0) continue;
+      float v = b.z * exp(-q);
+      if (b.w > 0.0) hT += v; else hU += v;
+    }
+  }
+  float hoogte(vec2 p) {
+    float a;
+    float b;
+    bulten(p, a, b);
+    return a + b + golf(p);
+  }
   void main() {
+    vec2 p = position.xz;
+    float hT;
+    float hU;
+    bulten(p, hT, hU);
+    float h = hT + hU + golf(p);
+    float e = 0.22;
+    float hx = hoogte(p + vec2(e, 0.0));
+    float hz = hoogte(p + vec2(0.0, e));
+    vNormaal = normalize(vec3(-(hx - h) / e, 1.0, -(hz - h) / e));
+    vH = h;
+    vThuis = hT;
+    vUit = hU;
     vUv = uv;
-    vec3 p = position;
-    float k = uv.x;
-    float a = uv.x * 5.2 - uTijd * 3.6 + uFase;
-    float b = uv.x * 10.5 + uv.y * 2.2 - uTijd * 5.7 + uFase * 1.7;
-    p.z += (sin(a) * 0.36 + sin(b) * 0.09) * k;
-    p.y += -k * k * 0.14 + sin(a * 0.8 + 1.3) * 0.05 * k;
-    vPlooi = (cos(a) * 0.8 + cos(b) * 0.35) * k;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    vPos = p;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p.x, h, p.y, 1.0);
   }
 `
-const VLAG_FS = /* glsl */ `
-  uniform sampler2D uKaart;
+const DOEK_FS = /* glsl */ `
+  uniform sampler2D uLijnen;
+  uniform vec3 uThuisA;
+  uniform vec3 uThuisB;
+  uniform vec3 uUitA;
+  uniform vec3 uUitB;
+  uniform float uL;
+  varying vec3 vNormaal;
+  varying float vH;
+  varying float vThuis;
+  varying float vUit;
   varying vec2 vUv;
-  varying float vPlooi;
+  varying vec2 vPos;
   void main() {
-    vec4 c = texture2D(uKaart, vUv);
-    float licht = clamp(0.86 + vPlooi * 0.22, 0.55, 1.18);
-    gl_FragColor = vec4(c.rgb * licht, 1.0);
+    float xn = vPos.x / 14.0 + 0.5;
+    float yn = vPos.y / uL + 0.5;
+    float baan = mod(floor(xn * 7.0), 2.0);
+    vec3 thuis = mix(uThuisA, uThuisB, baan);
+    vec3 uit = mix(uUitA, uUitB, baan);
+    // De thuishelft (y < 0,5) in de thuisbanen, de uithelft in de uitbanen.
+    vec3 c = mix(thuis, uit, smoothstep(0.496, 0.504, yn));
+    // Een bult krijgt de banen van de ploeg die wierp; hoe hoger, hoe lichter de top.
+    float tot = vThuis + vUit;
+    vec3 aanval = mix(thuis, uit, tot > 0.0001 ? vUit / tot : 0.0);
+    c = mix(c, aanval, smoothstep(0.12, 1.1, tot));
+    c = mix(c, vec3(1.0), smoothstep(2.5, 11.0, vH) * 0.55);
+    float lijn = texture2D(uLijnen, vUv).a;
+    c = mix(c, vec3(1.0), lijn * 0.92);
+    vec3 n = normalize(vNormaal);
+    if (!gl_FrontFacing) n = -n;
+    float licht = max(dot(n, normalize(vec3(-0.45, 1.0, -0.35))), 0.0);
+    float hemel = 0.5 + 0.5 * n.y;
+    c *= 0.34 + 0.4 * hemel + 0.5 * licht;
+    gl_FragColor = vec4(c, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
 `
 
-type PiekObj = {
-  piek: Piek
-  spits: THREE.Mesh
-  top: THREE.Mesh | null
-  gloed: THREE.Mesh
-  ring: THREE.Mesh | null
-  /** Het moment (seconden, echte tijd) waarop de piek verscheen; -1 = nog niet. */
-  flits: number
-  fase: number
-}
+type Doel = { sprite: THREE.Sprite; x: number; z: number; i: number; dx: number }
 
 type Scene3D = {
   renderer: THREE.WebGLRenderer
   scene: THREE.Scene
   camera: THREE.PerspectiveCamera
-  pieken: PiekObj[]
-  tijd: { value: number }
+  uniforms: { uTijd: { value: number }; uGolf: { value: number }; uZwel: { value: THREE.Vector3 }; uAantal: { value: number } }
+  bulten: Float32Array
+  bultTex: THREE.DataTexture
+  doelen: Doel[]
   lengteM: number
-  /** Camera al eens geplaatst (de eerste keer zonder naglijden). */
-  geplaatst: boolean
+  zwel: { a: number; z: number; x: number }
   dispose: () => void
 }
 
-function bouwScene(canvas: HTMLCanvasElement, verloop: Verloop, kleuren: Kleuren, teams: { home: string; away: string }, goalAreaDepth: number, speelveldM?: number): Scene3D {
+/** Het golven, gespiegeld uit de shader (voor de hoogte van de doelpuntringen). */
+function golfOp(x: number, z: number, tijd: number, golf: number, zwel: THREE.Vector3): number {
+  const w = golf * (Math.sin(z * 0.2 - tijd * 1.45) * 0.6 + Math.sin(x * 0.34 + z * 0.08 - tijd * 1.05) * 0.32)
+  const dz = z - zwel.x
+  const dx = x - zwel.z
+  const r = Math.sqrt(dz * dz + dx * dx * 0.6)
+  return w + zwel.y * Math.exp((-dz * dz) / 90) * (0.75 + 0.25 * Math.exp((-dx * dx) / 40)) + zwel.y * 0.24 * Math.sin(r * 0.75 - tijd * 3.1) * Math.exp(-r * 0.11)
+}
+
+function bouwScene(canvas: HTMLCanvasElement, verloop: Verloop, kleuren: Kleuren, goalAreaDepth: number, speelveldM?: number): Scene3D {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' })
   renderer.setPixelRatio(1)
-  renderer.setSize(W, VELD_H, false)
+  renderer.setSize(W, H, false)
   renderer.setClearColor(0x000000, 0)
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 0.95
+  renderer.toneMappingExposure = 1.15
   const scene = new THREE.Scene()
-  scene.fog = new THREE.Fog('#0e141c', 48, 120)
-  const camera = new THREE.PerspectiveCamera(36, W / VELD_H, 1, 400)
+  const camera = new THREE.PerspectiveCamera(26, W / H, 1, 600)
   const lengteM = totalLengthM(goalAreaDepth, { speelveldM })
-  const L2 = lengteM / 2
 
-  scene.add(new THREE.HemisphereLight('#ffffff', '#1a2029', 0.9))
-  const zon = new THREE.DirectionalLight('#fff4e0', 1.5)
-  zon.position.set(-14, 30, 12)
-  scene.add(zon)
-  // Elke kant baadt in het licht van haar club.
-  for (const [kleur, z] of [
-    [kleuren.home, -L2],
-    [kleuren.away, L2],
-  ] as const) {
-    const l = new THREE.PointLight(kleur, 28, 0, 1.4)
-    l.position.set(0, 7, z * 0.75)
-    scene.add(l)
+  const n = Math.min(MAX_BULTEN, Math.max(1, verloop.pieken.length))
+  const bulten = new Float32Array(n * 4)
+  const bultTex = new THREE.DataTexture(bulten, n, 1, THREE.RGBAFormat, THREE.FloatType)
+  bultTex.magFilter = THREE.NearestFilter
+  bultTex.minFilter = THREE.NearestFilter
+  bultTex.needsUpdate = true
+  const lijnen = lijnenTextuur(lengteM, goalAreaDepth, speelveldM)
+  const uniforms = {
+    uBulten: { value: bultTex },
+    uAantal: { value: 0 },
+    uTijd: { value: 0 },
+    uGolf: { value: 1.15 },
+    uZwel: { value: new THREE.Vector3(0, 0, 0) },
+    uLijnen: { value: lijnen },
+    uThuisA: { value: new THREE.Color(kleuren.home.a) },
+    uThuisB: { value: new THREE.Color(kleuren.home.b) },
+    uUitA: { value: new THREE.Color(kleuren.away.a) },
+    uUitB: { value: new THREE.Color(kleuren.away.b) },
+    uL: { value: lengteM },
   }
+  // Fijn genoeg dat een bult van een meter breed rond is: ± 7 punten per meter in de breedte.
+  const doekGeo = new THREE.PlaneGeometry(14, lengteM, 96, Math.round(lengteM * 4.4))
+  doekGeo.rotateX(-Math.PI / 2)
+  const doek = new THREE.Mesh(doekGeo, new THREE.ShaderMaterial({ uniforms, vertexShader: DOEK_VS, fragmentShader: DOEK_FS, side: THREE.DoubleSide }))
+  doek.frustumCulled = false
+  scene.add(doek)
+  const schaduwTex = schaduwTextuur()
+  const schaduw = new THREE.Mesh(new THREE.PlaneGeometry(14 * 1.9, lengteM * 1.35), new THREE.MeshBasicMaterial({ map: schaduwTex, transparent: true, opacity: 0.7, depthWrite: false }))
+  schaduw.rotation.x = -Math.PI / 2
+  schaduw.position.set(1.8, -2.4, 2.2)
+  scene.add(schaduw)
 
-  const tex = veldTextuur(kleuren, lengteM, goalAreaDepth, speelveldM)
-  const veld = new THREE.Mesh(new THREE.PlaneGeometry(14, lengteM), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9, metalness: 0 }))
-  // Liggend: de bovenkant van de textuur (y = 0, de thuisachterlijn) komt op -z, net als de pieken
-  // (z = (y - 0.5) × lengte), de thuisvlaggen en de thuislijsten.
-  veld.rotation.x = -Math.PI / 2
-  scene.add(veld)
-  const rand = new THREE.Mesh(new THREE.BoxGeometry(14 + 3.2, 0.6, lengteM + 3.2), new THREE.MeshStandardMaterial({ color: '#121820', roughness: 0.85 }))
-  rand.position.y = -0.31
-  scene.add(rand)
-  // Gloeiende lijsten langs de rand: thuiskleur op de thuishelft, uitkleur op de uithelft.
-  const lijstGeo = new THREE.BoxGeometry(0.16, 0.08, L2)
-  for (const sx of [-1, 1])
-    for (const [kleur, sz] of [
-      [kleuren.home, -1],
-      [kleuren.away, 1],
-    ] as const) {
-      const lijst = new THREE.Mesh(lijstGeo, new THREE.MeshBasicMaterial({ color: kleur, toneMapped: false }))
-      lijst.position.set(sx * (7 + 1.1), 0.02, (sz * L2) / 2)
-      scene.add(lijst)
-    }
-
-  // De vlaggen: één windrichting voor allemaal (naar +x), elk met een eigen fase zodat ze niet in
-  // de maat wapperen. Langs beide zijlijnen en achter beide achterlijnen, in de kleur van de club
-  // die die helft verdedigt.
-  const tijd = { value: 0 }
-  const vlagTex = { home: vlagTextuur(kleuren.home, teams.home), away: vlagTextuur(kleuren.away, teams.away) }
-  const doekGeo = new THREE.PlaneGeometry(2.7, 1.65, 30, 10)
-  doekGeo.translate(1.35, 0, 0)
-  const stokGeo = new THREE.CylinderGeometry(0.05, 0.06, 4.4, 10)
-  stokGeo.translate(0, 2.2, 0)
-  const knopGeo = new THREE.SphereGeometry(0.1, 12, 8)
-  const stokMat = new THREE.MeshStandardMaterial({ color: '#c9d1da', metalness: 0.8, roughness: 0.3 })
-  const plekken: { x: number; z: number; kant: 'home' | 'away' }[] = []
-  for (const sx of [-1, 1])
-    for (const z of [-0.36, -0.14, 0.14, 0.36]) plekken.push({ x: sx * 9.6, z: z * lengteM, kant: z < 0 ? 'home' : 'away' })
-  for (const x of [-5, -1.6, 1.8]) {
-    plekken.push({ x, z: -L2 - 2.6, kant: 'home' })
-    plekken.push({ x, z: L2 + 2.6, kant: 'away' })
-  }
-  plekken.forEach((p, i) => {
-    const stok = new THREE.Mesh(stokGeo, stokMat)
-    stok.position.set(p.x, 0, p.z)
-    scene.add(stok)
-    const knop = new THREE.Mesh(knopGeo, stokMat)
-    knop.position.set(p.x, 4.45, p.z)
-    scene.add(knop)
-    const mat = new THREE.ShaderMaterial({
-      uniforms: { uKaart: { value: vlagTex[p.kant] }, uTijd: tijd, uFase: { value: i * 1.37 + (p.x > 0 ? 0.6 : 0) } },
-      vertexShader: VLAG_VS,
-      fragmentShader: VLAG_FS,
-      side: THREE.DoubleSide,
-      fog: false,
-    })
-    const doek = new THREE.Mesh(doekGeo, mat)
-    doek.position.set(p.x + 0.04, 4.4 - 0.85, p.z)
-    scene.add(doek)
-  })
-
-  // De pieken: een gladde, slanke spits (lathe) met een kleurverloop van donker onderaan naar licht
-  // bovenaan, een zachte gloed op het veld eronder, en bij een doelpunt een bolletje en een lichtring.
-  const profiel: THREE.Vector2[] = []
-  for (let i = 0; i <= 20; i++) {
-    const h = i / 20
-    profiel.push(new THREE.Vector2(0.5 * Math.pow(1 - h, 1.9) + 0.012, h))
-  }
-  const spitsVoor = (kleur: string) => {
-    const geo = new THREE.LatheGeometry(profiel, 32)
-    const pos = geo.getAttribute('position')
-    const kleuren = new Float32Array(pos.count * 3)
-    const onder = new THREE.Color(meng(kleur, '#000000', 0.35))
-    const boven = new THREE.Color(meng(kleur, '#ffffff', 0.45))
-    const c = new THREE.Color()
-    for (let i = 0; i < pos.count; i++) {
-      c.copy(onder).lerp(boven, pos.getY(i))
-      kleuren.set([c.r, c.g, c.b], i * 3)
-    }
-    geo.setAttribute('color', new THREE.BufferAttribute(kleuren, 3))
-    return geo
-  }
-  const spitsGeo = { home: spitsVoor(kleuren.home), away: spitsVoor(kleuren.away) }
-  const bolGeo = new THREE.SphereGeometry(0.3, 20, 14)
-  const gloedTex = gloedTextuur()
-  const gloedGeo = new THREE.PlaneGeometry(2.4, 2.4)
-  gloedGeo.rotateX(-Math.PI / 2)
-  const ringGeo = new THREE.RingGeometry(0.62, 0.74, 64)
-  ringGeo.rotateX(-Math.PI / 2)
-
-  const pieken: PiekObj[] = verloop.pieken.map((piek, i) => {
-    const kleur = piek.kant === 'home' ? kleuren.home : kleuren.away
-    const doel = piek.soort !== 'misser'
-    const x = (piek.x - 0.5) * 14
-    const z = (piek.y - 0.5) * lengteM
-    const spits = new THREE.Mesh(
-      spitsGeo[piek.kant],
-      new THREE.MeshStandardMaterial({ vertexColors: true, emissive: kleur, emissiveIntensity: doel ? 0.4 : 0.06, roughness: 0.32, metalness: 0.08, transparent: !doel, opacity: doel ? 1 : 0.6 }),
-    )
-    spits.position.set(x, 0, z)
-    spits.scale.set(1, 0.001, 1)
-    spits.visible = false
-    scene.add(spits)
-    const gloed = new THREE.Mesh(gloedGeo, new THREE.MeshBasicMaterial({ map: gloedTex, color: kleur, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }))
-    gloed.position.set(x, 0.03, z)
-    scene.add(gloed)
-    let top: THREE.Mesh | null = null
-    let ring: THREE.Mesh | null = null
-    if (doel) {
-      top = new THREE.Mesh(bolGeo, new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: kleur, emissiveIntensity: 1.1, roughness: 0.15 }))
-      top.position.set(x, 0, z)
-      top.visible = false
-      scene.add(top)
-      ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: meng(kleur, '#ffffff', 0.3), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }))
-      ring.position.set(x, 0.05, z)
-      ring.visible = false
-      scene.add(ring)
-    }
-    return { piek, spits, top, gloed, ring, flits: -1, fase: i * 0.77 }
+  // De doelpuntringen: één per doelpunt; doelpunten vlak bij elkaar komen naast elkaar te hangen.
+  const ringTex = ringTextuur()
+  const doelen: Doel[] = []
+  verloop.pieken.forEach((p, i) => {
+    if (p.soort === 'misser' || i >= MAX_BULTEN) return
+    const x = (p.x - 0.5) * 14
+    const z = (p.y - 0.5) * lengteM
+    const buren = doelen.filter((d) => Math.hypot(d.x - x, d.z - z) < 1.6).length
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: ringTex, transparent: true, depthTest: false, toneMapped: false }))
+    sprite.renderOrder = 10
+    sprite.visible = false
+    scene.add(sprite)
+    doelen.push({ sprite, x, z, i, dx: buren * 1.25 })
   })
 
   return {
     renderer,
     scene,
     camera,
-    pieken,
-    tijd,
+    uniforms,
+    bulten,
+    bultTex,
+    doelen,
     lengteM,
-    geplaatst: false,
+    zwel: { a: 0, z: 0, x: 0 },
     dispose() {
-      for (const t of [tex, vlagTex.home, vlagTex.away, gloedTex]) t.dispose()
-      for (const g of [lijstGeo, doekGeo, stokGeo, knopGeo, spitsGeo.home, spitsGeo.away, bolGeo, gloedGeo, ringGeo]) g.dispose()
+      for (const t of [lijnen, schaduwTex, ringTex, bultTex]) t.dispose()
       scene.traverse((o) => {
-        const mesh = o as THREE.Mesh
-        if (mesh.isMesh) {
-          if (mesh.geometry) mesh.geometry.dispose()
-          const m = mesh.material as THREE.Material | undefined
-          if (m && typeof m.dispose === 'function') m.dispose()
+        const m = o as THREE.Mesh
+        if (m.isMesh || (o as THREE.Sprite).isSprite) {
+          m.geometry?.dispose()
+          const mat = m.material as THREE.Material | undefined
+          mat?.dispose()
         }
       })
       renderer.dispose()
@@ -388,33 +326,27 @@ function bouwScene(canvas: HTMLCanvasElement, verloop: Verloop, kleuren: Kleuren
   }
 }
 
-/** De achtergrond van het beeld, één keer getekend: donker, met de gloed van elke club in haar hoek. */
+/** De achtergrond, één keer getekend: donker paars, met de gloed van elke club in haar hoek. */
 function bouwAchtergrond(kleuren: Kleuren): HTMLCanvasElement {
   const c = document.createElement('canvas')
   c.width = W
   c.height = H
   const g = c.getContext('2d')!
   const basis = g.createLinearGradient(0, 0, 0, H)
-  basis.addColorStop(0, '#0a0f16')
-  basis.addColorStop(1, '#111822')
+  basis.addColorStop(0, '#1b1320')
+  basis.addColorStop(1, '#141019')
   g.fillStyle = basis
   g.fillRect(0, 0, W, H)
-  for (const [kleur, x, y, r] of [
-    [kleuren.home, 0, KOP * 0.6, 760],
-    [kleuren.away, W, H * 0.92, 820],
+  for (const [kleur, x, y] of [
+    [kleuren.home.a, 120, H * 0.78],
+    [kleuren.away.a, W - 120, H * 0.3],
   ] as const) {
-    const gl = g.createRadialGradient(x, y, 0, x, y, r)
-    gl.addColorStop(0, rgba(kleur, 0.34))
+    const gl = g.createRadialGradient(x, y, 0, x, y, 620)
+    gl.addColorStop(0, rgba(kleur, 0.16))
     gl.addColorStop(1, rgba(kleur, 0))
     g.fillStyle = gl
     g.fillRect(0, 0, W, H)
   }
-  // Vignet.
-  const v = g.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.8)
-  v.addColorStop(0, 'rgba(0,0,0,0)')
-  v.addColorStop(1, 'rgba(0,0,0,.45)')
-  g.fillStyle = v
-  g.fillRect(0, 0, W, H)
   return c
 }
 
@@ -428,36 +360,37 @@ export function Verloop3D({
 }: {
   shots: ShotPoint[]
   teams: { home: string; away: string }
-  colors?: { home?: string | null; away?: string | null }
+  colors?: { home?: string | null; away?: string | null; homeB?: string | null; awayB?: string | null }
   goalAreaDepth?: number
   speelveldM?: number
   matchLabel?: string
 }) {
   const verloop = useMemo(() => bouwVerloop(shots), [shots])
   const kleuren = useMemo<Kleuren>(() => {
-    const home = hex(colors?.home, DEFAULT_HOME_COLOR)
-    let away = hex(colors?.away, DEFAULT_AWAY_COLOR)
+    const ha = geldig(colors?.home) ?? DEFAULT_HOME_COLOR
+    let aa = geldig(colors?.away) ?? DEFAULT_AWAY_COLOR
     // Twee keer dezelfde kleur: de uitploeg krijgt de standaardkleur, anders zie je geen helften.
-    if (away.toLowerCase() === home.toLowerCase()) away = home.toLowerCase() === DEFAULT_AWAY_COLOR ? DEFAULT_HOME_COLOR : DEFAULT_AWAY_COLOR
-    return { home, away }
-  }, [colors?.home, colors?.away])
+    if (afstand(ha, aa) < 0.15) aa = afstand(ha, DEFAULT_AWAY_COLOR) < 0.15 ? DEFAULT_HOME_COLOR : DEFAULT_AWAY_COLOR
+    return { home: { a: ha, b: tweede(ha, geldig(colors?.homeB)) }, away: { a: aa, b: tweede(aa, geldig(colors?.awayB)) } }
+  }, [colors?.home, colors?.away, colors?.homeB, colors?.awayB])
+  const namen = useMemo(() => ({ home: afkorting(teams.home), away: afkorting(teams.away) }), [teams.home, teams.away])
 
   const zichtbaar = useRef<HTMLCanvasElement>(null)
   const scene = useRef<Scene3D | null>(null)
   const achtergrond = useRef<HTMLCanvasElement | null>(null)
-  // De tijdlijn: `doelT` is waar we naartoe gaan (afspelen, schuifbalk), `toonT` wat je ziet; die
-  // glijdt er vloeiend achteraan. Alles in refs: de tekenlus mag React niet elk beeld laten hertekenen.
-  const doelT = useRef(1)
+  // `doelT` is waar we naartoe gaan (afspelen, schuifbalk), `toonT` wat je ziet; die glijdt er
+  // vloeiend achteraan. Alles in refs: de tekenlus mag React niet elk beeld laten hertekenen.
+  const doelT = useRef(0)
   const toonT = useRef(0)
-  const modus = useRef<Modus>('stil')
+  const modus = useRef<Modus>('speelt')
   const snelheidRef = useRef(1)
   const opnameStart = useRef(0)
   const opnameKlaar = useRef<(() => void) | null>(null)
-  const stand = useRef<{ vorige: [number, number]; puls: [number, number] }>({ vorige: [0, 0], puls: [-99, -99] })
+  const puls = useRef<{ vorige: [number, number]; sinds: [number, number] }>({ vorige: [0, 0], sinds: [-99, -99] })
 
-  const [speelt, setSpeelt] = useState(false)
+  const [speelt, setSpeelt] = useState(true)
   const [snelheid, setSnelheid] = useState(1)
-  const [tijd, setTijd] = useState(1)
+  const [tijd, setTijd] = useState(0)
   const [opname, setOpname] = useState<{ pct: number } | null>(null)
   const [klaar, setKlaar] = useState<{ blob: Blob; naam: string } | null>(null)
   const [melding, setMelding] = useState<string | null>(null)
@@ -472,219 +405,308 @@ export function Verloop3D({
     setTimeout(() => setMelding(null), 5000)
   }
 
-  // Eén beeld tekenen op moment `t` (0..1 op de tijdas), `sec` = echte tijd in seconden (voor het
-  // wapperen en de flitsen), `dt` = seconden sinds het vorige beeld (voor het naglijden).
+  // Eén beeld op moment `t` (0..1 op de tijdas); `sec` = echte tijd (voor het golven), `dt` = seconden sinds het vorige beeld.
   const teken = (t: number, sec: number, dt: number) => {
     const s = scene.current
     const c = zichtbaar.current
     if (!s || !c) return
     const g = c.getContext('2d')!
-    s.tijd.value = sec
 
-    for (const p of s.pieken) {
-      const voor = (t - p.piek.t) / GROEI + 1
-      if (voor <= 0) {
-        p.spits.visible = false
-        ;(p.gloed.material as THREE.MeshBasicMaterial).opacity = 0
-        if (p.top) p.top.visible = false
-        if (p.ring) p.ring.visible = false
-        p.flits = -1
-        continue
+    // De bulten: elk groeit (met een kleine veerkracht) zodra zijn moment voorbij is.
+    let aantal = 0
+    verloop.pieken.forEach((p, i) => {
+      if (i >= MAX_BULTEN) return
+      const voor = (t - p.t) / GROEI + 1
+      const o = i * 4
+      s.bulten[o] = (p.x - 0.5) * 14
+      s.bulten[o + 1] = (p.y - 0.5) * s.lengteM
+      s.bulten[o + 2] = voor <= 0 ? 0 : veer(voor) * p.verwacht * BULT_M
+      s.bulten[o + 3] = p.werper === 'home' ? BULT_S : -BULT_S
+      aantal = i + 1
+    })
+    s.uniforms.uAantal.value = aantal
+    s.bultTex.needsUpdate = true
+
+    // De zwelling volgt de druk: waar de laatste pogingen vielen, en hoe gevaarlijk ze waren.
+    let gewicht = 0
+    let zw = 0
+    let xw = 0
+    for (const p of verloop.pieken) {
+      if (p.t > t) break
+      const w = Math.exp(-Math.pow((t - p.t) / 0.035, 2)) * p.verwacht
+      gewicht += w
+      zw += w * (p.y - 0.5) * s.lengteM
+      xw += w * (p.x - 0.5) * 14
+    }
+    const zachtjes = 1 - Math.exp(-Math.min(dt, 0.2) * 2.5)
+    const doelA = Math.min(4.2, gewicht * 2.6)
+    s.zwel.a += (doelA - s.zwel.a) * zachtjes
+    if (gewicht > 0.01) {
+      s.zwel.z += (zw / gewicht - s.zwel.z) * zachtjes
+      s.zwel.x += (xw / gewicht - s.zwel.x) * zachtjes
+    }
+    s.uniforms.uTijd.value = sec
+    s.uniforms.uGolf.value = 1.15 + s.zwel.a * 0.25
+    s.uniforms.uZwel.value.set(s.zwel.z, s.zwel.a, s.zwel.x)
+
+    // De gele ringen boven de doelpunten, telkens even opploppend.
+    for (const d of s.doelen) {
+      const p = verloop.pieken[d.i]
+      const voor = (t - p.t) / GROEI
+      d.sprite.visible = voor > 0.6
+      if (!d.sprite.visible) continue
+      let h = golfOp(d.x, d.z, sec, s.uniforms.uGolf.value, s.uniforms.uZwel.value)
+      for (let i = 0; i < aantal; i++) {
+        const o = i * 4
+        const ddx = d.x - s.bulten[o]
+        const ddz = d.z - s.bulten[o + 1]
+        h += s.bulten[o + 2] * Math.exp(-(ddx * ddx + ddz * ddz) / (2 * BULT_S * BULT_S))
       }
-      if (p.flits < 0 && voor >= 1) p.flits = sec
-      const f = veer(voor)
-      const hoogte = Math.max(0.001, f * p.piek.hoogte * MAX_PIEK_M)
-      p.spits.visible = true
-      p.spits.scale.set(0.6 + 0.4 * klem(voor), hoogte, 0.6 + 0.4 * klem(voor))
-      const doel = p.piek.soort !== 'misser'
-      ;(p.gloed.material as THREE.MeshBasicMaterial).opacity = uitloop(voor) * (doel ? 0.75 + 0.15 * Math.sin(sec * 2.1 + p.fase) : 0.3)
-      if (p.top) {
-        p.top.visible = voor >= 0.85
-        p.top.position.y = hoogte + 0.28 + Math.sin(sec * 2.3 + p.fase) * 0.07
-        p.top.scale.setScalar(uitloop((voor - 0.85) / 0.15))
-      }
-      if (p.ring) {
-        const leeftijd = p.flits < 0 ? -1 : sec - p.flits
-        p.ring.visible = leeftijd >= 0 && leeftijd < RING_S
-        if (p.ring.visible) {
-          const k = leeftijd / RING_S
-          p.ring.scale.setScalar(1 + uitloop(k) * 4.2)
-          ;(p.ring.material as THREE.MeshBasicMaterial).opacity = Math.pow(1 - k, 2) * 0.95
-        }
-      }
+      const schaal = 1.5 * veer((voor - 0.6) / 0.8)
+      d.sprite.scale.set(schaal, schaal, 1)
+      d.sprite.position.set(d.x + d.dx, h + 1.5, d.z)
     }
 
-    // Camera: schuin op het veld, traag rond het midden naarmate de wedstrijd vordert, met een
-    // zachte zweefbeweging; ze glijdt naar haar plek in plaats van te springen.
-    const hoek = -0.55 + t * 0.7 + Math.sin(sec * 0.23) * 0.05
-    const R = s.lengteM * (0.6 + Math.sin(sec * 0.17) * 0.012)
-    const doelPos = new THREE.Vector3(Math.sin(hoek) * R, s.lengteM * (0.5 + Math.sin(sec * 0.31) * 0.01), Math.cos(hoek) * R)
-    if (!s.geplaatst || dt >= 1) {
-      s.camera.position.copy(doelPos)
-      s.geplaatst = true
-    } else s.camera.position.lerp(doelPos, 1 - Math.exp(-dt * 3))
-    s.camera.lookAt(0, 0.6, 0)
+    // De camera: vast, schuin op het veld (de thuishelft vooraan links), met een heel zachte zweving.
+    const L = s.lengteM
+    // Uitgerekend zodat het hele veld (met pieken tot ± 14 m) tussen kop en tijdlijn past: schuin
+    // van opzij, zodat het lange krachtbalveld over de hele breedte van het beeld loopt.
+    const k = L / 46
+    s.camera.position.set(-97.7 * k + Math.sin(sec * 0.21) * 1.2, 48.9 * k + Math.sin(sec * 0.17) * 0.8, -49.7 * k)
+    s.camera.lookAt(0, 4, 0)
     s.renderer.render(s.scene, s.camera)
 
     if (!achtergrond.current) achtergrond.current = bouwAchtergrond(kleuren)
     g.drawImage(achtergrond.current, 0, 0)
-    g.drawImage(s.renderer.domElement, 0, KOP)
-
-    // Kop: titel, ploegen in hun kleur, de stand groot (klopt even op bij een doelpunt), het moment.
-    const nu = standOp(verloop, t)
-    const st = stand.current
-    for (const i of [0, 1] as const) {
-      if (nu[i] > st.vorige[i]) st.puls[i] = sec
-      if (nu[i] < st.vorige[i]) st.puls[i] = -99
-    }
-    st.vorige = nu
-    g.textBaseline = 'middle'
-    g.fillStyle = 'rgba(255,255,255,.55)'
-    g.font = `800 26px ${FONT}`
-    g.textAlign = 'left'
-    g.fillText('KRACHTBAL LIVE · WEDSTRIJDVERLOOP', 60, 52)
-    g.textAlign = 'right'
-    g.fillText(tijdLabelOp(verloop, t).toUpperCase(), W - 60, 52)
-    const naamBreedte = W / 2 - 60 - 175
-    const ploeg = (naam: string, kleur: string, x: number, align: CanvasTextAlign) => {
-      const balk = g.createLinearGradient(0, 96, 0, 200)
-      balk.addColorStop(0, meng(kleur, '#ffffff', 0.25))
-      balk.addColorStop(1, kleur)
-      g.fillStyle = balk
-      g.beginPath()
-      g.roundRect(align === 'left' ? x : x - 14, 96, 14, 104, 7)
-      g.fill()
-      g.fillStyle = '#ffffff'
-      g.font = `900 38px ${FONT}`
-      g.textAlign = align
-      const tx = align === 'left' ? x + 28 : x - 28
-      const delen = naam.length > 13 && naam.includes(' ') ? [naam.slice(0, naam.lastIndexOf(' ')), naam.slice(naam.lastIndexOf(' ') + 1)] : [naam]
-      delen.forEach((d, i) => g.fillText(d.toUpperCase(), tx, delen.length === 1 ? 148 : 126 + i * 44, naamBreedte - 28))
-    }
-    ploeg(teams.home, kleuren.home, 60, 'left')
-    ploeg(teams.away, kleuren.away, W - 60, 'right')
-    const cijfer = (i: 0 | 1, x: number, align: CanvasTextAlign) => {
-      const k = Math.exp(-(sec - st.puls[i]) * 4.5)
-      const kleur = i === 0 ? kleuren.home : kleuren.away
-      g.save()
-      g.translate(x, 150)
-      g.scale(1 + 0.22 * k, 1 + 0.22 * k)
-      g.font = `900 104px ${FONT}`
-      g.textAlign = align
-      if (k > 0.02) {
-        g.shadowColor = rgba(kleur, 0.9 * k)
-        g.shadowBlur = 40 * k
-      }
-      g.fillStyle = meng('#ffffff', meng(kleur, '#ffffff', 0.2), k * 0.85)
-      g.fillText(`${nu[i]}`, 0, 0)
-      g.restore()
-    }
-    cijfer(0, W / 2 - 44, 'right')
-    cijfer(1, W / 2 + 44, 'left')
-    g.textAlign = 'center'
-    g.fillStyle = 'rgba(255,255,255,.4)'
-    g.font = `900 60px ${FONT}`
-    g.fillText('–', W / 2, 146)
-    // Een dunne balk die van de thuiskleur naar de uitkleur loopt.
-    const band = g.createLinearGradient(60, 0, W - 60, 0)
-    band.addColorStop(0, kleuren.home)
-    band.addColorStop(1, kleuren.away)
-    g.fillStyle = band
-    g.globalAlpha = 0.85
-    g.fillRect(60, 244, W - 120, 4)
-    g.globalAlpha = 1
-    if (matchLabel) {
-      g.fillStyle = 'rgba(255,255,255,.55)'
-      g.font = `700 24px ${FONT}`
-      g.fillText(matchLabel, W / 2, 218, W - 120)
-    }
-
-    // Tijdlijn: de helften, per doelpoging een streepje in de clubkleur (zo hoog als de piek) dat
-    // zacht inkleurt als je er voorbij bent, en een gloeiende loper.
-    const x0 = 70
-    const x1 = W - 70
-    const y = TIJDLIJN_Y + 118
-    g.fillStyle = 'rgba(255,255,255,.1)'
-    g.beginPath()
-    g.roundRect(x0, y - 4, x1 - x0, 8, 4)
-    g.fill()
-    const lx = x0 + klem(t) * (x1 - x0)
-    const voortgang = g.createLinearGradient(x0, 0, x1, 0)
-    voortgang.addColorStop(0, kleuren.home)
-    voortgang.addColorStop(1, kleuren.away)
-    g.fillStyle = voortgang
-    g.beginPath()
-    g.roundRect(x0, y - 4, Math.max(8, lx - x0), 8, 4)
-    g.fill()
-    const rustX = x0 + verloop.rust * (x1 - x0)
-    g.fillStyle = 'rgba(255,255,255,.35)'
-    g.fillRect(rustX - 1, y - 14, 2, 28)
-    g.fillStyle = 'rgba(255,255,255,.55)'
-    g.font = `700 22px ${FONT}`
-    g.textAlign = 'center'
-    g.fillText('1e helft', (x0 + rustX) / 2, y + 40)
-    g.fillText('2e helft', (rustX + x1) / 2, y + 40)
-    let vorigLabelX = -1000
-    for (const p of verloop.pieken) {
-      const px = x0 + p.t * (x1 - x0)
-      const a = klem((t - p.t) / 0.012 + 1)
-      const kleur = p.kant === 'home' ? kleuren.home : kleuren.away
-      const h = (14 + p.hoogte * 56) * (0.55 + 0.45 * uitloop(a))
-      const breed = p.soort === 'misser' ? 3 : 6
-      g.fillStyle = 'rgba(255,255,255,.16)'
-      g.fillRect(px - breed / 2, y - 6 - h, breed, h)
-      if (a > 0) {
-        g.globalAlpha = uitloop(a)
-        g.fillStyle = kleur
-        g.beginPath()
-        g.roundRect(px - breed / 2, y - 6 - h, breed, h, breed / 2)
-        g.fill()
-        if (p.soort !== 'misser' && px - vorigLabelX > 30) {
-          vorigLabelX = px
-          g.fillStyle = '#ffffff'
-          g.font = `800 20px ${FONT}`
-          g.fillText(`+${p.punten}`, px, y - 18 - h)
-        }
-        g.globalAlpha = 1
-      }
-    }
-    g.save()
-    g.shadowColor = 'rgba(255,255,255,.8)'
-    g.shadowBlur = 18
-    g.fillStyle = '#ffffff'
-    g.beginPath()
-    g.arc(lx, y, 11, 0, Math.PI * 2)
-    g.fill()
-    g.restore()
-    g.fillStyle = 'rgba(255,255,255,.4)'
-    g.font = `700 20px ${FONT}`
-    g.textAlign = 'left'
-    g.fillText('▲ hoogte = punten (doelpunt) of gevaar (misser)', x0, TIJDLIJN_Y + 200)
-    g.textAlign = 'right'
-    g.fillText('krachtbal.live', x1, TIJDLIJN_Y + 200)
+    g.drawImage(s.renderer.domElement, 0, 0)
+    tekenKop(g, t, sec)
+    tekenTijdlijn(g, t)
   }
+
+  // Bovenaan: per ploeg een kleurbalkje, de afkorting met een badge, de stand en de doelpuntminuten;
+  // in het midden reeks en datum; rechts de klok met de voortgang in de helft.
+  const tekenKop = (g: CanvasRenderingContext2D, t: number, sec: number) => {
+    const stand = standOp(verloop, t)
+    const pl = puls.current
+    for (const i of [0, 1] as const) {
+      if (stand[i] > pl.vorige[i]) pl.sinds[i] = sec
+      if (stand[i] < pl.vorige[i]) pl.sinds[i] = -99
+    }
+    pl.vorige = stand
+    g.textBaseline = 'alphabetic'
+    const blok = (i: 0 | 1, x: number) => {
+      const k = i === 0 ? kleuren.home : kleuren.away
+      g.fillStyle = k.a
+      g.fillRect(x, 54, 22, 7)
+      g.fillStyle = k.b
+      g.fillRect(x + 22, 54, 22, 7)
+      g.fillStyle = 'rgba(255,255,255,.88)'
+      g.font = `800 30px ${FONT}`
+      g.textAlign = 'left'
+      g.fillText(i === 0 ? namen.home : namen.away, x, 98)
+      // Badge met de clubkleuren.
+      const bx = x + 118
+      g.beginPath()
+      g.arc(bx, 87, 17, 0, Math.PI * 2)
+      g.fillStyle = k.a
+      g.fill()
+      g.lineWidth = 4
+      g.strokeStyle = k.b
+      g.stroke()
+      // De stand, die even oplicht in de clubkleur bij een doelpunt.
+      const p = Math.exp(-(sec - pl.sinds[i]) * 4)
+      g.save()
+      g.translate(x - 4, 196)
+      g.scale(1 + 0.12 * p, 1 + 0.12 * p)
+      if (p > 0.02) {
+        g.shadowColor = rgba(readableOnDark(k.a), 0.9 * p)
+        g.shadowBlur = 36 * p
+      }
+      g.fillStyle = '#ffffff'
+      g.font = `900 98px ${FONT}`
+      g.fillText(String(stand[i]), 0, 0)
+      g.restore()
+      // De doelpuntminuten tot nu (de laatste die passen).
+      const minuten = verloop.pieken.filter((q) => q.t <= t && q.soort !== 'misser' && q.kant === (i === 0 ? 'home' : 'away') && q.minuut != null).map((q) => `${q.minuut}'`)
+      g.font = `700 21px ${FONT}`
+      let tekst = ''
+      for (let j = minuten.length - 1; j >= 0; j--) {
+        const poging = `• ${minuten[j]}  ${tekst}`
+        if (g.measureText(poging).width > 190) break
+        tekst = poging
+      }
+      g.fillStyle = 'rgba(255,255,255,.75)'
+      g.fillText(tekst.trim(), x, 236)
+    }
+    blok(0, 60)
+    blok(1, 275)
+    // Midden: reeks en datum.
+    const [reeks, datum] = (matchLabel ?? '').split(' · ')
+    g.textAlign = 'center'
+    g.fillStyle = 'rgba(255,255,255,.85)'
+    g.font = `800 22px ${FONT}`
+    if (reeks) g.fillText(reeks, 640, 68, 260)
+    g.fillStyle = 'rgba(255,255,255,.55)'
+    g.font = `700 19px ${FONT}`
+    if (datum) g.fillText(datum, 640, 96, 260)
+    // Rechts: de klok.
+    const klok = klokOp(verloop, t)
+    g.textAlign = 'right'
+    g.fillStyle = '#ffffff'
+    g.font = `900 ${klok.groot.length > 4 ? 64 : 84}px ${FONT}`
+    g.fillText(klok.groot, 1020, 118)
+    g.fillStyle = 'rgba(255,255,255,.65)'
+    g.font = `700 20px ${FONT}`
+    g.fillText(klok.klein, 1020, 150)
+    g.fillStyle = 'rgba(255,255,255,.15)'
+    g.fillRect(900, 164, 120, 4)
+    g.fillStyle = GEEL
+    g.fillRect(900, 164, 120 * klok.voortgang, 4)
+  }
+
+  // Onderaan: de aanvalsdruk van beide ploegen als één lijn (thuis erboven, uit eronder), de
+  // doelpunten als bolletjes, rust en einde; op het einde de cijfers erboven.
+  const tekenTijdlijn = (g: CanvasRenderingContext2D, t: number) => {
+    const x0 = 60
+    const x1 = 1020
+    const y = 940
+    const eind = klem((t - 0.985) / 0.015)
+    // Legende rechts.
+    g.textAlign = 'right'
+    g.font = `700 19px ${FONT}`
+    g.fillStyle = 'rgba(255,255,255,.75)'
+    g.fillText('▲ hogere piek → gevaarlijker', 1020, 836)
+    g.fillStyle = GEEL
+    g.fillText('○ doelpunt', 1020, 862)
+    // Links: het opschrift, of op het einde de cijfers.
+    g.textAlign = 'left'
+    g.globalAlpha = 1 - eind
+    g.fillStyle = 'rgba(255,255,255,.6)'
+    g.font = `800 17px ${FONT}`
+    g.fillText('AANVALSDRUK', x0, 892)
+    g.globalAlpha = 1
+    if (eind > 0) {
+      const c = cijfersTot(verloop, t)
+      const kolom = (label: string, waarden: [string, string], x: number) => {
+        g.textAlign = 'center'
+        g.fillStyle = 'rgba(255,255,255,.6)'
+        g.font = `700 18px ${FONT}`
+        g.fillText(label, x, 836)
+        g.font = `900 30px ${FONT}`
+        const m = g.measureText(' – ').width
+        g.fillStyle = readableOnDark(kleuren.home.a)
+        g.textAlign = 'right'
+        g.fillText(waarden[0], x - m / 2, 872)
+        g.fillStyle = 'rgba(255,255,255,.5)'
+        g.textAlign = 'center'
+        g.fillText('–', x, 872)
+        g.fillStyle = readableOnDark(kleuren.away.a)
+        g.textAlign = 'left'
+        g.fillText(waarden[1], x + m / 2, 872)
+      }
+      g.globalAlpha = eind
+      kolom('Doelpogingen', [String(c.pogingen[0]), String(c.pogingen[1])], 170)
+      kolom('Raak', [String(c.raak[0]), String(c.raak[1])], 390)
+      kolom('Verwachte punten', [c.verwacht[0].toFixed(1).replace('.', ','), c.verwacht[1].toFixed(1).replace('.', ',')], 610)
+      g.globalAlpha = 1
+    }
+    // As, rust en de lijn tot nu.
+    g.fillStyle = 'rgba(255,255,255,.18)'
+    g.fillRect(x0, y, x1 - x0, 1.5)
+    const rustX = x0 + verloop.rust * (x1 - x0)
+    g.fillRect(rustX, y - 34, 1.5, 68)
+    const N = 240
+    const tot = klem(t)
+    const punten: { x: number; h: number; u: number }[] = []
+    let max = 0.4
+    for (let i = 0; i <= N; i++) {
+      const s = (i / N) * 1
+      const [h, u] = drukOp(verloop, s, 1)
+      max = Math.max(max, h, u)
+    }
+    for (let i = 0; i <= N; i++) {
+      const s = i / N
+      if (s > tot) break
+      const [h, u] = drukOp(verloop, s, tot)
+      punten.push({ x: x0 + s * (x1 - x0), h, u })
+    }
+    const schaal = 30 / max
+    const vlak = (kant: 'h' | 'u', kleur: string, richting: 1 | -1) => {
+      if (punten.length < 2) return
+      g.beginPath()
+      g.moveTo(punten[0].x, y)
+      for (const p of punten) g.lineTo(p.x, y - richting * p[kant] * schaal)
+      g.lineTo(punten[punten.length - 1].x, y)
+      g.closePath()
+      g.fillStyle = rgba(kleur, 0.45)
+      g.fill()
+      g.beginPath()
+      punten.forEach((p, i) => (i ? g.lineTo(p.x, y - richting * p[kant] * schaal) : g.moveTo(p.x, y - richting * p[kant] * schaal)))
+      g.strokeStyle = readableOnDark(kleur)
+      g.lineWidth = 2
+      g.stroke()
+    }
+    vlak('h', kleuren.home.a, 1)
+    vlak('u', kleuren.away.a, -1)
+    // De loper.
+    const lx = x0 + tot * (x1 - x0)
+    g.fillStyle = 'rgba(255,255,255,.85)'
+    g.fillRect(lx - 1, y - 34, 2, 68)
+    // Doelpunten als bolletjes onder de as.
+    for (const p of verloop.pieken) {
+      if (p.soort === 'misser' || p.t > tot) continue
+      g.beginPath()
+      g.arc(x0 + p.t * (x1 - x0), y + 50, 6, 0, Math.PI * 2)
+      g.fillStyle = p.kant === 'home' ? kleuren.home.a : kleuren.away.a
+      g.fill()
+      g.lineWidth = 2
+      g.strokeStyle = 'rgba(255,255,255,.85)'
+      g.stroke()
+    }
+    g.fillStyle = 'rgba(255,255,255,.5)'
+    g.font = `700 16px ${FONT}`
+    g.textAlign = 'left'
+    g.fillText(verloop.tijdas === 'klok' ? "1'" : 'start', x0, y + 84)
+    // "rust" enkel als het niet op "1'" of "einde" botst.
+    g.textAlign = 'center'
+    if (rustX - x0 > 70 && x1 - rustX > 70) g.fillText('rust', rustX, y + 84)
+    g.textAlign = 'right'
+    g.fillText('einde', x1, y + 84)
+    // Voet.
+    g.textAlign = 'left'
+    g.fillStyle = GEEL
+    g.font = `900 18px ${FONT}`
+    g.fillText('KRACHTBAL LIVE', x0, 1052)
+    g.textAlign = 'right'
+    g.fillStyle = 'rgba(255,255,255,.55)'
+    g.font = `700 17px ${FONT}`
+    g.fillText('krachtbal.live', x1, 1052)
+  }
+
   const tekenRef = useRef(teken)
   tekenRef.current = teken
 
-  // De scène opbouwen (één keer per wedstrijd/kleuren) en de doorlopende tekenlus starten. Bij het
-  // openen glijdt het verloop van leeg naar het eindbeeld: alle pieken groeien op, met hun ringen.
+  // De scène opbouwen en de doorlopende tekenlus starten: bij het openen speelt het verloop af van
+  // de eerste minuut tot het einde.
   useEffect(() => {
     const c = zichtbaar.current
     if (!c || verloop.pieken.length === 0) return
     const webgl = document.createElement('canvas')
     webgl.width = W
-    webgl.height = VELD_H
+    webgl.height = H
     try {
-      scene.current = bouwScene(webgl, verloop, kleuren, teams, goalAreaDepth, speelveldM)
+      scene.current = bouwScene(webgl, verloop, kleuren, goalAreaDepth, speelveldM)
       achtergrond.current = bouwAchtergrond(kleuren)
       setFout(null)
     } catch (err) {
       setFout((err as Error).message || 'WebGL kon niet starten.')
       return
     }
-    doelT.current = 1
+    doelT.current = 0
     toonT.current = 0
-    stand.current = { vorige: [0, 0], puls: [-99, -99] }
+    modus.current = 'speelt'
+    setSpeelt(true)
+    puls.current = { vorige: [0, 0], sinds: [-99, -99] }
     let raf = 0
     let vorige = performance.now()
     let gemiddeld = 1 / 60
@@ -697,8 +719,8 @@ export function Verloop3D({
         return
       }
       const m = modus.current
-      // Traag toestel (gemiddeld trager dan ± 22 beelden per seconde): de helft van de beelden
-      // tekenen. Nooit tijdens een opname: die moet gelijkmatig lopen.
+      // Traag toestel (gemiddeld trager dan ± 22 beelden per seconde): de helft van de beelden.
+      // Nooit tijdens een opname: die moet gelijkmatig lopen.
       beeld++
       if (m !== 'opname' && gemiddeld > 0.045 && beeld % 2 === 1) return
       const dt = Math.min(0.1, (nu - vorige) / 1000)
@@ -723,7 +745,7 @@ export function Verloop3D({
         }
       } else {
         const verschil = doelT.current - toonT.current
-        toonT.current = Math.abs(verschil) < 1e-4 ? doelT.current : toonT.current + verschil * (1 - Math.exp(-dt * 5))
+        toonT.current = Math.abs(verschil) < 1e-4 ? doelT.current : toonT.current + verschil * (1 - Math.exp(-dt * 6))
       }
       tekenRef.current(toonT.current, nu / 1000, dt)
       if (nu - laatsteUi > 100) {
@@ -738,8 +760,7 @@ export function Verloop3D({
       scene.current = null
       achtergrond.current = null
     }
-    // teams: enkel de namen tellen (voor de vlaggen); een nieuw object met dezelfde namen herbouwt niet.
-  }, [verloop, kleuren, teams.home, teams.away, goalAreaDepth, speelveldM])
+  }, [verloop, kleuren, goalAreaDepth, speelveldM])
 
   const spring = (t: number) => {
     modus.current = 'stil'
@@ -762,7 +783,7 @@ export function Verloop3D({
 
   const bestandsnaam = (ext: string) => `${slugFilename('wedstrijdverloop', teams.home, teams.away, matchLabel) || 'wedstrijdverloop'}.${ext}`
 
-  // PNG van het moment waar je staat (meteen scherp, zonder naglijden).
+  // PNG van het moment waar je staat.
   const bewaarBeeld = async () => {
     const c = zichtbaar.current
     if (!c) return
@@ -773,10 +794,10 @@ export function Verloop3D({
     await saveOrShareBlob(blob, bestandsnaam('png'), `${teams.home} – ${teams.away}${matchLabel ? ` · ${matchLabel}` : ''}`)
   }
 
-  // Video: het canvas opnemen terwijl het verloop van 0 tot 1 speelt (snelheid 1), met een korte
-  // nahoud op het eindbeeld. De tekenlus doet het werk (modus 'opname'); hier enkel de recorder.
-  // mp4 (H.264) eerst — dat kan je via WhatsApp doorsturen — en anders webm. Elk type wordt eerst
-  // een halve seconde geprobeerd: sommige toestellen zeggen dat mp4 kan en laten de recorder dan sterven.
+  // Video: het canvas opnemen terwijl het verloop van de eerste minuut tot het einde speelt, met een
+  // korte nahoud op het eindbeeld. De tekenlus doet het werk (modus 'opname'); hier enkel de
+  // recorder. mp4 (H.264) eerst — dat kan je via WhatsApp doorsturen — anders webm. Elk type wordt
+  // eerst een halve seconde geprobeerd: sommige toestellen zeggen dat mp4 kan en laten de recorder dan sterven.
   const neemOp = async () => {
     const c = zichtbaar.current
     if (!c || opname || speelt) return

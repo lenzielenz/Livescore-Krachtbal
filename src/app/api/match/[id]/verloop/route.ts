@@ -26,7 +26,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       {
         status: state.match.status,
         teams: { home: state.teams.home.name, away: state.teams.away.name },
-        colors: { home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null },
+        // Beide clubkleuren: elke helft van het veld krijgt de banen van haar club (primair en secundair).
+        colors: {
+          home: state.teams.home.colors?.primary ?? null,
+          away: state.teams.away.colors?.primary ?? null,
+          homeB: state.teams.home.colors?.secondary ?? null,
+          awayB: state.teams.away.colors?.secondary ?? null,
+        },
         goalAreaDepth: match.goalAreaDepth ?? null,
         speelveldM: match.veldSpeelveld ?? null,
         matchLabel: `${reeks}${datum ? ` · ${datum}` : ''}`,

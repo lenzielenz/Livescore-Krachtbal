@@ -20,7 +20,7 @@ const Verloop3D = dynamic(() => import('@/components/Verloop3D').then((m) => m.V
 type Gegevens = {
   status: string
   teams: { home: string; away: string }
-  colors: { home: string | null; away: string | null }
+  colors: { home: string | null; away: string | null; homeB?: string | null; awayB?: string | null }
   goalAreaDepth: number | null
   speelveldM: number | null
   matchLabel: string
