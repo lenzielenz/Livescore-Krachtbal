@@ -315,6 +315,8 @@ export type WeekendBord = {
   score: { home: number; away: number } | null
   /** Een wedstrijd van je eigen club. */
   eigen: boolean
+  /** Aan welke kant je eigen club speelt (voor het scorebord: daar komt het clublogo). */
+  kant?: 'thuis' | 'uit' | null
 }
 /** De weekendzaal: de wedstrijden van het komende (of lopende) speelweekend. */
 export type WeekendZaal = {

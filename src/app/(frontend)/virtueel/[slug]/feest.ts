@@ -198,7 +198,8 @@ type Bundel = {
 }
 
 const additief = (kleur: THREE.ColorRepresentation, map?: THREE.Texture) =>
-  new THREE.MeshBasicMaterial({ color: kleur, map, vertexColors: !map, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false, toneMapped: false })
+  // `map: undefined` doorgeven doet three waarschuwen (41 keer per bezoek): de sleutel enkel zetten als er een textuur is.
+  new THREE.MeshBasicMaterial({ color: kleur, ...(map ? { map } : {}), vertexColors: !map, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false, toneMapped: false })
 
 function maakBundel(ouder: THREE.Object3D, x: number, y: number, z: number, o: { lengte: number; straal: number; vloer: number | null; omhoog?: boolean; kantel: [number, number]; tempo: number; kleur: number; sterk: number; kop?: THREE.Material }): Bundel {
   const voet = new THREE.Group()

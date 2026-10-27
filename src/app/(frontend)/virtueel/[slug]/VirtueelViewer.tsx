@@ -9,7 +9,8 @@ import { pasStandenToe, type WeekendStand } from '@/lib/virtueel-weekend'
 import { bouwEregalerij } from './erezaal'
 import { bouwOmgeving } from './omgeving'
 import { bouwSfeer } from './sfeer'
-import { bouwStadion } from './stadion'
+import { bouwStadion, type Wedstrijdbord } from './stadion'
+import { veldMateriaal, veldTexturen } from './veld'
 import { bouwWeekendzaal } from './weekendzaal'
 import { bouwFotogalerij } from './fotogalerij'
 import { bouwWegwijzers, type Bestemming } from './wegwijzers'
@@ -30,7 +31,7 @@ import { bouwPopcornDoosje } from './popcornkraam'
 import { bouwKleedkamer, KLEED, type Kleedkamer } from './kleedkamer'
 import { bouwKelderspel, type KelderActie, type Kelderspel } from './kelderspel'
 import { bouwGoudjacht, type GoudPlek, type Goudjacht } from './goudjacht'
-import { bouwSamenvoeger } from './samenvoegen'
+import { bouwSamenvoeger, ontleedSamenvoegen } from './samenvoegen'
 import { bouwZichtbaarheid } from './zichtbaarheid'
 import { Badkiezer, Doelworp, Loopband } from './Kelderspellen'
 import { bouwGokkantoor, type Gokkantoor } from './gokkantoor'
@@ -145,63 +146,6 @@ const RADAR: Record<Warmte, string> = { heet: '🔥 heet!', warm: '♨️ warm',
 const kort = (id: string) => id.replace(/^T\d-/, '')
 
 // ---------- textuurtjes, allemaal getekend: geen extra bestanden nodig ----------
-
-/** Het hele veld in één textuur: kunstgras in banen van 4 m, de doelgebieden, en alle lijnen. */
-function veldTextuur(f: Veld, marge: number): THREE.CanvasTexture {
-  const pxm = 40
-  const L = f.length_m
-  const W = f.width_m
-  const w = Math.round((L + 2 * marge) * pxm)
-  const h = Math.round((W + 2 * marge) * pxm)
-  const X = (x: number) => (x + marge) * pxm
-  const Y = (y: number) => (y + marge) * pxm
-  const c = document.createElement('canvas')
-  c.width = w
-  c.height = h
-  const g = c.getContext('2d')!
-  for (let x = 0, k = 0; x < w; x += 4 * pxm, k++) {
-    g.fillStyle = k % 2 ? '#2c8549' : '#287a42'
-    g.fillRect(x, 0, 4 * pxm, h)
-  }
-  g.fillStyle = 'rgba(6,24,14,.28)'
-  g.fillRect(0, 0, w, Y(0))
-  g.fillRect(0, Y(W), w, h - Y(W))
-  g.fillRect(0, 0, X(0), h)
-  g.fillRect(X(L), 0, w - X(L), h)
-  // Doelgebieden achter de doellijnen.
-  for (const [a, e] of [[0, f.goal_a], [f.goal_b, L]] as const) {
-    g.fillStyle = 'rgba(29,104,140,.6)'
-    g.fillRect(X(a), Y(0), (e - a) * pxm, W * pxm)
-  }
-  // Fijne vezelstructuur.
-  const img = g.getImageData(0, 0, w, h)
-  const d = img.data
-  let z = 12345
-  const rnd = () => (z = (z * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff
-  for (let i = 0; i < d.length; i += 4) {
-    const n = (rnd() - 0.5) * 16
-    d[i] += n * 0.4
-    d[i + 1] += n
-    d[i + 2] += n * 0.45
-  }
-  g.putImageData(img, 0, 0)
-  const lijn = (x0: number, y0: number, x1: number, y1: number) => {
-    g.fillStyle = 'rgba(244,248,245,.95)'
-    const dk = 0.1 * pxm
-    if (x0 === x1) g.fillRect(X(x0) - dk / 2, Y(Math.min(y0, y1)), dk, Math.abs(y1 - y0) * pxm)
-    else g.fillRect(X(Math.min(x0, x1)), Y(y0) - dk / 2, Math.abs(x1 - x0) * pxm, dk)
-  }
-  lijn(0, 0, L, 0)
-  lijn(0, W, L, W)
-  lijn(0, 0, 0, W)
-  lijn(L, 0, L, W)
-  for (const x of [f.goal_a, f.goal_b]) lijn(x, -0.5, x, W + 0.5)
-  for (const x of [f.goal_a + 4, f.goal_b - 4, (f.goal_a + f.goal_b) / 2]) lijn(x, 0, x, W)
-  const t = new THREE.CanvasTexture(c)
-  t.colorSpace = THREE.SRGBColorSpace
-  t.anisotropy = 8
-  return t
-}
 
 function tekstSprite(tekst: string, kleur: string, hoogte = 0.32): THREE.Sprite {
   const c = document.createElement('canvas')
@@ -497,6 +441,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const [goud, setGoud] = useState(0)
   const [radar, setRadar] = useState<Warmte>('niets')
   const [melding, setMelding] = useState<string | null>(null)
+  // Een tik op het scorebord: het paneel met de wedstrijd die erop staat (of null).
+  const [bordTik, setBordTik] = useState<Wedstrijdbord | null | false>(false)
+  const bordWedstrijdRef = useRef<Wedstrijdbord | null>(null)
   const [geluid, setGeluid] = useState(false)
   const [liftPaneel, setLiftPaneel] = useState<{ hier: number; rijdt: boolean; doel: number | null } | null>(null)
   const [muur, setMuur] = useState<{ tags: Tag[]; lengte: number }>({ tags: [], lengte: muurLengte(0) })
@@ -562,6 +509,16 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const t = setTimeout(() => setWelkom(false), 6000)
     return () => clearTimeout(t)
   }, [welkom, klaar])
+
+  // Tijdens het ontwikkelen: een meetscript kan van modus wisselen (niet in productie).
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return
+    const w = window as unknown as { __vkModus?: (m: Modus) => void }
+    w.__vkModus = (m) => setModus(m)
+    return () => {
+      delete w.__vkModus
+    }
+  }, [])
 
   // De graffitimuur van je club: alles wat er ooit op gespoten is (staat in de databank, dus ook
   // na een update van de site blijft hij vol).
@@ -726,6 +683,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // ook de schaduwen en de liftspiegels hieronder). `zwak` onthouden we enkel voor de meter.
     const zwak = window.matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency ?? 8) <= 4
     const licht = true
+    // Opschalen, gemeten in plaats van geraden: een computer zonder aanraakscherm, met genoeg
+    // kernen en een groot scherm, krijgt de nabewerking (gloed, stemming) klaargezet maar úít. Pas
+    // als het beeld een tijdlang vlot loopt (zie de bijsturing in de lus) gaat ze aan; hapert het
+    // daarna, dan zet dezelfde bijsturing ze weer uit, en blijft ze uit.
+    const sterk = !zwak && !window.matchMedia('(pointer: coarse)').matches && (navigator.hardwareConcurrency ?? 0) >= 6 && window.innerWidth >= 1000
     // Scherp genoeg om tekst te lezen: een gsm heeft 3 pixels per schermpunt; aan 1,25 werd het beeld
     // ± 2,4 keer uitvergroot en was alle tekst wazig. Nu tot 2, binnen het pixelbudget (MAX_PIXELS);
     // hapert het toch, dan stapt de bijsturing zelf terug.
@@ -855,10 +817,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     grond.receiveShadow = true
     scene.add(grond)
     const marge = 4
-    const veldVlak = new THREE.Mesh(
-      new THREE.PlaneGeometry(veld.length_m + 2 * marge, veld.width_m + 2 * marge),
-      new THREE.MeshStandardMaterial({ map: veldTextuur(veld, marge), roughness: 0.92 }),
-    )
+    // Het veld: gras met maaibanen, slijtage en kalklijnen (veld.ts), met een lichte glans.
+    const veldVlak = new THREE.Mesh(new THREE.PlaneGeometry(veld.length_m + 2 * marge, veld.width_m + 2 * marge), veldMateriaal(veldTexturen(veld, marge)))
     veldVlak.rotation.x = -Math.PI / 2
     veldVlak.receiveShadow = true
     scene.add(veldVlak)
@@ -871,7 +831,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const omgeving = bouwOmgeving(scene, { thema, licht, logo: stadion.logo })
     bron('Omgeving')
     // Het oefencomplex ten noorden van het stadion, met een veld van dezelfde maat (geen wedstrijd).
-    const oefen = bouwOefencomplex(scene, { thema, licht, veldTex: veldTextuur(veld, 3), lengte: veld.length_m, breedte: veld.width_m, pleinRand: GEVEL.B + 22 })
+    const oefen = bouwOefencomplex(scene, { thema, licht, veldTex: veldTexturen(veld, 3).kleur, lengte: veld.length_m, breedte: veld.width_m, pleinRand: GEVEL.B + 22 })
     bron('Oefencomplex')
     // Het fandorp aan de overkant van de straat: foodtrucks, feesttent, springkasteel en een reuzenrad.
     const fandorp = bouwFandorp(scene, { thema, licht, straatZ: GEVEL.B + 30, melding: (t) => setMelding(t) })
@@ -1035,6 +995,14 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const noordTribune = stadion.obstakels.find((o) => o.z1 < 0 && o.x1 - o.x0 > 30)
     const weekendzaal = thema.weekend ? bouwWeekendzaal(scene, { thema, zaal: thema.weekend, wandZ: (noordTribune?.z0 ?? -22) + 0.45 }) : null
     bron('Weekendzaal')
+    // Het scorebord toont de wedstrijd van je eigen club dit weekend: een live wedstrijd eerst,
+    // anders de eerste in de kalender (komend, gespeeld). Geen eigen wedstrijd: het fragment.
+    const eigenWedstrijd = (zaal: typeof thema.weekend) => {
+      const eigen = zaal?.borden.filter((b) => b.eigen) ?? []
+      return eigen.find((b) => b.status === 'live') ?? eigen[0] ?? null
+    }
+    bordWedstrijdRef.current = eigenWedstrijd(thema.weekend)
+    stadion.zetWedstrijd(bordWedstrijdRef.current)
     let weekendStroom: EventSource | null = null
     if (thema.weekend?.bezig && weekendzaal && typeof EventSource !== 'undefined') {
       let huidig = thema.weekend
@@ -1045,6 +1013,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           if (nieuw === huidig) return
           huidig = nieuw
           weekendzaal.werkBij(nieuw)
+          bordWedstrijdRef.current = eigenWedstrijd(nieuw)
+          stadion.zetWedstrijd(bordWedstrijdRef.current)
         } catch {
           // Een kapot bericht: de muur blijft gewoon staan zoals hij was.
         }
@@ -1314,7 +1284,26 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       loper.pitch = Math.max(-1.2, Math.min(1.2, loper.pitch - (e.clientY - sleep.y) * 0.004))
       sleep = { x: e.clientX, y: e.clientY }
     }
-    const op_ = () => (sleep = null)
+    const neerPlek = { x: 0, y: 0, t: 0 }
+    const neerOnthoud = (e: PointerEvent) => {
+      neerPlek.x = e.clientX
+      neerPlek.y = e.clientY
+      neerPlek.t = performance.now()
+    }
+    // Een korte tik (geen sleep) op het scorebord: het paneel met de wedstrijd.
+    const tikOpBord = (e: PointerEvent) => {
+      if (Math.hypot(e.clientX - neerPlek.x, e.clientY - neerPlek.y) > 8 || performance.now() - neerPlek.t > 400) return
+      const r = renderer.domElement.getBoundingClientRect()
+      const punt = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1)
+      const straal = new THREE.Raycaster()
+      straal.setFromCamera(punt, camera)
+      if (straal.intersectObject(stadion.scorebord, false).length) setBordTik(bordWedstrijdRef.current)
+    }
+    const op_ = (e: PointerEvent) => {
+      sleep = null
+      tikOpBord(e)
+    }
+    renderer.domElement.addEventListener('pointerdown', neerOnthoud)
     renderer.domElement.addEventListener('pointerdown', neer)
     renderer.domElement.addEventListener('pointermove', beweeg)
     renderer.domElement.addEventListener('pointerup', op_)
@@ -1322,8 +1311,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
     // De nabewerking (gloed, stemming per plek, waas, hitte) kostte 5 à 6 extra beeldvullende
     // tekenrondes per beeld: uit voor iedereen (zie `licht` hierboven).
-    const nabewerking = licht ? null : bouwNabewerking(renderer, scene, camera)
-    let nabewerkingAan = true
+    const nabewerking = licht && !sterk ? null : bouwNabewerking(renderer, scene, camera)
+    // Op een sterke computer start ze uit en gaat ze pas aan na een tijdlang vlotte beelden.
+    let nabewerkingAan = !licht
+    let opgeschaald = false
+    let vlotteRondes = 0
     // De onzichtbare meter (zie meter.ts): hoe vlot het hier loopt, per plek, voor achteraf. De
     // tellers van three tellen over het hele beeld (alle passes, schaduw, spiegels), niet enkel de
     // laatste tekenronde: daarom zetten we ze zelf terug aan het begin van elk beeld.
@@ -2061,6 +2053,48 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
               ? `kelder:${laatsteRuimte}`
               : waar
         meter.beeld(ruw, vuurwerk.bezig() ? `vuurwerk:${plek}` : plek, performance.now() - werkBegin)
+        // Tijdens het ontwikkelen: de laatste telling leesbaar voor een meetscript (niet in productie).
+        if (process.env.NODE_ENV !== 'production') {
+          const telling = {
+            plek,
+            calls: renderer.info.render.calls,
+            tris: renderer.info.render.triangles,
+            werkMs: performance.now() - werkBegin,
+            ratio: renderer.getPixelRatio(),
+            geometries: renderer.info.memory.geometries,
+            textures: renderer.info.memory.textures,
+            samengevoegd: samenvoeger.klaar(),
+            bespaard: samenvoeger.bespaard(),
+            samenvoeger: samenvoeger.debug(),
+          }
+          ;(window as unknown as { __vkMeting?: () => unknown }).__vkMeting = () => telling
+          ;(window as unknown as { __vkScene?: unknown }).__vkScene = scene
+          ;(window as unknown as { __vkStadion?: unknown }).__vkStadion = stadion
+          ;(window as unknown as { __vkSamenvoeg?: (bron: string) => unknown }).__vkSamenvoeg = (bron) => scene.children.filter((c) => c.userData.bron === bron).map((t) => ontleedSamenvoegen(t))
+          // Ontleding op vraag: wat wordt er nu getekend, per module en per soort?
+          ;(window as unknown as { __vkOntleed?: () => unknown }).__vkOntleed = () => {
+            const frustum = new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse))
+            const per: Record<string, Record<string, number>> = {}
+            scene.traverse((o) => {
+              const m = o as THREE.Mesh
+              if (!(m.isMesh || (o as THREE.Sprite).isSprite || (o as THREE.Points).isPoints || (o as THREE.Line).isLine)) return
+              if (!o.layers.test(camera.layers)) return
+              for (let p: THREE.Object3D | null = o; p; p = p.parent) if (!p.visible) return
+              if (o.frustumCulled && m.geometry && !(o as THREE.Sprite).isSprite) {
+                if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere()
+                const bol = m.geometry.boundingSphere!.clone().applyMatrix4(o.matrixWorld)
+                if (!frustum.intersectsSphere(bol)) return
+              }
+              let top: THREE.Object3D = o
+              while (top.parent && top.parent !== scene) top = top.parent
+              const bron = (top.userData.bron as string) ?? top.name ?? '?'
+              const soort = (o as THREE.InstancedMesh).isInstancedMesh ? 'instanced' : (o as THREE.Sprite).isSprite ? 'sprite' : (o as THREE.Points).isPoints ? 'points' : (o as THREE.Line).isLine ? 'line' : o.userData.samengevoegd ? 'samengevoegd' : o.userData.los ? 'los' : Array.isArray(m.material) ? `mesh×${m.material.length}` : 'mesh'
+              per[bron] ??= {}
+              per[bron][soort] = (per[bron][soort] ?? 0) + 1
+            })
+            return per
+          }
+        }
         renderer.info.reset()
       }
 
@@ -2076,6 +2110,18 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         schokken = 0
       }
       if (frames >= 90) {
+        // Loopt het drie rondes na elkaar ruim vlot (± 55 beelden per seconde of beter, zonder
+        // schokken), dan mag de nabewerking aan: één keer, en enkel waar ze klaargezet is.
+        if (nabewerking && !nabewerkingAan && !opgeschaald && !document.hidden) {
+          vlotteRondes = frameTijd / frames < 1 / 55 && schokken === 0 ? vlotteRondes + 1 : 0
+          if (vlotteRondes >= 3) {
+            opgeschaald = true
+            nabewerkingAan = true
+            maat()
+            meter.stap('nabewerking aan')
+            meter.zet({ ratio: renderer.getPixelRatio(), nabewerking: true, schaduw: zon.shadow.mapSize.x })
+          }
+        }
         if (frameTijd / frames > 1 / 40 || schokken > frames * 0.12) {
           const nuRatio = renderer.getPixelRatio()
           if (nuRatio > 1) {
@@ -2182,10 +2228,36 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       }
       for (const o of verborgen) o.visible = false
     }
+    // Niet tekenen als niemand kijkt: bij een verborgen tabblad (de browser remt rAF dan al, maar
+    // niet overal even hard) of als het canvas uit beeld gescrold is, stopt de lus. Komt het terug,
+    // dan loopt ze verder zonder inhaalsprong: de klok van het fragment begint waar ze stopte.
+    let slaapt = false
+    let inBeeld = true
+    const slaap = () => {
+      const moet = document.hidden || !inBeeld
+      if (moet === slaapt) return
+      slaapt = moet
+      if (slaapt) {
+        cancelAnimationFrame(raf)
+        meter.stap('slaapt')
+      } else {
+        vorige = performance.now()
+        frames = -30
+        raf = requestAnimationFrame(tik)
+      }
+    }
+    document.addEventListener('visibilitychange', slaap)
+    const kijker = typeof IntersectionObserver !== 'undefined' ? new IntersectionObserver((items) => {
+      inBeeld = items.some((i) => i.isIntersecting)
+      slaap()
+    }, { threshold: 0.02 }) : null
+    kijker?.observe(el)
     raf = requestAnimationFrame(tik)
 
     return () => {
       cancelAnimationFrame(raf)
+      document.removeEventListener('visibilitychange', slaap)
+      kijker?.disconnect()
       nabewerking?.dispose()
       vuurwerk.dispose()
       feest.dispose()
@@ -2207,6 +2279,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       ro.disconnect()
       window.removeEventListener('keydown', opToets)
       window.removeEventListener('keyup', losToets)
+      renderer.domElement.removeEventListener('pointerdown', neerOnthoud)
       orbit.dispose()
       renderer.dispose()
       scene.traverse((o) => {
@@ -2620,6 +2693,27 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+            {bordTik !== false && (
+              <div className="vk-bordtik" role="dialog" aria-label="Scorebord">
+                {bordTik ? (
+                  <>
+                    <b>
+                      {bordTik.thuis} {bordTik.score ? `${bordTik.score.home} – ${bordTik.score.away}` : '–'} {bordTik.uit}
+                    </b>
+                    <small>
+                      {bordTik.status === 'live' ? '🔴 Live' : bordTik.status === 'gespeeld' ? 'Eindstand' : bordTik.status === 'wacht' ? 'Wacht op de uitslag' : `${bordTik.dag} ${bordTik.uur}`} · {bordTik.reeks}
+                    </small>
+                    <a href={`/match/${bordTik.id}`}>Bekijk de wedstrijd →</a>
+                  </>
+                ) : (
+                  <>
+                    <b>Virtueel krachtbal</b>
+                    <small>Geen wedstrijd van je club dit weekend. Het bord toont het fragment op het veld.</small>
+                  </>
+                )}
+                <button type="button" onClick={() => setBordTik(false)}>Sluiten</button>
               </div>
             )}
             {melding && (

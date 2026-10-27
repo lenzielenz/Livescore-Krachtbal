@@ -19,7 +19,9 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 //
 // Wat nooit samengaat: sprites, instanced meshes, lijnen en punten; spiegels en andere meshes met
 // een eigen render-hook; materialen met eigen shadercode (die rekenen met de lokale vorm);
-// gespiegelde meshes (negatieve schaal keert de voorkant om); meshes op een eigen laag.
+// gespiegelde meshes (negatieve schaal keert de voorkant om); meshes op een eigen laag. Patches
+// die enkel met de wereldpositie rekenen (lichtkaart.ts, nacht.ts) zetten userData.wereldPatch en
+// gaan wél mee.
 // Materiaalwijzigingen (een kleur die ademt, een textuur die schuift) blijven gewoon werken: de
 // samengevoegde mesh gebruikt hetzelfde materiaal-object.
 //
@@ -27,8 +29,10 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 // valt nog altijd kan overslaan.
 
 const CEL = 28
-/** Wachten (in beelden) voor we beginnen samenvoegen. */
-const WACHT = 150
+/** Wachten voor we beginnen samenvoegen: zoveel beelden én zoveel seconden (een traag toestel haalt
+ *  de beelden niet, maar wat beweegt, verraadt zich in die tijd evengoed). */
+const WACHT = 30
+const WACHT_S = 2.5
 /** Zoveel originelen per beeld nakijken. */
 const CONTROLE_PER_BEELD = 900
 /** Tijd per beeld voor het samenvoegen zelf (ms): verspreid over beelden, geen hapering. */
@@ -105,11 +109,68 @@ const geschikt = (m: THREE.Mesh) => {
   // Laag 0 mag uit staan (de zichtbaarheidslaag), maar een eigen laag (spiegels, je figuur) niet.
   if (Array.isArray(m.material) || m.onBeforeRender !== basisHook || (m.layers.mask & ~1) !== 0 || !m.visible) return false
   const mat = m.material
-  if ((mat as THREE.ShaderMaterial).isShaderMaterial || mat.onBeforeCompile !== basisCompile) return false
+  // Eigen shadercode rekent meestal met de lokale vorm (een vlag die wappert): niet samenvoegen.
+  // Enkel patches die met de wereldpositie werken (de lichtkaart, het hoogteverloop) zeggen dat
+  // zelf (userData.wereldPatch) en mogen wel.
+  if ((mat as THREE.ShaderMaterial).isShaderMaterial || (mat.onBeforeCompile !== basisCompile && mat.userData.wereldPatch !== true)) return false
   const g = m.geometry
   if (!g?.attributes.position || Object.keys(g.morphAttributes).length || (g as THREE.InstancedBufferGeometry).isInstancedBufferGeometry) return false
   if (Object.values(g.attributes).some((a) => (a as THREE.InterleavedBufferAttribute).isInterleavedBufferAttribute || (a as THREE.InstancedBufferAttribute).isInstancedBufferAttribute)) return false
   return m.matrixWorld.determinant() > 0
+}
+
+/** Enkel voor het ontwikkelen: waarom gaan de meshes onder `top` (niet) samen? */
+export function ontleedSamenvoegen(top: THREE.Object3D): Record<string, number> {
+  const uit: Record<string, number> = {}
+  const tel = (k: string) => (uit[k] = (uit[k] ?? 0) + 1)
+  const bezoek = (o: THREE.Object3D, zichtbaar: boolean) => {
+    if (o.userData.los) return tel('los')
+    const m = o as THREE.Mesh
+    if (m.isMesh && !(m as THREE.InstancedMesh).isInstancedMesh) {
+      if (!zichtbaar) tel('ouderOnzichtbaar')
+      else if (m.userData.inPakket) tel('inPakket')
+      else if (m.userData.samengevoegd) tel('samengevoegd')
+      else if (geschikt(m)) tel('geschikt')
+      else {
+        const mat = m.material
+        tel(
+          Array.isArray(mat) ? 'array' : m.onBeforeRender !== basisHook ? 'onBeforeRender' : (m.layers.mask & ~1) !== 0 ? 'laag' : !m.visible ? 'onzichtbaar' : (mat as THREE.ShaderMaterial).isShaderMaterial ? 'shader' : mat.onBeforeCompile !== basisCompile && mat.userData.wereldPatch !== true ? 'compile' : m.matrixWorld.determinant() <= 0 ? 'spiegel' : 'geometrie',
+        )
+      }
+    }
+    for (const c of o.children) bezoek(c, zichtbaar && c.visible)
+  }
+  bezoek(top, top.visible)
+  // Dezelfde groepering als zoekGroepen, met een proefsamenvoeging van de grootste groep.
+  const groepen = new Map<string, THREE.Mesh[]>()
+  const centrum = new THREE.Vector3()
+  top.traverse((o) => {
+    const m = o as THREE.Mesh
+    if (!geschikt(m) || m.userData.inPakket || m.userData.los) return
+    const geo = m.geometry
+    if (!geo.boundingSphere) geo.computeBoundingSphere()
+    centrum.copy(geo.boundingSphere!.center).applyMatrix4(m.matrixWorld)
+    const cel = `${Math.floor(centrum.x / CEL)},${Math.floor(centrum.y / CEL)},${Math.floor(centrum.z / CEL)}`
+    const sleutel = [materiaalSleutel(m.material as THREE.Material), handtekening(geo), m.castShadow, m.receiveShadow, m.renderOrder, m.frustumCulled, cel].join('|')
+    groepen.set(sleutel, [...(groepen.get(sleutel) ?? []), m])
+  })
+  const lijsten = [...groepen.values()].sort((a, b) => b.length - a.length)
+  uit.groepen = lijsten.length
+  uit.groepen2plus = lijsten.filter((l) => l.length >= 2).length
+  uit.grootste = lijsten[0]?.length ?? 0
+  if (lijsten[0] && lijsten[0].length >= 2) {
+    try {
+      const geos = lijsten[0].map((m) => (m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()))
+      const samen = mergeGeometries(geos, false)
+      uit.proef = samen ? 1 : 0
+      samen?.dispose()
+      geos.forEach((g) => g.dispose())
+    } catch (e) {
+      uit.proefFout = 1
+      ;(uit as unknown as Record<string, string>).fout = String((e as Error).message).slice(0, 120)
+    }
+  }
+  return uit
 }
 
 export type Samenvoeger = {
@@ -120,6 +181,8 @@ export type Samenvoeger = {
   klaar: () => boolean
   /** Alles weer uit elkaar (om te vergelijken of het beeld identiek is). */
   losAlles: () => void
+  /** Tellers, voor het ontwikkelen. */
+  debug: () => Record<string, number>
 }
 
 /**
@@ -128,6 +191,7 @@ export type Samenvoeger = {
  */
 export function bouwSamenvoeger(scene: THREE.Scene, toppen: THREE.Object3D[], opt: { nieuw?: (mesh: THREE.Mesh, top: THREE.Object3D) => void } = {}): Samenvoeger {
   let beeld = 0
+  const begin = performance.now()
   // Het werk in kleine stukjes: eerst per top de groepen zoeken, daarna elke groep apart samenvoegen.
   // Vroeger ging een hele top (bv. het volledige fandorp) in één keer, en dat gaf een schok van een
   // tiende van een seconde, ongeacht het budget per beeld.
@@ -136,10 +200,13 @@ export function bouwSamenvoeger(scene: THREE.Scene, toppen: THREE.Object3D[], op
   const originelen: Origineel[] = []
   const pakketten: Pakket[] = []
   let controle = 0
+  /** Tellers voor het ontwikkelen (zie debug()). */
+  const tellers = { tops: 0, taken: 0, samengevoegd: 0, teKlein: 0, mislukt: 0, uitElkaar: 0, overgeslagenTop: 0 }
   const verwacht = new THREE.Matrix4()
   const centrum = new THREE.Vector3()
 
   const zoekGroepen = (top: THREE.Object3D) => {
+    tellers.tops++
     top.updateMatrixWorld(true)
     const topInv = new THREE.Matrix4().copy(top.matrixWorld).invert()
     const groepen = new Map<string, THREE.Mesh[]>()
@@ -168,13 +235,17 @@ export function bouwSamenvoeger(scene: THREE.Scene, toppen: THREE.Object3D[], op
         if (stuk.length >= 2) taken.push({ top, topInv, lijst: stuk })
       }
     }
+    tellers.taken += taken.length
     wachtrij.unshift(...taken)
   }
 
   const voegGroepSamen = (top: THREE.Object3D, topInv: THREE.Matrix4, groep: THREE.Mesh[]) => {
     // Sinds het zoeken kan er al iets bewogen of verdwenen zijn (de controle hieronder markeert dat).
     const lijst = groep.filter((m) => !m.userData.los && !m.userData.inPakket && m.parent)
-    if (lijst.length < 2) return
+    if (lijst.length < 2) {
+      tellers.teKlein++
+      return
+    }
     {
       const geos = lijst.map((m) => {
         const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()
@@ -189,7 +260,11 @@ export function bouwSamenvoeger(scene: THREE.Scene, toppen: THREE.Object3D[], op
         samen = null
       }
       geos.forEach((g) => g.dispose())
-      if (!samen) return
+      if (!samen) {
+        tellers.mislukt++
+        return
+      }
+      tellers.samengevoegd++
       samen.computeBoundingSphere()
       const eerste = lijst[0]
       const mesh = new THREE.Mesh(samen, eerste.material)
@@ -224,6 +299,7 @@ export function bouwSamenvoeger(scene: THREE.Scene, toppen: THREE.Object3D[], op
 
   const uitElkaar = (p: Pakket) => {
     if (p.los) return
+    tellers.uitElkaar++
     p.los = true
     p.mesh.removeFromParent()
     p.mesh.geometry.dispose()
@@ -248,7 +324,7 @@ export function bouwSamenvoeger(scene: THREE.Scene, toppen: THREE.Object3D[], op
   return {
     update() {
       beeld++
-      if (beeld < WACHT) return
+      if (beeld < WACHT || performance.now() - begin < WACHT_S * 1000) return
       // 1. Samenvoegen, verspreid over beelden.
       if (wachtrij.length) {
         const start = performance.now()
@@ -281,7 +357,8 @@ export function bouwSamenvoeger(scene: THREE.Scene, toppen: THREE.Object3D[], op
         if (veranderd) uitElkaar(o.pakket)
       }
     },
-    klaar: () => beeld >= WACHT && wachtrij.length === 0,
+    debug: () => ({ ...tellers, wachtrij: wachtrij.length, pakketten: pakketten.length, toppen: toppen.length }),
+    klaar: () => beeld >= WACHT && performance.now() - begin >= WACHT_S * 1000 && wachtrij.length === 0,
     losAlles: () => pakketten.forEach(uitElkaar),
     bespaard: () => pakketten.reduce((s, p) => s + (p.los ? 0 : p.originelen.length - 1), 0),
   }

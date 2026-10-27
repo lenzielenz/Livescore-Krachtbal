@@ -113,6 +113,10 @@ export function bouwLichtkaart(opt: { sterkte?: number } = {}): Lichtkaart {
     gepatcht.add(mat)
     const vorige = m.onBeforeCompile
     const vorigeSleutel = m.customProgramCacheKey()
+    // Deze patch rekent enkel met de wereldpositie: een samengevoegde mesh (samenvoegen.ts) ziet er
+    // precies hetzelfde mee uit. Dat mag de samenvoeger weten — anders liet hij elk belicht
+    // materiaal links liggen en bleven er honderden tekenopdrachten per beeld over.
+    if (vorige === THREE.Material.prototype.onBeforeCompile || m.userData.wereldPatch === true) m.userData.wereldPatch = true
     m.onBeforeCompile = (shader, renderer) => {
       vorige.call(m, shader, renderer)
       shader.uniforms.uLichtkaart = uKaart
