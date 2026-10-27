@@ -748,6 +748,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               stats={share.stats}
               shots={share.shots}
               teams={{ home: state.teams.home.name, away: state.teams.away.name }}
+              colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
               goalAreaDepth={(matchDoc as { goalAreaDepth?: number } | null)?.goalAreaDepth ?? undefined}
               speelveldM={(matchDoc as { veldSpeelveld?: number | null } | null)?.veldSpeelveld ?? undefined}
               matchLabel={`${share.reeks}${share.datum ? ` · ${share.datum}` : ''}`}

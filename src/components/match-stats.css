@@ -287,3 +287,12 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* ── 3D-wedstrijdverloop (Verloop3D): één deelbaar beeld van 4:5 met kop, veld en tijdlijn ── */
+.verloop3d { display: flex; flex-direction: column; gap: 8px; }
+.verloop3d-beeld { width: 100%; max-width: 460px; height: auto; aspect-ratio: 4 / 5; border-radius: 12px; display: block; margin: 0 auto; background: #0b1017; }
+.verloop3d .replay-controls select { padding: 6px 8px; border: 1px solid var(--line); background: #10141a; color: var(--txt); border-radius: 7px; font-size: 0.8rem; }
+.verloop3d-knoppen { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.verloop3d-knoppen button { padding: 6px 10px; border: 1px solid var(--line); background: #10141a; color: var(--txt); border-radius: 7px; font-size: 0.8rem; cursor: pointer; }
+.verloop3d-knoppen button:disabled { opacity: 0.5; cursor: not-allowed; }
+.verloop3d-knoppen .replay-rec-save { background: var(--accent, #06d6a0); color: #06140d; border-color: var(--accent, #06d6a0); font-weight: 700; }
