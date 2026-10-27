@@ -1,14 +1,11 @@
-import { betrokkenen } from '@/lib/aftrap'
-import { formatDateTimeBE } from '@/lib/datetime'
-import { federatieToegang, leesJson, relId } from '@/lib/federatie-api'
-import { meld } from '@/lib/meldingen'
-import { sendPushToClubs } from '@/lib/push'
+import { federatieToegang, leesJson } from '@/lib/federatie-api'
+import { verplaatsWedstrijd } from '@/lib/wedstrijd-verplaatsen'
 
 // Wedstrijden verplaatsen in bulk (vanuit /beheer/wedstrijden en de planner /beheer/planner).
 //   POST { wijzigingen: [{ matchId, date: ISO }] } → { ok, verplaatst, overgeslagen }
 // Enkel geplande wedstrijden: een lopende of afgelopen wedstrijd verplaats je niet. Iedereen hoort
-// het nieuwe tijdstip: de staf van beide clubs, de scheidsrechter (die meteen kan laten weten als
-// hij dan niet kan) en de spelers op de selectie.
+// het nieuwe tijdstip (zie wedstrijd-verplaatsen.ts). Een heel weekend in één keer:
+// /api/federatie/weekend-verplaatsen.
 export async function POST(req: Request) {
   const t = await federatieToegang(req)
   if (t.fout) return t.fout
@@ -33,28 +30,9 @@ export async function POST(req: Request) {
         overgeslagen.push({ matchId, reden: 'niet gevonden' })
         continue
       }
-      if (match.status !== 'scheduled') {
-        overgeslagen.push({ matchId, reden: match.status === 'live' ? 'is bezig' : 'is al gespeeld' })
-        continue
-      }
-      if (new Date(String(match.date)).getTime() === datum.getTime()) continue
-      await payload.update({ collection: 'matches', id: matchId, data: { date: datum.toISOString() }, overrideAccess: true })
-      verplaatst += 1
-      const team = (v: unknown) => (v && typeof v === 'object' ? (v as { name?: unknown; club?: unknown }) : null)
-      const thuis = team(match.homeTeam)
-      const uit = team(match.awayTeam)
-      const titel = `${String(thuis?.name ?? '')} – ${String(uit?.name ?? '')}`
-      await meld(payload, (await betrokkenen(payload, { id: matchId, homeTeam: match.homeTeam, awayTeam: match.awayTeam })).filter((id) => id !== Number(t.user.id)), {
-        titel: `🔁 Verplaatst: ${titel}`,
-        tekst: `Nieuw tijdstip: ${formatDateTimeBE(datum.toISOString())} (was ${formatDateTimeBE(String(match.date))}). Scheidsrechter: kan je dan niet, laat het de federatie meteen weten.`,
-        url: `/match/${matchId}`,
-      }).catch(() => 0)
-      void sendPushToClubs(payload, [relId(thuis?.club), relId(uit?.club)], {
-        title: '🔁 Wedstrijd verplaatst',
-        body: `${String(thuis?.name ?? '')} – ${String(uit?.name ?? '')}: nu ${formatDateTimeBE(datum.toISOString())}`,
-        url: `/match/${matchId}`,
-        tag: `verplaatst-${matchId}`,
-      }).catch(() => null)
+      const r = await verplaatsWedstrijd(payload, match, datum, { doorUser: Number(t.user.id) })
+      if (!r.ok) overgeslagen.push({ matchId, reden: r.reden })
+      else if (r.verplaatst) verplaatst += 1
     }
     return Response.json({ ok: true, verplaatst, overgeslagen })
   } catch (err) {
