@@ -303,3 +303,8 @@
 .verloop3d-laag { position: fixed; inset: 0; z-index: 140; background: rgba(4, 7, 11, 0.86); display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 16px; }
 .verloop3d-paneel { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 10px; background: var(--bg, #0b1017); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
 .verloop3d-kop { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+/* Het 3D-verloop volgt de clubkleuren: knoppen in de thuiskleur, een gloed van de uitkleur rond het beeld. */
+.verloop3d .replay-play { background: var(--vh, var(--accent)); color: var(--vh-inkt, #06140d); }
+.verloop3d .replay-scrub { accent-color: var(--vh, var(--accent)); }
+.verloop3d .verloop3d-knoppen .replay-rec-save { background: var(--vh, var(--accent)); border-color: var(--vh, var(--accent)); color: var(--vh-inkt, #06140d); }
+.verloop3d .verloop3d-beeld { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), -18px 18px 60px -28px var(--vh, transparent), 18px -18px 60px -28px var(--va, transparent); }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { ShotPoint } from '@/lib/match-engine'
-import { afkorting, bouwVerloop, cijfersTot, drukOp, gevaar, klokOp, standOp, tijdLabelOp, verwachtePunten } from '@/lib/wedstrijdverloop'
+import { afkorting, bouwTijdwarp, bouwVerloop, cijfersTot, drukOp, gevaar, klokOp, momentumOp, standOp, tijdLabelOp, verwachtePunten } from '@/lib/wedstrijdverloop'
 
 const worp = (o: Partial<ShotPoint>): ShotPoint => ({
   x: 0.5,
@@ -98,5 +98,33 @@ describe('wedstrijdverloop', () => {
     expect(afkorting('Sint-Michiels')).toBe('SMI')
     expect(afkorting('KBK Ternat')).toBe('TER')
     expect(afkorting('Pollare')).toBe('POL')
+  })
+
+  it('geeft momentum naar de ploeg die drukt, tussen -1 en 1', () => {
+    const v = bouwVerloop([worp({ outcome: 'goal', type: 'rug', isLastThrow: true, gameClock: 120, points: 2, distance: 3 }), worp({ outcome: 'caught', isLastThrow: true, gameClock: 900, teamSide: 'away', distance: 3 })])
+    const thuis = momentumOp(v, v.pieken[0].t)
+    const uit = momentumOp(v, v.pieken[1].t)
+    expect(thuis).toBeGreaterThan(0.3)
+    expect(uit).toBeLessThan(-0.3)
+    expect(Math.abs(thuis)).toBeLessThan(1)
+  })
+
+  it('vertraagt rond een doelpunt en houdt begin, einde en volgorde', () => {
+    const v = bouwVerloop([worp({ outcome: 'goal', isLastThrow: true, gameClock: 600, points: 1 }), worp({ outcome: 'out_back', isLastThrow: true, gameClock: 600, period: 2 })])
+    const w = bouwTijdwarp(v)
+    expect(w.naarT(0)).toBeCloseTo(0, 3)
+    expect(w.naarT(1)).toBeCloseTo(1, 3)
+    let vorige = -1
+    for (let r = 0; r <= 1; r += 0.05) {
+      const t = w.naarT(r)
+      expect(t).toBeGreaterThanOrEqual(vorige)
+      vorige = t
+      expect(w.naarR(t)).toBeCloseTo(r, 2)
+    }
+    // Rond het doelpunt kost een stukje tijdas meer afspeeltijd dan in een leeg stuk.
+    const g = v.pieken[0].t
+    const rondDoel = w.naarR(g + 0.01) - w.naarR(g - 0.01)
+    const leeg = w.naarR(0.3 + 0.01) - w.naarR(0.3 - 0.01)
+    expect(rondDoel).toBeGreaterThan(leeg * 2)
   })
 })

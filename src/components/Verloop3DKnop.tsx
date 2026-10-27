@@ -21,6 +21,7 @@ type Gegevens = {
   status: string
   teams: { home: string; away: string }
   colors: { home: string | null; away: string | null; homeB?: string | null; awayB?: string | null }
+  logos?: { home: string | null; away: string | null }
   goalAreaDepth: number | null
   speelveldM: number | null
   matchLabel: string
@@ -99,6 +100,7 @@ export function Verloop3DKnop({ matchId }: { matchId: number }) {
                   shots={gegevens.shots}
                   teams={gegevens.teams}
                   colors={gegevens.colors}
+                  logos={gegevens.logos}
                   goalAreaDepth={gegevens.goalAreaDepth ?? undefined}
                   speelveldM={gegevens.speelveldM ?? undefined}
                   matchLabel={gegevens.matchLabel}

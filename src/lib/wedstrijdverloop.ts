@@ -184,3 +184,61 @@ export function afkorting(naam: string): string {
   const raw = delen.length > 1 ? `${delen[0][0]}${delen[1].slice(0, 2)}` : w.slice(0, 3)
   return raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() || 'KB'
 }
+
+/**
+ * Het momentum op moment `t`, van -1 (uit drukt) tot 1 (thuis drukt): het verschil in aanvalsdruk,
+ * breed uitgesmeerd en gedempt, zodat de naad tussen de clubkleuren rustig ademt in plaats van te
+ * schokken. Pogingen na `tot` tellen niet mee.
+ */
+export function momentumOp(v: Verloop, t: number, tot = 1): number {
+  const [h, a] = drukOp(v, t, tot, 0.045)
+  return (h - a) / (h + a + 0.6)
+}
+
+export type Tijdwarp = {
+  /** Van afspeelpositie (0..1 van de echte afspeeltijd) naar moment op de tijdas. */
+  naarT: (r: number) => number
+  /** Omgekeerd: van moment op de tijdas naar afspeelpositie. */
+  naarR: (t: number) => number
+}
+
+/**
+ * Dramatische tijd: rond een doelpunt of een grote kans loopt het afspelen trager, door de rustige
+ * stukken sneller. De volgorde blijft exact; enkel het tempo op het scherm verschilt. `rek` is hoeveel
+ * trager een doelpuntmoment loopt (2,5 = ± 3,5 keer trager dan een leeg stuk).
+ */
+export function bouwTijdwarp(v: Verloop, rek = 2.5): Tijdwarp {
+  const N = 1000
+  const cum = new Float64Array(N + 1)
+  for (let i = 1; i <= N; i++) {
+    const tm = (i - 0.5) / N
+    let gewicht = 0
+    for (const p of v.pieken) {
+      const x = (tm - p.t) / 0.012
+      if (Math.abs(x) > 3) continue
+      gewicht += (p.soort === 'misser' ? p.verwacht * 0.3 : 1) * Math.exp(-x * x)
+    }
+    cum[i] = cum[i - 1] + (1 + rek * Math.min(gewicht, 1.5)) / N
+  }
+  const totaal = cum[N]
+  for (let i = 0; i <= N; i++) cum[i] /= totaal
+  return {
+    naarT(r) {
+      const k = Math.max(0, Math.min(1, r))
+      let lo = 0
+      let hi = N
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1
+        if (cum[mid] < k) lo = mid
+        else hi = mid
+      }
+      const span = cum[hi] - cum[lo]
+      return (lo + (span > 0 ? (k - cum[lo]) / span : 0)) / N
+    },
+    naarR(t) {
+      const x = Math.max(0, Math.min(1, t)) * N
+      const i = Math.min(N - 1, Math.floor(x))
+      return cum[i] + (cum[i + 1] - cum[i]) * (x - i)
+    },
+  }
+}

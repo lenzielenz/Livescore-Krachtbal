@@ -1,4 +1,5 @@
 import { formatDateTimeBE } from '@/lib/datetime'
+import { logoBron } from '@/lib/logo-bron'
 import { buildMatchState, loadMatchThrowData } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
@@ -20,6 +21,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0, overrideAccess: true }).catch(() => null)
     if (!match || match.analyseOnly) return Response.json({ error: 'Wedstrijd niet gevonden' }, { status: 404 })
     const [state, { shots }] = await Promise.all([buildMatchState(payload, matchId), loadMatchThrowData(payload, matchId)])
+    // Het clublogo altijd van ons eigen domein: dan mag het canvas met het logo erop nog bewaard en
+    // opgenomen worden (een afbeelding van een ander domein maakt het canvas 'besmet').
+    const eigenLogo = (url: string | null) => {
+      const bron = logoBron(url)
+      if (!bron) return null
+      if (bron.startsWith('/')) return bron
+      return /^https?:\/\//i.test(bron) ? `/api/logo-proxy?url=${encodeURIComponent(bron)}` : null
+    }
     const reeks = match.reeks ? reeksNaam(match.reeks) : 'Krachtbal'
     const datum = match.date ? formatDateTimeBE(String(match.date)) : null
     return Response.json(
@@ -33,6 +42,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           homeB: state.teams.home.colors?.secondary ?? null,
           awayB: state.teams.away.colors?.secondary ?? null,
         },
+        logos: { home: eigenLogo(state.teams.home.logoUrl), away: eigenLogo(state.teams.away.logoUrl) },
         goalAreaDepth: match.goalAreaDepth ?? null,
         speelveldM: match.veldSpeelveld ?? null,
         matchLabel: `${reeks}${datum ? ` · ${datum}` : ''}`,
