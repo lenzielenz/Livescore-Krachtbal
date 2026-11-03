@@ -99,9 +99,15 @@ function rng(seed: number) {
   }
 }
 
-/** Een "foto" van een ondergelopen veld, voor de afgelasting (PNG via sharp). */
-async function fotoVeld(): Promise<File> {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640">
+/**
+ * De "foto" van een ondergelopen veld, als SVG: enkel vlakken en lijnen, GEEN <text>.
+ *
+ * Tekst in een SVG die sharp naar PNG rastert, vraagt fontconfig aan librsvg. Ontbreekt dat op de container (zo op Railway),
+ * dan is het geen gewone fout maar een native crash die het hele Node-proces meesleurt: het klaarzetten van de demo liep daar
+ * vast op deze stap en liet een half gevulde demo achter (zie ook de waarschuwing in api/club/instagram-weekend/route.ts).
+ */
+export function veldFotoSvg(): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640">
     <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fa3b5"/><stop offset="0.35" stop-color="#c7d2db"/><stop offset="0.36" stop-color="#3f6b3a"/><stop offset="1" stop-color="#2d4f2a"/></linearGradient></defs>
     <rect width="960" height="640" fill="url(#g)"/>
     <ellipse cx="420" cy="470" rx="300" ry="70" fill="#9fb6c8" opacity="0.85"/>
@@ -109,8 +115,12 @@ async function fotoVeld(): Promise<File> {
     <ellipse cx="200" cy="560" rx="170" ry="45" fill="#98afc2" opacity="0.8"/>
     <line x1="80" y1="250" x2="880" y2="250" stroke="#e8efe6" stroke-width="5"/>
     <rect x="430" y="175" width="100" height="75" fill="none" stroke="#e8efe6" stroke-width="5"/>
-    <text x="30" y="610" font-family="Arial" font-size="26" fill="#ffffff">Terrein onder water — 2 uur voor de aftrap</text>
   </svg>`
+}
+
+/** Een "foto" van een ondergelopen veld, voor de afgelasting (PNG via sharp). */
+async function fotoVeld(): Promise<File> {
+  const svg = veldFotoSvg()
   const sharp = (await import('sharp')).default
   const png = await sharp(Buffer.from(svg)).png().toBuffer()
   return new File([new Uint8Array(png)], 'terrein.png', { type: 'image/png' })
