@@ -48,6 +48,8 @@ export default function RootLayout(props: { children: React.ReactNode }) {
           <a href="/account-verwijderen">Account verwijderen</a>
           <span aria-hidden>·</span>
           <a href="/reglement">Reglement</a>
+          <span aria-hidden>·</span>
+          <a href="/app">Android-app</a>
         </footer>
         <Toaster />
         <ServiceWorker />

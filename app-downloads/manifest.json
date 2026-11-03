@@ -1,0 +1,20 @@
+{
+  "apps": [
+    {
+      "id": "federatie",
+      "naam": "Krachtbal Federatie",
+      "bestand": "Krachtbal-Federatie-0.2.0.apk",
+      "versie": "0.2.0",
+      "versieCode": 2,
+      "datum": "2026-11-03"
+    },
+    {
+      "id": "aantekenaar",
+      "naam": "Krachtbal Aantekenaar",
+      "bestand": "Krachtbal-Aantekenaar-1.0.7.apk",
+      "versie": "1.0.7",
+      "versieCode": 8,
+      "datum": "2026-11-03"
+    }
+  ]
+}
