@@ -1,5 +1,6 @@
 import type { Payload } from 'payload'
 
+import { createFlightGuard, createLimiter } from './concurrency'
 import { buildMatchState, buildTimeline } from './match-engine'
 import { isPreMatchLead, isTribuneOpen } from './tribune'
 
@@ -89,9 +90,17 @@ type Channel = {
   poll: ReturnType<typeof setInterval> | null
   flush: ReturnType<typeof setInterval> | null
   idle: ReturnType<typeof setTimeout> | null // sloop-timer wanneer (even) niemand kijkt
+  // Eén scorepoll tegelijk: duurt een poll langer dan SCORE_POLL_MS (trage databank), dan hoopten de
+  // polls zich op (elk ≈15 queries) en hielden ze de pool voor altijd verzadigd (2026-10-30).
+  flight: ReturnType<typeof createFlightGuard>
 }
 
 const channels = new Map<number, Channel>()
+
+// Achtergrondschrijfacties (tellers, poll, piek, shoutouts) gaan met hooguit 2 tegelijk naar de databank.
+// Vielen alle kijkers van meerdere wedstrijden tegelijk weg, dan startte elk kanaal meteen drie `update`s;
+// dat zijn evenveel transacties die elk een verbinding vasthouden en er binnenin nog een nodig hebben.
+const limitWrites = createLimiter(2)
 
 const SCORE_POLL_MS = 1500
 const REACTION_FLUSH_MS = 300 // geaggregeerd venster (~3 flushes/sec)
@@ -137,7 +146,7 @@ function broadcastViewers(ch: Channel, matchId: number) {
 // Piek gebundeld wegschrijven (debounce, best-effort) — zelfde ritme als de andere tellers.
 async function savePeakViewers(ch: Channel, matchId: number) {
   try {
-    await ch.payload.update({ collection: 'matches', id: matchId, data: { peakViewers: ch.peakViewers }, overrideAccess: true })
+    await limitWrites(() => ch.payload.update({ collection: 'matches', id: matchId, data: { peakViewers: ch.peakViewers }, overrideAccess: true }))
   } catch {
     /* best-effort */
   }
@@ -162,6 +171,8 @@ export function viewerCountFor(matchId: number): number {
 async function pollScore(payload: Payload, matchId: number) {
   const ch = channels.get(matchId)
   if (!ch) return
+  const token = ch.flight.enter()
+  if (!token) return // de vorige poll loopt nog → deze tick overslaan
   let payloadData: unknown
   try {
     const [state, timeline] = await Promise.all([buildMatchState(payload, matchId), buildTimeline(payload, matchId)])
@@ -173,6 +184,8 @@ async function pollScore(payload: Payload, matchId: number) {
     payloadData = { state, timeline }
   } catch {
     return // transiënt → overslaan
+  } finally {
+    ch.flight.leave(token)
   }
   const s = JSON.stringify(payloadData)
   if (s === ch.lastScore) return
@@ -195,7 +208,7 @@ function flushReactions(matchId: number) {
 // Schrijf de cumulatieve tellers weg naar de wedstrijd (best-effort).
 async function saveReactions(ch: Channel, matchId: number) {
   try {
-    await ch.payload.update({ collection: 'matches', id: matchId, data: { liveReactions: ch.totals }, overrideAccess: true })
+    await limitWrites(() => ch.payload.update({ collection: 'matches', id: matchId, data: { liveReactions: ch.totals }, overrideAccess: true }))
   } catch {
     /* best-effort: een mislukte save mag de live-werking niet breken */
   }
@@ -213,7 +226,7 @@ function scheduleSaveReactions(ch: Channel, matchId: number) {
 // Poll-stemmen gebundeld wegschrijven (debounce, best-effort).
 async function savePoll(ch: Channel, matchId: number) {
   try {
-    await ch.payload.update({ collection: 'matches', id: matchId, data: { livePoll: ch.pollVotes }, overrideAccess: true })
+    await limitWrites(() => ch.payload.update({ collection: 'matches', id: matchId, data: { livePoll: ch.pollVotes }, overrideAccess: true }))
   } catch {
     /* best-effort */
   }
@@ -229,7 +242,7 @@ function scheduleSavePoll(ch: Channel, matchId: number) {
 // Shoutouts onmiddellijk wegschrijven (ze zijn schaars en mogen niet verloren gaan).
 async function saveShoutouts(ch: Channel, matchId: number) {
   try {
-    await ch.payload.update({ collection: 'matches', id: matchId, data: { liveShoutouts: ch.shoutouts }, overrideAccess: true })
+    await limitWrites(() => ch.payload.update({ collection: 'matches', id: matchId, data: { liveShoutouts: ch.shoutouts }, overrideAccess: true }))
   } catch {
     /* best-effort */
   }
@@ -336,6 +349,7 @@ export function joinMatch(payload: Payload, matchId: number, send: Send, viewerK
       poll: setInterval(() => void pollScore(payload, matchId), SCORE_POLL_MS),
       flush: setInterval(() => flushReactions(matchId), REACTION_FLUSH_MS),
       idle: null,
+      flight: createFlightGuard(),
     }
     channels.set(matchId, ch)
     void pollScore(payload, matchId) // directe eerste score
@@ -376,23 +390,26 @@ export function joinMatch(payload: Payload, matchId: number, send: Send, viewerK
       if (c.flush) clearInterval(c.flush)
       c.poll = null
       c.flush = null
-      // Schrijf de laatste tellerstand nog weg (de debounce kan nog openstaan), zodat niets
-      // verloren gaat als het kanaal straks definitief opgeruimd wordt.
+      // Schrijf de laatste tellerstand nog weg als de debounce nog openstaat, zodat niets verloren gaat
+      // als het kanaal straks definitief opgeruimd wordt. ENKEL als er iets openstaat: elke wijziging plant
+      // zelf een opslag (scheduleSave*), dus zonder openstaande timer staat alles al in de databank. Vroeger
+      // schreven we hier altijd drie keer weg — vielen de kijkers van meerdere wedstrijden tegelijk weg,
+      // dan waren dat tientallen gelijktijdige transacties die de pool vastzetten (2026-10-30).
       if (c.saveTimer) {
         clearTimeout(c.saveTimer)
         c.saveTimer = null
+        void saveReactions(c, matchId)
       }
-      void saveReactions(c, matchId)
       if (c.pollSaveTimer) {
         clearTimeout(c.pollSaveTimer)
         c.pollSaveTimer = null
+        void savePoll(c, matchId)
       }
-      void savePoll(c, matchId)
       if (c.peakSaveTimer) {
         clearTimeout(c.peakSaveTimer)
         c.peakSaveTimer = null
+        void savePeakViewers(c, matchId)
       }
-      void savePeakViewers(c, matchId)
       if (c.idle) clearTimeout(c.idle)
       c.idle = setTimeout(() => {
         const cur = channels.get(matchId)

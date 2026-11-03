@@ -8,6 +8,8 @@
 // Dat klapt de DB-kost terug naar 15 queries/1.5 s per wedstrijd, ongeacht het publiek.
 // Voor échte multi-instance schaal hoort dit later achter Redis pub/sub te zitten.
 
+import { createFlightGuard } from './concurrency'
+
 type Frame = { id: number; data: unknown }
 type Sub = (frame: Frame) => void
 
@@ -17,6 +19,9 @@ type Hub = {
   lastId: number
   timer: ReturnType<typeof setInterval> | null
   poll: () => Promise<unknown>
+  // Eén poll tegelijk per sleutel: duurt een poll langer dan het interval (trage databank), dan
+  // stapelden de ticks zich op en hielden ze de pool voor altijd verzadigd (2026-10-30).
+  flight: ReturnType<typeof createFlightGuard>
 }
 
 const hubs = new Map<string, Hub>()
@@ -24,12 +29,16 @@ const hubs = new Map<string, Hub>()
 async function tick(key: string) {
   const h = hubs.get(key)
   if (!h) return
+  const token = h.flight.enter()
+  if (!token) return // vorige poll loopt nog → deze tick overslaan
   let data: unknown
   try {
     data = await h.poll()
   } catch {
     // Transiënte DB-fout of (tijdelijk) verdwenen wedstrijd → deze tick overslaan, niet crashen.
     return
+  } finally {
+    h.flight.leave(token)
   }
   const s = JSON.stringify(data)
   if (s === h.last) return
@@ -58,7 +67,7 @@ export function subscribe(
 ): () => void {
   let h = hubs.get(key)
   if (!h) {
-    h = { subs: new Set(), last: '', lastId: 0, timer: null, poll }
+    h = { subs: new Set(), last: '', lastId: 0, timer: null, poll, flight: createFlightGuard() }
     hubs.set(key, h)
     h.timer = setInterval(() => void tick(key), intervalMs)
     void tick(key) // directe eerste poll

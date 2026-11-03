@@ -6,6 +6,7 @@ import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 import sharp from 'sharp'
 
+import { DB_CONNECT_TIMEOUT_MS, DB_POOL_MAX } from './lib/db-pool'
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { TornooiFotos } from './collections/TornooiFotos'
@@ -96,11 +97,17 @@ const originConfig = serverURL ? { serverURL, cors: [serverURL], csrf: [serverUR
 //    rolling deploy (precies wat de FK-migratie deed hangen: die was na 10s gefaald i.p.v. te hangen).
 //  - idle_in_transaction_session_timeout (60s): dood een transactie die 60s "idle in transaction"
 //    blijft hangen — net de zombie die een gecrashte migratie achterlaat → locks komen vanzelf vrij.
+//  - connectionTimeoutMillis (15s): ook het WACHTEN op een vrije verbinding is begrensd. pg-standaard is
+//    eeuwig; een volle pool liet de hele site hangen (2026-10-30). Nu faalt zo'n verzoek na 15 s zichtbaar.
+//  - max (20): ruimer dan de pg-standaard van 10. Een Payload-transactie houdt een verbinding vast en vraagt
+//    binnenin vaak een tweede; zie lib/db-pool.ts en lib/concurrency.ts voor hoe de rest daarmee omgaat.
 // LET OP: migraties draaien op dezelfde pool; houd elke migratie ruim onder statement_timeout.
 const db = isPostgres
   ? postgresAdapter({
       pool: {
         connectionString: databaseUrl,
+        max: DB_POOL_MAX,
+        connectionTimeoutMillis: DB_CONNECT_TIMEOUT_MS,
         statement_timeout: 30_000,
         lock_timeout: 10_000,
         idle_in_transaction_session_timeout: 60_000,
