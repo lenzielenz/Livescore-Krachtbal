@@ -183,7 +183,7 @@ Vereist Android Studio (SDK + JDK). Vanuit deze map:
 
 ```powershell
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
-.\gradlew.bat :app:testFederatieDebugUnitTest :app:testAantekenaarDebugUnitTest   # 103 unit-tests per variant
+.\gradlew.bat :app:testFederatieDebugUnitTest :app:testAantekenaarDebugUnitTest   # 109 unit-tests per variant
 .\gradlew.bat :app:assembleFederatieRelease :app:assembleAantekenaarRelease        # app/build/outputs/apk/<variant>/release/
 ```
 

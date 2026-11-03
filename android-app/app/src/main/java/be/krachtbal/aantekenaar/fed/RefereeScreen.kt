@@ -61,7 +61,11 @@ fun RefereeScreen(matchId: Int, focus: String, onBack: () -> Unit, onEditLineup:
     val model = remember(matchId) { HubModel(matchId, withRosters = true) }
     val ui by model.ui.collectAsState()
     val scope = rememberCoroutineScope()
-    val act = rememberActionState()
+    // Eén status per sectie: de fout of bevestiging staat dan bij de knop waarop je tikte, niet bovenaan buiten beeld.
+    val actControle = rememberActionState()
+    val actKeuring = rememberActionState()
+    val actOfficials = rememberActionState()
+    val actVrijgave = rememberActionState()
     var open by remember { mutableStateOf(setOf(focus)) }
     LaunchedEffect(model) { model.reload() }
 
@@ -87,7 +91,6 @@ fun RefereeScreen(matchId: Int, focus: String, onBack: () -> Unit, onEditLineup:
             else -> {
                 ui.error?.let { Banner("Niet alles kon geladen worden", it, tint = Pal.Warn) }
                 if (ui.cancelled) Banner("Wedstrijd afgelast", "Er valt niets meer te controleren of vrij te geven.", tint = Pal.Bad)
-                Feedback(act)
 
                 val rows = sheet.home + sheet.away
                 val gecontroleerd = rows.count { it.gecontroleerd }
@@ -102,8 +105,9 @@ fun RefereeScreen(matchId: Int, focus: String, onBack: () -> Unit, onEditLineup:
                     onToggle = { toggle("controle") },
                 ) {
                     Dim("Controleer elke speler op de lijst: “jij bent die speler, alles in orde”. Wie volgens het reglement niet mag spelen, staat in het rood.")
+                    Feedback(actControle)
                     for (side in listOf(Side.HOME, Side.AWAY)) {
-                        ControleSide(model, ui, side, locked, act, scope, onEditLineup)
+                        ControleSide(model, ui, side, locked, actControle, scope, onEditLineup)
                     }
                 }
 
@@ -113,7 +117,7 @@ fun RefereeScreen(matchId: Int, focus: String, onBack: () -> Unit, onEditLineup:
                     done = sheet.keuringBevestigd,
                     open = "keuring" in open,
                     onToggle = { toggle("keuring") },
-                ) { KeuringBody(matchId, sheet, locked, act, scope, reload) }
+                ) { KeuringBody(matchId, sheet, locked, actKeuring, scope, reload) }
 
                 Section(
                     title = "Officials",
@@ -121,7 +125,7 @@ fun RefereeScreen(matchId: Int, focus: String, onBack: () -> Unit, onEditLineup:
                     done = Officials.validate(st.match.reeks, sheet.officials).isEmpty(),
                     open = "officials" in open,
                     onToggle = { toggle("officials") },
-                ) { OfficialsBody(matchId, st.match.reeks, sheet, locked, act, scope, reload) }
+                ) { OfficialsBody(matchId, st.match.reeks, sheet, locked, actOfficials, scope, reload) }
 
                 val vrijgave = ui.steps.firstOrNull { it.id == StepId.VRIJGAVE }
                 Section(
@@ -130,7 +134,7 @@ fun RefereeScreen(matchId: Int, focus: String, onBack: () -> Unit, onEditLineup:
                     done = sheet.startAkkoord,
                     open = "vrijgave" in open,
                     onToggle = { toggle("vrijgave") },
-                ) { VrijgaveBody(matchId, ui, vrijgave, locked, act, scope, reload) }
+                ) { VrijgaveBody(matchId, ui, vrijgave, locked, actVrijgave, scope, reload) }
 
                 Section(
                     title = "Meer",
@@ -214,6 +218,7 @@ private fun KeuringBody(
 ) {
     val values = remember(sheet.keuring) { mutableStateMapOf<String, String>().apply { putAll(sheet.keuring) } }
     val frozen = locked || sheet.keuringBevestigd
+    Feedback(act)
     Dim("Zet elk punt op OK, NIET OK of N.v.t. Een punt dat niet in orde is, gaat meteen als melding naar de thuisclub en de federatie.")
     KEURING_ITEMS.forEach { (key, label) ->
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -255,6 +260,7 @@ private fun OfficialsBody(
 ) {
     val values = remember(sheet.officials) { mutableStateMapOf<String, String>().apply { putAll(sheet.officials) } }
     val required = Officials.required(reeks).toSet()
+    Feedback(act)
     Dim("Altijd met naam én voornaam. Verplicht voor deze reeks: ${Officials.required(reeks).joinToString(", ") { Officials.LABELS.getValue(it).lowercase() }.ifEmpty { "niets" }}.")
     Officials.KEYS.forEach { key ->
         val status = Officials.status(key, values.toMap())
@@ -294,6 +300,7 @@ private fun VrijgaveBody(
     var code by remember { mutableStateOf("") }
     val scheduled = ui.state?.match?.status == "scheduled"
     val klaar = step?.state == StepState.TODO
+    Feedback(act)
     when {
         sheet.startAkkoord -> {
             Banner("Vrijgegeven ✓", sheet.startNaam?.let { "Door $it." } ?: "De tafel kan de wedstrijd starten.", tint = Pal.Ok)

@@ -52,7 +52,13 @@ class LocalClock(
      */
     fun restore(s: Snapshot) {
         val nowElapsed = elapsedNow()
-        if (nowElapsed >= s.anchorElapsed) {
+        // Zelfde opstart van het toestel? Dan is het opstartmoment (muurklok − monotone tijd) nog hetzelfde, op een kleine
+        // klokcorrectie na. Enkel "de monotone tijd is al voorbij het anker" volstaat niet: na een herstart is ze dat na
+        // een paar minuten óók, en dan leek een kwartier stilstand op twee minuten.
+        val bootThen = s.anchorWall - s.anchorElapsed
+        val bootNow = wallNow() - nowElapsed
+        val sameBoot = nowElapsed >= s.anchorElapsed && kotlin.math.abs(bootNow - bootThen) < BOOT_TOLERANCE_MS
+        if (sameBoot) {
             base = s.base
             running = s.running
             anchorElapsed = s.anchorElapsed
@@ -64,5 +70,10 @@ class LocalClock(
             anchorElapsed = nowElapsed
             anchorWall = wallNow()
         }
+    }
+
+    companion object {
+        /** Zoveel mag het opstartmoment verschoven zijn en nog dezelfde opstart heten (NTP-correcties zijn seconden). */
+        const val BOOT_TOLERANCE_MS = 120_000L
     }
 }

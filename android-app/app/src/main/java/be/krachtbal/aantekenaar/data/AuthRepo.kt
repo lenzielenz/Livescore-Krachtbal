@@ -1,5 +1,6 @@
 package be.krachtbal.aantekenaar.data
 
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -69,12 +70,13 @@ class AuthRepo(private val store: AuthStore, private val api: Api) {
      * en rollen halen we daarna op uit het profiel. Mislukt dat, dan blijft er niets half ingelogd achter.
      */
     suspend fun loginDemo(server: String, rol: String, code: String?): Result<Unit> {
-        val cleanServer = server.trim().trimEnd('/').ifEmpty { DEFAULT_SERVER }
+        val cleanServer = normaliseServer(server)
         val ok = api.loginDemo(cleanServer, rol, code).getOrElse { return Result.failure(it) }
         val before = Triple(store.serverUrl, store.token, store.demoRol)
         store.serverUrl = cleanServer
         store.token = ok.token
-        val me = api.fetchMe()
+        // De demo op Railway kan net wakker worden: één keer opnieuw proberen vóór we het opgeven.
+        val me = api.fetchMe() ?: run { delay(1_500); api.fetchMe() }
         if (me == null) {
             store.serverUrl = before.first
             store.token = before.second
@@ -98,7 +100,7 @@ class AuthRepo(private val store: AuthStore, private val api: Api) {
     val serverUrl: String get() = store.serverUrl
 
     suspend fun login(server: String, email: String, password: String): Result<Unit> {
-        val cleanServer = server.trim().trimEnd('/').ifEmpty { DEFAULT_SERVER }
+        val cleanServer = normaliseServer(server)
         return api.login(cleanServer, email.trim(), password).map { ok ->
             store.serverUrl = cleanServer
             store.token = ok.token
@@ -127,7 +129,10 @@ class AuthRepo(private val store: AuthStore, private val api: Api) {
                     _signedIn.value = true
                     Reauth.OK
                 },
-                onFailure = { if (it is LoginDenied) Reauth.DENIED else Reauth.UNREACHABLE },
+                onFailure = {
+                    // Geweigerd (code gewijzigd, geen demo meer): niet elke 15 s opnieuw proberen — de gebruiker kiest zelf opnieuw.
+                    if (it is LoginDenied) { store.demoRol = null; Reauth.DENIED } else Reauth.UNREACHABLE
+                },
             )
         }
         val email = store.email ?: return@withLock Reauth.DENIED
@@ -138,10 +143,15 @@ class AuthRepo(private val store: AuthStore, private val api: Api) {
                 store.userId = ok.userId
                 store.userName = ok.name
                 saveClub(ok.clubId)
+                saveMe(ok) // rollen kunnen intussen gewijzigd zijn (bv. net scheidsrechter geworden)
                 _signedIn.value = true
                 Reauth.OK
             },
-            onFailure = { if (it is LoginDenied) Reauth.DENIED else Reauth.UNREACHABLE },
+            onFailure = {
+                // Het bewaarde wachtwoord klopt niet meer (gewijzigd op de site): wis het, anders probeert de wachtrij het
+                // elke 15 s opnieuw en vergrendelt Payload het account na vijf mislukte pogingen — ook voor de website.
+                if (it is LoginDenied) { store.savePassword(null); Reauth.DENIED } else Reauth.UNREACHABLE
+            },
         )
     }
 

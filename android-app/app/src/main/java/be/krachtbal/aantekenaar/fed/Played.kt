@@ -32,14 +32,31 @@ object Played {
      */
     suspend fun compute(ui: HubModel.UI): Sides<Set<Int>>? {
         val st = ui.state ?: return null
-        val sheet = ui.sheet ?: return null
-        fun roster(s: Side): List<Player> = sheet.lineup(s).map { r ->
-            Player(id = r.player, name = ui.nameOf(s, r.player) ?: return emptyList(), shirtNumber = r.rugnummer ?: 0, teamId = st.teams[s].id)
-        }
-        val rosters = Sides(roster(Side.HOME), roster(Side.AWAY))
-        if (rosters.home.isEmpty() && rosters.away.isEmpty()) return null
+        val rosters = rosters(ui) ?: return null
         val subs = Graph.api.fetchSubstitutions(st.match.id)
         fun notes(s: Side) = subs.filter { it.teamId == st.teams[s].id }.map { it.note }
         return fromEvents(rosters, st.lineup, Sides(notes(Side.HOME), notes(Side.AWAY)))
+    }
+
+    /**
+     * De spelers op het blad per kant, met hun naam. Eén naam die we niet kennen (een speler die niet meer bij de ploeg
+     * hoort, of een lijst die niet laadde) en we geven op: wie eruit gewisseld werd, herkennen we aan zijn naam, en een
+     * halve berekening zou een hele ploeg als "niemand speelde" wegschrijven. Dan duidt de scheidsrechter het zelf aan.
+     */
+    internal fun rosters(ui: HubModel.UI): Sides<List<Player>>? {
+        val st = ui.state ?: return null
+        val sheet = ui.sheet ?: return null
+        fun roster(s: Side): List<Player>? {
+            val out = ArrayList<Player>()
+            for (r in sheet.lineup(s)) {
+                val name = ui.nameOf(s, r.player) ?: return null
+                out += Player(id = r.player, name = name, shirtNumber = r.rugnummer ?: 0, teamId = st.teams[s].id)
+            }
+            return out
+        }
+        val home = roster(Side.HOME) ?: return null
+        val away = roster(Side.AWAY) ?: return null
+        if (home.isEmpty() && away.isEmpty()) return null
+        return Sides(home, away)
     }
 }

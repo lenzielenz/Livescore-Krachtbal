@@ -52,14 +52,36 @@ class MatchService : Service() {
         watcher?.cancel()
         watcher = scope.launch {
             Graph.foreground.collect { i ->
-                (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(NOTIF_ID, build(i))
+                if (i == null) {
+                    // Niets actiefs meer: de service stopt zichzélf — en dus altijd ná het startForeground() hierboven.
+                    // Een stopService() van buitenaf kon dat voorsteken, en dat is op Android 8.1–11 een crash van
+                    // het hele proces ("did not then call Service.startForeground()").
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                } else {
+                    (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(NOTIF_ID, build(i))
+                }
             }
         }
         return START_NOT_STICKY
     }
 
+    // Android 15: een dataSync-service mag hoogstens 6 uur per etmaal lopen; daarna vraagt het systeem om te stoppen en
+    // doodt het de app als dat niet gebeurt. De app blijft gewoon werken (de wachtrij loopt zolang de app open is);
+    // enkel het levend houden op de achtergrond valt tot het etmaal om is weg.
+    override fun onTimeout(startId: Int, fgsType: Int) = verlopen()
+
+    override fun onTimeout(startId: Int) = verlopen()
+
+    private fun verlopen() {
+        Graph.onServiceTimedOut()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
     override fun onDestroy() {
         scope.cancel()
+        Graph.onServiceStopped()
         super.onDestroy()
     }
 

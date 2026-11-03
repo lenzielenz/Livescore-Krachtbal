@@ -170,6 +170,17 @@ class StepsTest {
     }
 
     @Test
+    fun `de oude status 'vrijgegeven' is geen vrijgave door de scheidsrechter`() {
+        // Server: "vrijgegeven" = de scheidsrechter mag de opstellingen zien (~1 u vooraf). De wedstrijd zelf is pas vrij na
+        // zijn akkoord (status "wedstrijdklaar"). De tafel mag dus nog niet starten.
+        val s = sheet(status = "vrijgegeven", home = rows(7), away = rows(7))
+        val steps = Steps.plan(scheduled, s)
+        assertEquals(StepState.TODO, steps.state(StepId.CONTROLE))
+        assertEquals(StepState.WAIT, steps.state(StepId.VRIJGAVE))
+        assertEquals(StepState.WAIT, steps.state(StepId.AANTEKENEN))
+    }
+
+    @Test
     fun `wie een stap mag doen hangt af van de rol`() {
         val coach = Me(roles = setOf("club-lid"), clubFuncties = setOf("coach"))
         val sr = Me(roles = setOf("scheidsrechter"))
@@ -253,6 +264,19 @@ class SheetParseTest {
         assertEquals(1, l.kapitein)
         assertNull(l.vergrendeld)
         assertNull(parseLineupInfo("""{"error":"Niet ingelogd."}"""))
+    }
+}
+
+class ServerAdresTest {
+    @Test
+    fun `een adres zonder schema krijgt https, lokale adressen http, en nooit een slash achteraan`() {
+        assertEquals("https://krachtbal-demo-production.up.railway.app", be.krachtbal.aantekenaar.data.normaliseServer("krachtbal-demo-production.up.railway.app"))
+        assertEquals("https://livescore.roodgries.be", be.krachtbal.aantekenaar.data.normaliseServer("  https://livescore.roodgries.be/ "))
+        assertEquals("http://10.0.2.2:3000", be.krachtbal.aantekenaar.data.normaliseServer("10.0.2.2:3000"))
+        assertEquals("http://localhost:3000", be.krachtbal.aantekenaar.data.normaliseServer("localhost:3000/"))
+        assertEquals("http://10.0.2.2:3000", be.krachtbal.aantekenaar.data.normaliseServer("http://10.0.2.2:3000"))
+        assertEquals(be.krachtbal.aantekenaar.data.DEFAULT_SERVER, be.krachtbal.aantekenaar.data.normaliseServer("   "))
+        assertEquals(be.krachtbal.aantekenaar.data.DEFAULT_SERVER, be.krachtbal.aantekenaar.data.normaliseServer(null))
     }
 }
 

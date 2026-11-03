@@ -5,6 +5,8 @@ import be.krachtbal.aantekenaar.data.MatchState
 import be.krachtbal.aantekenaar.data.Side
 import be.krachtbal.aantekenaar.data.Sides
 import be.krachtbal.aantekenaar.data.StateResult
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,14 +50,20 @@ class HubModel(val matchId: Int, private val withRosters: Boolean = false) {
 
     suspend fun reload() = mutex.withLock {
         val api = Graph.api
-        val st = when (val r = api.fetchState(matchId)) {
-            is StateResult.Ok -> r.state
+        // De drie onafhankelijke lezingen tegelijk: zo wacht de hub niet drie keer na elkaar op het netwerk.
+        val (stateRes, cancelled, sheetRes) = coroutineScope {
+            val a = async { api.fetchState(matchId) }
+            val b = async { api.fetchCancelled(matchId) }
+            val c = async { api.fetchSheet(matchId) }
+            Triple(a.await(), b.await(), c.await())
+        }
+        val st = when (stateRes) {
+            is StateResult.Ok -> stateRes.state
             is StateResult.Err -> {
-                _ui.update { it.copy(loading = false, error = r.message) }
+                _ui.update { it.copy(loading = false, error = stateRes.message) }
                 return@withLock
             }
         }
-        val cancelled = api.fetchCancelled(matchId)
         var error: String? = null
         var sheet: SheetView? = null
         var lineups: Sides<LineupInfo?> = Sides(null, null)
@@ -67,10 +75,14 @@ class HubModel(val matchId: Int, private val withRosters: Boolean = false) {
                 is Fetch.Forbidden -> null
                 is Fetch.Err -> { error = l.message; null }
             }
-            return Sides(one(Side.HOME), one(Side.AWAY))
+            return coroutineScope {
+                val h = async { one(Side.HOME) }
+                val a = async { one(Side.AWAY) }
+                Sides(h.await(), a.await())
+            }
         }
 
-        when (val s = api.fetchSheet(matchId)) {
+        when (val s = sheetRes) {
             is Fetch.Ok -> {
                 sheet = s.value
                 // Nog geen blad? Dan maakt de selectie-route het aan (zoals het scheidsrechterscherm op de site).

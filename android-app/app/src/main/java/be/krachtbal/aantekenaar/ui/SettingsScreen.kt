@@ -221,7 +221,7 @@ fun SettingsScreen(onClose: () -> Unit) {
                     SmallButton("Uitloggen", { onClose(); Graph.authRepo.logout() }, Btn.Danger)
                 }
 
-                Dim("Krachtbal Aantekenaar ${BuildConfig.VERSION_NAME}", Modifier.padding(bottom = 24.dp))
+                Dim("${androidx.compose.ui.res.stringResource(be.krachtbal.aantekenaar.R.string.app_name)} ${BuildConfig.VERSION_NAME}", Modifier.padding(bottom = 24.dp))
             }
         }
         }

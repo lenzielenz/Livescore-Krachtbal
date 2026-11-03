@@ -13,6 +13,20 @@ import javax.crypto.spec.GCMParameterSpec
 /** Het adres waarmee de app begint: productie voor de tafel-app, de demoruimte voor de federatie-app (build.gradle.kts). */
 val DEFAULT_SERVER: String = be.krachtbal.aantekenaar.BuildConfig.DEFAULT_SERVER
 
+/**
+ * Een ingetikt serveradres bruikbaar maken: spaties en een slash achteraan weg, en het schema ervoor als dat ontbreekt
+ * (OkHttp weigert "krachtbal-demo-production.up.railway.app" anders met een uitzondering, en dat was een crash bij het
+ * inloggen). Lokale adressen krijgen http (enkel daar is onversleuteld toegestaan, zie network_security_config.xml);
+ * al de rest https. Leeg = de standaardserver.
+ */
+fun normaliseServer(raw: String?): String {
+    val s = (raw ?: "").trim().trimEnd('/')
+    if (s.isEmpty()) return DEFAULT_SERVER
+    if (Regex("^https?://", RegexOption.IGNORE_CASE).containsMatchIn(s)) return s
+    val lokaal = Regex("^(localhost|127\\.0\\.0\\.1|10\\.0\\.2\\.2)(:|$)").containsMatchIn(s)
+    return (if (lokaal) "http://" else "https://") + s
+}
+
 /** Versleutelt het bewaarde wachtwoord met een sleutel die het toestel nooit prijsgeeft (Android Keystore). */
 internal object Vault {
     private const val ALIAS = "aantekenaar_wachtwoord"
@@ -55,7 +69,7 @@ class AuthStore(ctx: Context) {
     var serverUrl: String
         get() = sp.getString("server", null) ?: DEFAULT_SERVER
         set(v) {
-            sp.edit().putString("server", v.trim().trimEnd('/').ifEmpty { DEFAULT_SERVER }).apply()
+            sp.edit().putString("server", normaliseServer(v)).apply()
         }
 
     var token: String?
@@ -125,7 +139,14 @@ class AuthStore(ctx: Context) {
         }
 
     fun savePassword(pw: String?) {
-        sp.edit().apply { if (pw == null) remove("pw") else putString("pw", Vault.encrypt(pw)) }.apply()
+        // Een kapotte Keystore (sommige toestellen na een wijziging van de schermvergrendeling) mag het inloggen niet laten
+        // crashen: dan bewaren we gewoon geen wachtwoord en vraagt de app na een verlopen sessie om opnieuw in te loggen.
+        val blob = try {
+            pw?.let(Vault::encrypt)
+        } catch (_: Exception) {
+            null
+        }
+        sp.edit().apply { if (blob == null) remove("pw") else putString("pw", blob) }.apply()
     }
 
     fun password(): String? = sp.getString("pw", null)?.let(Vault::decrypt)

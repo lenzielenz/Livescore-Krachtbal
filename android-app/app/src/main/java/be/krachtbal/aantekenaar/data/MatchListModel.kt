@@ -104,6 +104,10 @@ class MatchListModel {
         _state.update { it.copy(loading = true, error = null) }
         val mode = _state.value.mode
         job = Graph.scope.launch {
+            // De aantekenmodus van de server (supporters/federatie) bepaalt of een geplande wedstrijd "klaar — tik om te
+            // starten" mag tonen. Vers ophalen vóór de rijen komen: anders stond die regel op de demo (federatiemodus)
+            // verkeerd tot de eerste wedstrijd geopend werd.
+            if (!append) Graph.api.fetchScoreMode()?.let { Graph.auth.scoreMode = it }
             Graph.api.fetchMatches(mode, "", page).fold(
                 onSuccess = { res ->
                     val rows = if (append) ListLogic.merge(_state.value.rows, res.rows) else res.rows

@@ -172,8 +172,18 @@ class MatchSession(val matchId: Int) {
         loadPlayersIfNeeded()
     }
 
+    private var squadAttempts = 0
+
+    /**
+     * Vanzelf hoogstens drie pogingen per sessie (pas zodra de stand er is, anders is er nog geen ploeg om voor te laden);
+     * daarna enkel nog op vraag ([loadSquad] bij het wisselscherm). Zo krijgt een haperend netwerk nog een kans, maar laat een
+     * ploeg zonder geregistreerde spelers niet bij élk streambericht opnieuw het blad en de spelers ophalen.
+     */
     private suspend fun loadPlayersIfNeeded() {
-        if (!_ui.value.federation || _ui.value.squad.home.isNotEmpty() || _ui.value.squad.away.isNotEmpty()) return
+        val u = _ui.value
+        if (!u.federation || server == null) return
+        if (u.squad.home.isNotEmpty() || u.squad.away.isNotEmpty() || squadAttempts >= 3) return
+        squadAttempts++
         loadSquad()
     }
 
@@ -210,14 +220,8 @@ class MatchSession(val matchId: Int) {
     /** Zet de veldspelers van een ploeg (ook een wissel); gaat door dezelfde wachtrij als een doelpunt, dus ook offline. */
     fun setLineup(side: Side, playerIds: List<Int>) {
         if (finishedBlocks()) return
-        val st = _ui.value.state
-        // De server schrijft een wissel pas op het blad als hij de vorige veldopstelling ook bewaard heeft. Heeft deze tafel nog
-        // nooit een veld ingesteld, dan zou de eerste wissel anders niet gelogd worden — en dan weet niemand later dat de
-        // speler die eruit ging, speelde. Dus eerst de huidige opstelling vastleggen (voor de server: "geen wijziging").
-        if (st != null && st.isLive) {
-            val huidig = Field.resolve(_ui.value.squad[side], st.lineup[side]).map { it.id }
-            if (huidig.isNotEmpty() && huidig != playerIds) enqueue(makeOp("setlineup", side).copy(playerIds = huidig))
-        }
+        // Eén actie per wissel. De server vergelijkt met het veld zoals hij het zelf toont (ook als er nog nooit een veld
+        // bewaard was: dan de eerste vier van de selectie), dus de eerste wissel van een wedstrijd komt gewoon op het blad.
         enqueue(makeOp("setlineup", side).copy(playerIds = playerIds))
     }
 
@@ -229,7 +233,7 @@ class MatchSession(val matchId: Int) {
                 adoptServerClock(r.state)
             }
             _ui.update { it.copy(loading = false, loadError = null) }
-            publish()
+            publish(durable = false)
             loadPlayersIfNeeded()
             true
         }
@@ -300,7 +304,7 @@ class MatchSession(val matchId: Int) {
         if (queue.isNotEmpty() || inFlight || Time.elapsed() - lastOwn < SETTLE_MS) return
         server = st
         adoptServerClock(st)
-        publish()
+        publish(durable = false)
         scope.launch { loadPlayersIfNeeded() }
     }
 
@@ -429,11 +433,13 @@ class MatchSession(val matchId: Int) {
         // Een "al gestart" na een dubbele tik of een tweede toestel is gewoon goed nieuws — geen foutbalk.
         val alGestart = op.action == "simplestart" && Regex("al gestart", RegexOption.IGNORE_CASE).containsMatchIn(message)
         if (!alGestart) rejected += Rejected(op, message)
-        if (op.action == "simplestart") {
+        if (op.action == "simplestart" && !alGestart) {
             // De wedstrijd loopt op de server niet (te vroeg, niet startklaar): alles wat erna kwam is zinloos.
+            // Bij "al gestart" (een tweede toestel of de federatie startte al) loopt ze juist wél: de doelpunten en
+            // kruisjes die offline na onze start getikt werden, gaan dan gewoon door — die mogen nooit stil verdwijnen.
             while (queue.isNotEmpty()) {
                 val later = queue.removeFirst()
-                if (!alGestart) rejected += Rejected(later, "Niet verstuurd omdat het starten werd geweigerd.")
+                rejected += Rejected(later, "Niet verstuurd omdat het starten werd geweigerd.")
             }
         }
         publish()
@@ -617,15 +623,26 @@ class MatchSession(val matchId: Int) {
 
     // ── Publiceren ───────────────────────────────────────────────────────────────────────────
 
-    private fun publish() {
+    /** [durable] = false: enkel de stand van de server veranderde (livestream, poll) — geen eigen tik die de schijf moet halen. */
+    private fun publish(durable: Boolean = true) {
         val shown = server?.let { Overlay.apply(it, queue) }
         _ui.update { it.copy(state = shown, pending = queue.size, rejected = rejected.toList(), staleQueue = staleQueue) }
-        persist()
+        persist(durable)
         Graph.onSessionChanged()
     }
 
-    private fun persist() {
+    private var lastLightPersist = -1_000_000L
+
+    private fun persist(durable: Boolean) {
         if (server == null && queue.isEmpty() && rejected.isEmpty()) return
+        // Een stand die enkel van de server kwam hoeft niet bij elke update naar schijf: bij een lege wachtrij haalt de app
+        // ze bij het openen toch opnieuw op. Eén keer per 10 s volstaat om zonder netwerk een recente stand te tonen, en zo
+        // schrijft een meekijkende tafel niet bij elk doelpunt van de stream op de hoofdthread.
+        if (!durable && queue.isEmpty() && rejected.isEmpty()) {
+            val now = Time.elapsed()
+            if (now - lastLightPersist < LIGHT_PERSIST_MS) return
+            lastLightPersist = now
+        }
         try {
             Graph.store.save(
                 SessionSnapshot(matchId, server, clock.snapshot(), queue.toList(), rejected.toList(), Time.wall()),
@@ -636,6 +653,8 @@ class MatchSession(val matchId: Int) {
     }
 
     companion object {
+        /** Hoe vaak een stand die enkel van de server kwam toch naar schijf gaat (zie [persist]). */
+        const val LIGHT_PERSIST_MS = 10_000L
         private const val TAG = "MatchSession"
         const val STALE_QUEUE_MS = 15 * 60_000L
         const val DRIFT_TOLERANCE_S = 2.0

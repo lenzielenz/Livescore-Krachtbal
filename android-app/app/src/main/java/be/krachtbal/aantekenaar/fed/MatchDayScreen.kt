@@ -65,7 +65,7 @@ import java.util.Locale
 private val dayFmt = DateTimeFormatter.ofPattern("EEEE d MMMM · HH:mm", Locale.forLanguageTag("nl-BE"))
 
 /** Hoe vaak de hub zich vernieuwt zolang hij zichtbaar is: een scheidsrechter kan op een ander toestel vrijgeven. */
-private const val REFRESH_MS = 10_000L
+private const val REFRESH_MS = 15_000L
 
 /**
  * De wedstrijddag van één wedstrijd: alle stappen op een rij, met wat er klaar is en wie aan zet is. Van hieruit ga je

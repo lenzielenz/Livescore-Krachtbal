@@ -355,6 +355,9 @@ class Api(internal val auth: AuthStore, val serverClock: ServerClock) {
         /** Rijen per lijstpagina. De lijst laadt zelf door tot [be.krachtbal.aantekenaar.data.MatchListModel.AUTO_LOAD_MAX]. */
         const val PAGE_SIZE = 100
         const val SEASON_LIMIT = 200
+
+        /** Een clublogo groter dan dit laden we niet (de badge toont dan de initialen). */
+        const val MAX_LOGO_BYTES = 3_000_000L
     }
 
     // ── Logo's en clubs ──────────────────────────────────────────────────────────────────────
@@ -368,9 +371,22 @@ class Api(internal val auth: AuthStore, val serverClock: ServerClock) {
         }
         val handle = coroutineContext[Job]!!.invokeOnCompletion { c.cancel() }
         try {
-            c.execute().use { r ->
+            c.execute().use antwoord@{ r ->
                 val body = r.body
-                if (!r.isSuccessful || body == null || body.contentLength() > 3_000_000) null else body.bytes()
+                if (!r.isSuccessful || body == null || body.contentLength() > MAX_LOGO_BYTES) return@antwoord null
+                // Zonder Content-Length (chunked) is de grootte vooraf onbekend: begrensd lezen, anders kan één extern
+                // logo van tientallen MB het geheugen van een kleine telefoon opeten.
+                val buf = okio.Buffer()
+                var total = 0L
+                body.source().use { src ->
+                    while (true) {
+                        val n = src.read(buf, 64 * 1024L)
+                        if (n == -1L) break
+                        total += n
+                        if (total > MAX_LOGO_BYTES) return@antwoord null
+                    }
+                }
+                buf.readByteArray()
             }
         } catch (_: IOException) {
             null
@@ -443,9 +459,12 @@ class Api(internal val auth: AuthStore, val serverClock: ServerClock) {
      * Vraagt de demo een toegangscode, dan sturen we dezelfde cookie mee als de website ([DemoAccess]).
      */
     suspend fun loginDemo(server: String, rol: String, code: String?): Result<LoginOk> {
-        val b = Request.Builder().url(server.trimEnd('/') + "/api/demoruimte/als")
-            .header("Accept", "application/json")
-            .header("User-Agent", BuildInfo.AGENT)
+        val b = try {
+            Request.Builder().url(server.trimEnd('/') + "/api/demoruimte/als")
+        } catch (_: IllegalArgumentException) {
+            return Result.failure(IOException("Ongeldig serveradres: $server"))
+        }
+        b.header("Accept", "application/json").header("User-Agent", BuildInfo.AGENT)
         if (!code.isNullOrBlank()) b.header("Cookie", "${DemoAccess.COOKIE}=${DemoAccess.hash(code)}")
         val req = b.post(buildJsonObject { put("rol", rol) }.toString().toRequestBody(json)).build()
         val raw = withContext(Dispatchers.IO) {
@@ -477,7 +496,11 @@ class Api(internal val auth: AuthStore, val serverClock: ServerClock) {
     }
 
     suspend fun login(server: String, email: String, password: String): Result<LoginOk> {
-        val req = Request.Builder().url(server.trimEnd('/') + "/api/users/login")
+        val req = try {
+            Request.Builder().url(server.trimEnd('/') + "/api/users/login")
+        } catch (_: IllegalArgumentException) {
+            return Result.failure(IOException("Ongeldig serveradres: $server"))
+        }
             .header("Accept", "application/json")
             .post(buildJsonObject { put("email", email); put("password", password) }.toString().toRequestBody(json))
             .build()

@@ -23,8 +23,8 @@ android {
         applicationId = "be.krachtbal.aantekenaar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 8
-        versionName = "1.0.7"
+        versionCode = 9
+        versionName = "1.0.8"
     }
 
     // Eén codebasis, twee apps:
@@ -42,8 +42,8 @@ android {
         create("federatie") {
             dimension = "product"
             applicationId = "be.krachtbal.federatie"
-            versionCode = 2
-            versionName = "0.2.0"
+            versionCode = 3
+            versionName = "0.2.1"
             buildConfigField("boolean", "FEDERATIE", "true")
             // De demoruimte (eigen Railway-project "Krachtbal-demo"); later het officiële adres van het pakket.
             buildConfigField("String", "DEFAULT_SERVER", "\"https://krachtbal-demo-production.up.railway.app\"")

@@ -107,6 +107,30 @@ class LocalClockTest {
         c2.restore(snap)
         assertEquals(70.0, c2.value(), 1e-9)
     }
+
+    @Test
+    fun herstelNaHerstartMetAlWeerHogereMonotoneTijd() {
+        // Momentopname 2 min na het opstarten; de telefoon valt uit, start opnieuw en de app komt pas na 5 min uptime terug,
+        // 15 min muurklok later. De monotone tijd (300 s) is dan al voorbij het oude anker (120 s): dat mag ons niet misleiden.
+        val c = LocalClock({ 120_000L }, { 10_000_000L })
+        c.set(30.0, true)
+        val snap = c.snapshot()
+        val c2 = LocalClock({ 300_000L }, { 10_900_000L })
+        c2.restore(snap)
+        assertEquals(30.0 + 900.0, c2.value(), 1e-9) // de volle 15 minuten, niet 3
+    }
+
+    @Test
+    fun kleineKlokcorrectieIsGeenHerstart() {
+        var e = 100_000L
+        val c = LocalClock({ e }, { 5_000_000L })
+        c.set(30.0, true)
+        val snap = c.snapshot()
+        e += 20_000 // 20 s later, en intussen zette NTP de muurklok 5 s bij
+        val c2 = LocalClock({ e }, { 5_025_000L })
+        c2.restore(snap)
+        assertEquals(50.0, c2.value(), 1e-9) // de monotone tijd telt, niet de bijgestelde muurklok
+    }
 }
 
 class OpBodyTest {

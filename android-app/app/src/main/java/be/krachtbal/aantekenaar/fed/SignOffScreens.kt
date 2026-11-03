@@ -270,7 +270,9 @@ private fun hintFor(who: Signer, ui: HubModel.UI): String? {
     return when (who) {
         Signer.KAPITEIN_THUIS -> st.captain.home?.let { ui.nameOf(Side.HOME, it) }
         Signer.KAPITEIN_UIT -> st.captain.away?.let { ui.nameOf(Side.AWAY, it) }
-        Signer.SCHEIDSRECHTER -> Graph.authRepo.userName
+        // De server zet de naam van de toegewezen scheidsrechter: voor de scheidsrechter zelf is dat zijn eigen naam; tekent
+        // de federatie, dan weten we hier niet wie dat is en beloven we niets.
+        Signer.SCHEIDSRECHTER -> Graph.authRepo.me.value.let { if (it.isReferee && !it.isFederatie) Graph.authRepo.userName else null }
     }
 }
 

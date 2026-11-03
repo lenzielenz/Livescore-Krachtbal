@@ -129,11 +129,13 @@ object Graph {
         val pick = active.firstOrNull { it.ui.value.state?.isLive == true } ?: active.firstOrNull()
         val st = pick?.ui?.value?.state
         if (pick == null || st == null || !settings.keepAlive.value) {
+            // De service ziet dit en stopt zichzelf (MatchService): nooit van hieruit stopService() roepen, dat kan
+            // vóór zijn startForeground() komen en dan crasht Android 8.1–11 het proces.
             _foreground.value = null
-            stopService()
             return
         }
         val u = pick.ui.value
+        val wasIdle = _foreground.value == null
         val score = "${st.score.home} – ${st.score.away}"
         val extra = when {
             u.pending > 0 -> " · ${u.pending} wacht${if (u.pending == 1) "" else "en"} op verzenden"
@@ -147,11 +149,16 @@ object Graph {
             running = pick.clock.isRunning,
             chronoBaseWall = Time.wall() - (pick.clock.value() * 1000).toLong(),
         )
-        startService()
+        // Van "niets" naar "iets actiefs": (opnieuw) starten, ook als we dachten dat hij nog liep — de service kan net
+        // aan het stoppen zijn omdat de vorige stand leeg was.
+        if (wasIdle || !serviceUp) startService()
     }
 
+    /** Android 15 vroeg de dataSync-service te stoppen (6 u per etmaal op): niet opnieuw starten tot het etmaal om is. */
+    private var serviceBlockedUntil = 0L
+
     private fun startService() {
-        if (serviceUp) return
+        if (Time.wall() < serviceBlockedUntil) return
         try {
             ContextCompat.startForegroundService(app, MatchService.intent(app))
             serviceUp = true
@@ -161,9 +168,12 @@ object Graph {
         }
     }
 
-    private fun stopService() {
-        if (!serviceUp) return
+    /** Door MatchService.onDestroy: vanaf nu mag een volgende wedstrijd hem opnieuw starten. */
+    fun onServiceStopped() {
         serviceUp = false
-        app.stopService(MatchService.intent(app))
+    }
+
+    fun onServiceTimedOut() {
+        serviceBlockedUntil = Time.wall() + 24 * 3_600_000L
     }
 }

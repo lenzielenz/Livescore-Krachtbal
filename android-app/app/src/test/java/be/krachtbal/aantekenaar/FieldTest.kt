@@ -101,6 +101,45 @@ class FieldTest {
     }
 }
 
+class PlayedRosterTest {
+    private fun sheetRows(ids: List<Int>) = ids.map { be.krachtbal.aantekenaar.fed.LineupRow(it, it, deelgenomen = false, gecontroleerd = true) }
+
+    private fun ui(homeIds: List<Int>, awayIds: List<Int>, known: Map<Int, String>) = be.krachtbal.aantekenaar.fed.HubModel.UI(
+        loading = false,
+        state = MatchState(
+            match = MatchInfo(id = 43, status = "finished"),
+            teams = Sides(TeamInfo(1, "Thuis"), TeamInfo(2, "Uit")),
+            lineup = Sides(homeIds.take(4), awayIds.take(4)),
+        ),
+        sheet = be.krachtbal.aantekenaar.fed.SheetView(
+            id = 1, status = "af_te_tekenen", home = sheetRows(homeIds), away = sheetRows(awayIds), homeConfirmed = true, awayConfirmed = true,
+            keuring = emptyMap(), keuringBevestigd = true, officials = emptyMap(), startAkkoord = true, startNaam = null, eindeAkkoord = false,
+            forfait = "geen", kapiteinThuis = be.krachtbal.aantekenaar.fed.Signature(false, null), kapiteinUit = be.krachtbal.aantekenaar.fed.Signature(false, null),
+            scheidsrechter = be.krachtbal.aantekenaar.fed.Signature(false, null), assignedReferee = 1, backupReferee = null,
+        ),
+        lineups = Sides(
+            be.krachtbal.aantekenaar.fed.LineupInfo(1, "Thuis", "senioren", homeIds.mapNotNull { id -> known[id]?.let { be.krachtbal.aantekenaar.fed.RosterPlayer(id, it, id, "ok", emptyList(), false, null, null) } }, emptySet(), "af_te_tekenen", emptyList(), true, null, null),
+            be.krachtbal.aantekenaar.fed.LineupInfo(2, "Uit", "senioren", awayIds.mapNotNull { id -> known[id]?.let { be.krachtbal.aantekenaar.fed.RosterPlayer(id, it, id, "ok", emptyList(), false, null, null) } }, emptySet(), "af_te_tekenen", emptyList(), true, null, null),
+        ),
+    )
+
+    @Test
+    fun `alle namen bekend geeft de spelers van het blad`() {
+        val known = (1..8).associateWith { "Speler $it" } + (101..104).associateWith { "Gast $it" }
+        val r = Played.rosters(ui(listOf(1, 2, 3, 4, 5), listOf(101, 102, 103, 104), known))!!
+        assertEquals(listOf(1, 2, 3, 4, 5), r.home.map { it.id })
+        assertEquals("Gast 101", r.away[0].name)
+    }
+
+    @Test
+    fun `een onbekende naam aan een kant en we rekenen niet, want anders wordt die ploeg 'niemand speelde'`() {
+        val known = (1..8).associateWith { "Speler $it" } + (101..104).associateWith { "Gast $it" } - 3 // speler 3 niet (meer) bekend
+        assertNull(Played.rosters(ui(listOf(1, 2, 3, 4), listOf(101, 102, 103, 104), known)))
+        // een lijst die helemaal niet laadde (bv. een tijdelijke fout) → ook niets berekenen
+        assertNull(Played.rosters(ui(listOf(1, 2, 3, 4), listOf(101, 102, 103, 104), (1..8).associateWith { "Speler $it" })))
+    }
+}
+
 class SubstitutionQueueTest {
     private fun state() = MatchState(
         match = MatchInfo(id = 43, status = "live"),

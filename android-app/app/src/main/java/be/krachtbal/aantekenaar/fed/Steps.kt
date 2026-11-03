@@ -57,6 +57,9 @@ data class MatchFacts(
 )
 
 object Steps {
+    // De bladstatussen van de server, in volgorde (src/lib/matchsheet-workflow.ts). "vrijgegeven" staat er bewust NIET in:
+    // dat is de oude status "opstellingen zichtbaar voor de scheidsrechter", niet zijn vrijgave van de wedstrijd — ze telt
+    // hier als concept (rang 0). De echte vrijgave is `wedstrijdstart.akkoord` → "wedstrijdklaar".
     private val RANK = listOf("concept", "wedstrijdklaar", "bezig", "af_te_tekenen", "ingediend")
     private fun rank(status: String) = RANK.indexOf(status).coerceAtLeast(0)
 
