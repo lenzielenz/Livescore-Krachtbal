@@ -160,6 +160,27 @@ gedeelde hub draait **één** poller per match en doet fan-out naar alle abonnee
 DB-kost blijft constant ongeacht het publiek. Voor échte horizontale schaal hoort
 dit later achter Redis pub/sub (nu per-instance in-memory). Zie `AUDIT-2026-06.md` §2/§6.
 
+### Databankpool (waarom er grenzen zijn)
+
+De Postgres-pool is klein en wordt gedeeld door alles: pagina's, de polls van de hub, de wedstrijdkanalen en
+elke aantekenactie. Op 2026-10-30 hing de productie-app daardoor vast: toen de laatste kijkers van meerdere
+wedstrijden tegelijk wegvielen, startte elk kanaal meteen drie `payload.update`s. Elke Payload-transactie houdt
+een verbinding vast en vraagt binnenin nog een tweede (hooks, geneste lezingen); met evenveel transacties als
+verbindingen komt er nooit meer een vrij tot Postgres ze na 60 s afsluit (`idle_in_transaction_session_timeout`).
+De regels sindsdien:
+
+- **Pool**: `max` 20 en `connectionTimeoutMillis` 15 s (`lib/db-pool.ts`, in `payload.config.ts`). Wachten op een
+  verbinding is begrensd: een volle pool geeft een snelle fout i.p.v. een site die eeuwig "laadt".
+- **Eén poll tegelijk** per periodieke taak (`createFlightGuard` in `lib/concurrency.ts`): `sse-hub.ts` en
+  `match-channel.ts` slaan een tick over zolang de vorige poll loopt. Een trage databank mag de polls niet opstapelen.
+- **Achtergrondschrijfacties begrensd** (`createLimiter`): tellers, poll, piek en shoutouts van een wedstrijdkanaal
+  gaan met hooguit 2 tegelijk naar de databank, en bij het wegvallen van de laatste kijker wordt enkel nog
+  weggeschreven wat écht openstaat (elke wijziging plant zelf een opslag).
+- **Slot-houders begrensd**: `withDbLock` (`lib/db-lock.ts`) bezet per actie een verbinding en doet daarbinnen nog
+  queries; er zijn nooit meer slot-houders dan `DB_HOLDERS_MAX` (minder dan de helft van de pool).
+- **Nieuwe periodieke taak of massale schrijfactie?** Houd je aan dezelfde regels: nooit een `setInterval` zonder
+  overlapbewaking, nooit onbegrensd veel `payload.*`-schrijfacties tegelijk.
+
 ## Vertrouwen op een supporters-score
 
 In supporters-modus (`settings.scoreMode`) mag élke ingelogde supporter de score
