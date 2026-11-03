@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- body background-color van de site (styles.css) -->
+    <color name="bg">#FF070809</color>
+    <!-- achtergrond van het site-icoon (icon.svg) -->
+    <color name="ic_background">#FF06140D</color>
+</resources>

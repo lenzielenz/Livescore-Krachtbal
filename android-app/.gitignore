@@ -1,0 +1,15 @@
+*.iml
+.gradle/
+.idea/
+.kotlin/
+/local.properties
+/build/
+/app/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+# Ondertekeningssleutel: NOOIT committen. Verlies je ze, dan kan je geen updates meer uitbrengen.
+/keystore/
+/keystore.properties
+# Gebouwde APK's horen in app-downloads/ (de map waaruit de site ze aanbiedt), niet hier.
+/dist/
