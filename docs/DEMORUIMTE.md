@@ -69,6 +69,19 @@ Alles wat een rol "doet", gebeurt via dezelfde routes als in de echte app (selec
 vrijgave, start, blessure, afgelasting, aftrap, verplaatsing): de demo toont nooit iets wat de app
 zelf niet kan.
 
+## De federatie-app (Android)
+
+De demoruimte heeft een eigen app, **Krachtbal Federatie**, te downloaden op `/app` van elke omgeving (zie
+[APP-DOWNLOAD.md](APP-DOWNLOAD.md); broncode in `android-app/`). Ze begint op het adres van de demo en toont bovenaan het
+inlogscherm **"Kijk als …"**: dezelfde rollen als de band op de site (coach, scheidsrechter, tafel, clubbeheerder, federatie),
+zonder wachtwoord, via `POST /api/demoruimte/als`. Vraagt de demo een toegangscode, dan vult de presentator die één keer
+in (de app bewaart ze). De app dekt de hele wedstrijddag van [FEDERATIEFLOW.md](FEDERATIEFLOW.md) §5 — selectie,
+controle en vrijgave, aantekenen met wissels, "wie speelde" berekend uit de wissels, aftekenen met de vinger, indienen —
+op dezelfde routes als de site, dus ook hier geldt: wat de app doet, kan de site ook.
+
+Handig voor een presentatie: zet de demo klaar, open de wedstrijddag van de hoofdwedstrijd op de telefoon en laat de
+stappen één voor één verspringen terwijl op het grote scherm de site meekijkt.
+
 ## Veiligheid
 
 - Rol wisselen zonder wachtwoord, en alles wissen, bestaat **enkel** met `PLATFORM_OMGEVING=demo`.

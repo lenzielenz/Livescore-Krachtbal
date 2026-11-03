@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Het officiële icoon van de site (public/icon-maskable-512.png): gele K in een teal ring. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_background" />
+    <foreground android:drawable="@drawable/ic_launcher_fg" />
+</adaptive-icon>

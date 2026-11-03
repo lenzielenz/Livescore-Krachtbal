@@ -1154,12 +1154,11 @@ export async function setLineup(
 
   // Vorige veldspelers vóór de update — tijdens een lopende wedstrijd is het verschil een
   // VERVANGING en hoort die (wie eruit, wie erin) op het officiële wedstrijdblad (reglement §9).
+  // Opgelost zoals de stand ze toont (resolveLineup): was er nog nooit een veld bewaard, dan zijn
+  // de eerste vier van de selectie het veld. Anders bleef de éérste wissel van een wedstrijd
+  // ongelogd en wist niemand achteraf dat de speler die eruit ging, gespeeld had.
   const prevRaw = side === 'home' ? match.homeLineup : match.awayLineup
-  const prev = Array.isArray(prevRaw)
-    ? prevRaw
-        .map((v) => (v && typeof v === 'object' ? (v as { id?: number }).id : v))
-        .filter((v): v is number => typeof v === 'number')
-    : []
+  const prev = match.status === 'live' ? await resolveLineup(payload, prevRaw, teamId, matchId, side) : []
 
   await payload.update({
     collection: 'matches',
