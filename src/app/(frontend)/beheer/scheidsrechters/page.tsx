@@ -7,6 +7,7 @@ import { dateStrBE, formatDateTimeBE } from '@/lib/datetime'
 import { relId } from '@/lib/federatie-api'
 import { getPayloadClient } from '@/lib/payload-client'
 import { FederatieAlleen } from '../FederatieAlleen'
+import { ScheidsrechterKnop } from './ScheidsrechterKnop'
 import { Toewijzen, type ToewijsWedstrijd } from './Toewijzen'
 import '../federatie-tools.css'
 
@@ -72,11 +73,14 @@ export default async function ScheidsrechtersPage() {
     <>
       <SiteHeader active="federatie" />
       <div className="site site-breed">
-        <h1 className="page-title">Scheidsrechters toewijzen</h1>
+        <div className="sr-kop">
+          <h1 className="page-title">Scheidsrechters toewijzen</h1>
+          <ScheidsrechterKnop />
+        </div>
         <p className="acc-page-intro">
           De komende {DAGEN} dagen, per speeldag. Kies per wedstrijd een scheidsrechter of laat het voorstel de lege plaatsen
-          invullen; bewaren stuurt elke scheidsrechter een melding. Een nieuwe scheidsrechter voeg je toe in{' '}
-          <Link href="/admin/collections/officials/create" style={{ color: 'var(--accent)' }}>het beheer</Link>.
+          invullen; bewaren stuurt elke scheidsrechter een melding. {refs.length} scheidsrechter{refs.length === 1 ? '' : 's'} in de lijst
+          {' '}(<Link href="/admin/collections/officials" style={{ color: 'var(--accent)' }}>bewerken in het beheer</Link>).
         </p>
         {refs.length === 0 ? (
           <p className="empty">Nog geen scheidsrechters in het systeem.</p>

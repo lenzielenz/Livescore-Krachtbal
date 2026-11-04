@@ -175,7 +175,50 @@ staan open, de rest klapt in (en dat onthoudt de browser). Op een smal scherm sc
 `/federatie` is het **dashboard**: kerncijfers (open, dringend, deze week, wedstrijden vandaag), de
 takenlijst — dringendste eerst, met per taak de knop om het meteen op te lossen (aanvragen,
 wedstrijden zonder scheidsrechter, opstellingen binnen 48 uur, bladen niet ingediend, wedstrijden die
-te lang live staan, clubs zonder login) —, de wedstrijden van vandaag en de aantekenmodus.
+te lang live staan, clubs zonder login) —, het bord in cijfers met wat bij jou ligt, de wedstrijden
+van vandaag en de aantekenmodus.
+
+**Snel doen** (de knop **+** in de topbalk, op elke pagina): scheidsrechter toevoegen (dossier, en met
+e-mailadres meteen een login met uitnodigingslink, zoals bij een clubbeheerder), een taak op het bord
+zetten, een bericht aan alle clubs / scheidsrechters / coaches / de federatie (melding + push), en de
+sprongen naar club aanmaken, wedstrijd verplaatsen en leden keuren. Code: `components/fed-shell/SnelMenu.tsx`,
+`/api/federatie/scheidsrechters`, `/api/federatie/bericht`.
+
+### Het bord: aanvragen & taken
+
+`/federatie/aanvragen` toont **alles wat binnenkomt** op één bord, in vier kolommen: *Nieuw* (nog
+niemand mee bezig), *In behandeling* (een collega werkt eraan), *Wacht op anderen* (de bal ligt bij een
+club, speler, scheidsrechter of extern) en *Afgehandeld* (laatste 14 dagen). Erop staan
+verplaatsingsaanvragen, registraties, klachten, boetes (voorstel, betwist, betaling gemeld),
+ongevalsdossiers, medische kaarten, afgelastingen, inschrijvingen — en **vrije taken** die de federatie
+zelf aanmaakt ("verzekeringspolis vernieuwen").
+
+- **Slepen** = oppakken (naar *In behandeling*: jij wordt behandelaar), doorgeven (de behandelaar
+  kiezen in het paneel: de collega krijgt een melding met de link), op wacht zetten (naar *Wacht op
+  anderen*: op wie?) of loslaten (naar *Nieuw*).
+- **Beslissen** gebeurt met de knoppen op de kaart: goedkeuren, afwijzen, opleggen, afhandelen… —
+  dezelfde functies als het werkscherm van die soort, dus met dezelfde meldingen en regels. Daarom kan
+  je een aanvraag **niet** naar *Afgehandeld* slepen: afgehandeld is wat de aanvraag zelf zegt.
+- Per kaart: behandelaar, op wie we wachten (en waarop), deadline (te laat = rood, bovenaan), notities
+  voor je collega's, en een link naar het werkscherm.
+- Filters: soort, "mijn dossiers", zoeken. `?dossier=klacht:12` opent een kaart meteen (zo verwijzen de
+  meldingen ernaar). In de zijbalk staat als teller wat er *nieuw* is.
+
+Waar de staat zit, en waarom zo:
+
+| | Waar | |
+|---|---|---|
+| Status van de aanvraag (open, goedgekeurd, betaald, …) | de collection van die soort | **enige bron**; het bord leest ze |
+| Behandelaar, wacht op, deadline, notities | `dossiers` (`collections/Dossiers.ts`), één rij per aanvraag, pas aangemaakt bij de eerste handeling | een laag erover, nooit een tweede status |
+| Vrije taak | `dossiers` met `bron: 'taak'`, eigen `afgerondOp` | bestaat enkel hier |
+
+Code: `src/lib/aanvragen-bord.ts` (puur: kolom, knoppen, sorteren, filteren — getest),
+`src/lib/federatie-aanvragen.ts` (de lijst uit alle bronnen + de knoppen uitvoeren),
+`src/lib/dossiers.ts` (de laag), `/api/federatie/aanvragen`, `/api/federatie/dossiers`,
+`src/app/(frontend)/federatie/aanvragen/`. **Een nieuwe soort aanvraag** voeg je toe in
+`aanvragen-bord.ts` (`Bron`, `BRON_META`, `actiesVoor`) en `federatie-aanvragen.ts` (lezen + uitvoeren),
+en aan de enum in `collections/Dossiers.ts` (met migratie). Wat er nog ontbreekt tegenover andere
+federaties: [FEDERATIE-ROADMAP.md](FEDERATIE-ROADMAP.md).
 
 Wie het platform krijgt, en wie niet:
 

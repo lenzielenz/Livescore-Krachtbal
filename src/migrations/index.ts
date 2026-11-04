@@ -147,6 +147,7 @@ import * as migration_20261020_180000_wedstrijddag_blessure_afgelasting from './
 import * as migration_20261020_200000_aftrap_boetes from './20261020_200000_aftrap_boetes'
 import * as migration_20261020_220000_inschrijving_planning from './20261020_220000_inschrijving_planning'
 import * as migration_20261021_080000_klachten from './20261021_080000_klachten'
+import * as migration_20261104_090000_dossiers from './20261104_090000_dossiers'
 
 export const migrations = [
   {
@@ -888,5 +889,10 @@ export const migrations = [
     up: migration_20261021_080000_klachten.up,
     down: migration_20261021_080000_klachten.down,
     name: '20261021_080000_klachten',
+  },
+  {
+    up: migration_20261104_090000_dossiers.up,
+    down: migration_20261104_090000_dossiers.down,
+    name: '20261104_090000_dossiers',
   },
 ];

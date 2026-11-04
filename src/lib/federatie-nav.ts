@@ -10,6 +10,7 @@ import { verborgenInDemo } from './omgeving'
 
 export type FedIcon =
   | 'dashboard'
+  | 'bord'
   | 'kalender'
   | 'inschrijvingen'
   | 'planner'
@@ -62,7 +63,8 @@ export const FED_NAV: FedNavGroup[] = [
     key: 'overzicht',
     titel: 'Overzicht',
     items: [
-      { key: 'dashboard', label: 'Dashboard', hint: 'Wat vandaag aandacht vraagt', href: '/federatie', icon: 'dashboard', zoek: ['start', 'taken', 'overzicht'] },
+      { key: 'dashboard', label: 'Dashboard', hint: 'Wat vandaag aandacht vraagt', href: '/federatie', icon: 'dashboard', zoek: ['start', 'overzicht'] },
+      { key: 'aanvragen', label: 'Aanvragen & taken', hint: 'Alles wat binnenkomt op één bord: oppakken, doorgeven, afhandelen', href: '/federatie/aanvragen', icon: 'bord', zoek: ['bord', 'kanban', 'taken', 'dossiers', 'opvolgen', 'doorgeven', 'toewijzen'] },
     ],
   },
   {

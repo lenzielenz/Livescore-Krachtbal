@@ -106,3 +106,7 @@
 .bt-bulk .ft-zoek { flex: 1 1 200px; margin: 0; }
 .bt-vink { width: 18px; height: 18px; margin-right: 8px; accent-color: var(--accent); flex: 0 0 auto; }
 .od-kaart.bt-gekozen { box-shadow: 0 0 0 2px var(--accent); }
+
+/* Scheidsrechters: titel en "toevoegen" naast elkaar. */
+.sr-kop { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sr-kop .page-title { margin-bottom: 0; }
