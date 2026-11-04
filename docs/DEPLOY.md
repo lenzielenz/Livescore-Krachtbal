@@ -61,6 +61,7 @@ worden nadat het Volume is gekoppeld.
 - **Node 22 → 24**: PROJECT.md noemde Node 22, maar Next 16 + Payload 3.85 vereisen Node ≥ 24.14. Daarom Node 24.
 - SQLite + Volume betekent **één** service-instance (geen horizontale schaling); voor dit live-score-gebruik ruim voldoende.
 - DB-migraties: Payload draait in dev met `push`-modus (auto-schema). Voor productie later `payload migrate` toevoegen aan een release-stap.
+- **Build faalt met `next/font/google queries have exactly one entry`** (of `Can't resolve '@vercel/turbopack-next/internal/font/google/font'`, via `src/app/(frontend)/layout.tsx`): `next/font/google` (Sora, Inter) haalt de lettertypes **tijdens de build** bij Google op; lukt dat even niet, dan faalt de hele build en toont de Railway-log enkel "exit code 1". Dat is tijdelijk en geen codefout: de vorige versie blijft gewoon draaien. Rol opnieuw uit (nieuwe commit op `main`, of *Redeploy* in het dashboard); de MCP-`redeploy` hergebruikt de mislukte build en helpt dus niet. De echte fout staat in de buildlog onder "Build error occurred" (`get-logs` met `types: ["build"]`); `get-deployment-diagnosis` kan hem niet vinden.
 
 
 ## Video-analyse op de server (Python + opencv)
