@@ -163,11 +163,37 @@ vernietigt. In de instellingen kiest de federatie wie de **scheidsrechterskosten
 thuisclub of gedeeld; bij forfait de ploeg die forfait gaf); de club ziet per wedstrijd wat ze verschuldigd
 is (€13 + km-vergoeding, zoals op de kwitantie). Code: `src/lib/boetes.ts`.
 
-## 6. Dashboard — federatie
+## 6. Dashboard en werkplatform — federatie
 
-`/federatie` toont wat er nog te doen is (aanvragen, wedstrijden zonder scheidsrechter, opstellingen
-binnen 48 uur, bladen niet ingediend, wedstrijden die te lang live staan, clubs zonder login) en de
-tools per taak.
+Wie federatie of admin is, werkt in een **werkplatform**: een vaste zijbalk met alle tools in groepen
+(Competitie, Wedstrijddag, Tucht & geld, Clubs & leden, Seizoen, Systeem), een topbalk met kruimel,
+zoeken (**Ctrl+K**: typ "boete", "kaart" of "weekend" en spring naar het juiste scherm), meldingen en
+het accountmenu, en daarnaast de pagina zelf. Naast een menu-item staat hoeveel er nog open staat
+(klachten, boetes, te keuren leden…); groepen met openstaand werk en de groep van je huidige scherm
+staan open, de rest klapt in (en dat onthoudt de browser). Op een smal scherm schuift de zijbalk uit.
+
+`/federatie` is het **dashboard**: kerncijfers (open, dringend, deze week, wedstrijden vandaag), de
+takenlijst — dringendste eerst, met per taak de knop om het meteen op te lossen (aanvragen,
+wedstrijden zonder scheidsrechter, opstellingen binnen 48 uur, bladen niet ingediend, wedstrijden die
+te lang live staan, clubs zonder login) —, de wedstrijden van vandaag en de aantekenmodus.
+
+Wie het platform krijgt, en wie niet:
+
+| Wie | Krijgt de zijbalk? |
+|---|---|
+| Federatie, admin | Ja — op `/federatie`, `/beheer/*`, `/wedstrijdbladen`, `/ongevallen`, `/knipjes`, `/bekerfinale` |
+| Club, coach, scheidsrechter, speler, supporter, uitgelogd | Nee: elke pagina ziet er uit zoals voorheen |
+| Federatie/admin in *Bekijk als supporter* (kijkmodus) | Nee: dan zie je de site zoals een vers lid |
+| Clubluiken onder `/beheer` (`club-team`, `spelers`, `training`) | Nee, ook niet voor de federatie: dat zijn tools van een club of coach |
+
+Code: `src/components/fed-shell/` (zijbalk, topbalk, zoekpalet, `FedShellGate` die per layout beslist
+wie de shell krijgt) en `src/lib/federatie-nav.ts` (de indeling). **Een nieuwe federatietool** voeg je
+toe aan `FED_NAV` — dan staat ze in de zijbalk én in Ctrl+K — en een test bewaakt dat elke tool uit
+`lib/profiles.ts` er ook in staat. Heeft ze een openstaande-taak-teller nodig, laat dan de taak in
+`lib/federatie-dashboard.ts` naar dezelfde `href` verwijzen. De tellers komen van
+`/api/federatie/taken`. De pagina's zelf blijven ongewijzigd: de gewone `SiteHeader` trekt zich terug
+zodra de shell er staat (`components/fed-shell/context.ts`). Draait de federatie daardoor ergens
+nieuw, voeg dan in die luik-map een `layout.tsx` toe met `<FedShellGate>`.
 
 ## 7. Referendum — speler, speelster en belofte van het jaar
 

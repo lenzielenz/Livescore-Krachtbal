@@ -3,27 +3,14 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
+import { useInFedShell } from '@/components/fed-shell/context'
 import { WeatherWidget } from '@/components/WeatherWidget'
-import { KIJKMODUS_COOKIE } from '@/lib/kijkmodus'
 import { menuRechten } from '@/lib/menu-rechten'
-import { clearNavAuth, readNavAuth, writeNavAuth } from '@/lib/nav-auth-cache'
+import { readNavAuth, writeNavAuth } from '@/lib/nav-auth-cache'
 import { verborgenInDemo } from '@/lib/omgeving'
 import { PROFILES } from '@/lib/profiles'
+import { kijkmodusCookieAan, uitloggen, zetKijkmodus } from '@/lib/sessie-client'
 import './site-header.css'
-
-// Kijkmodus (beheerder bekijkt de site als vers lid): cookie zetten/wissen + herladen, zodat
-// zowel de server-render als deze navigatie meteen de gestripte kijk tonen.
-function kijkmodusCookieAan(): boolean {
-  if (typeof document === 'undefined') return false
-  return document.cookie.split(';').some((c) => c.trim() === `${KIJKMODUS_COOKIE}=1`)
-}
-function zetKijkmodus(aan: boolean) {
-  document.cookie = aan
-    ? `${KIJKMODUS_COOKIE}=1; path=/; max-age=${12 * 3600}`
-    : `${KIJKMODUS_COOKIE}=; path=/; max-age=0`
-  clearNavAuth()
-  window.location.reload()
-}
 
 // Eén gedeelde navigatie. Supporters volgen wedstrijden (primair). Al de rest zit
 // onder één opgekuist "Meer"-menu: ontdekken (tornooi, demo) en de drie
@@ -66,7 +53,15 @@ const PROFILE_VISIBLE: Record<string, (a: { isClub: boolean; isCoach: boolean; i
 // aparte menu-items (de analyse-hub bevat zelf al z'n tools; training is een eigen luik).
 const MENU_SECTIONS: NavSection[] = ['stand', 'analyse', 'training', 'tornooi', 'clubs', 'scheidsrechters', 'federatie']
 
+// Binnen het federatieplatform (zijbalk + topbalk) is deze header overbodig: de shell neemt
+// navigatie, meldingen en account over. De wrapper houdt de hooks (en netwerkcalls) van de
+// eigenlijke header volledig uit beeld zodra we in de shell staan.
 export function SiteHeader({ active = null }: { active?: NavSection }) {
+  const inShell = useInFedShell()
+  return inShell ? null : <SiteHeaderInner active={active} />
+}
+
+function SiteHeaderInner({ active = null }: { active?: NavSection }) {
   const [open, setOpen] = useState(false)
   // Analyse-toegang (admin/analyse) en training-toegang (analyse of club-beheerder) bepalen
   // welke menu-items verschijnen.
@@ -130,15 +125,6 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
       })
       .catch(() => {})
   }, [loggedIn])
-  const logout = async () => {
-    try {
-      await fetch('/api/users/logout', { method: 'POST', credentials: 'include' })
-    } catch {
-      /* sessie verloopt sowieso server-side */
-    }
-    clearNavAuth()
-    window.location.href = '/'
-  }
   const menuActive = active !== null && MENU_SECTIONS.includes(active)
   // Kijkmodus: de navigatie toont wat een VERS lid ziet — alle rol-gebonden ingangen weg.
   // (De echte vlaggen blijven bewaard voor het menu-item en de exit-banner.)
@@ -254,7 +240,7 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                             👁 Bekijk als supporter
                           </button>
                         )}
-                        <button type="button" className="sh-more-item" onClick={() => { setOpen(false); void logout() }}>
+                        <button type="button" className="sh-more-item" onClick={() => { setOpen(false); void uitloggen() }}>
                           🚪 Uitloggen
                         </button>
                       </>

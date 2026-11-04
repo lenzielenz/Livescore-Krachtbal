@@ -1,0 +1,584 @@
+/* Het werkplatform voor de federatie: zijbalk + topbalk + de pagina zelf (components/fed-shell).
+   Gebouwd op de bestaande tokens (antraciet + ijsblauw, zie styles.css) zodat de federatiepagina's
+   binnenin ongewijzigd passen. Alles heet .fs-… om niet met de rest van de site te botsen. */
+
+.fs {
+  --fs-side: 264px;
+  --fs-top: 56px;
+  display: flex;
+  min-height: 100dvh;
+  /* Vlak donker vlak over de aurora-achtergrond van de site: een werkplek, geen etalage. */
+  background: var(--bg);
+  color: var(--txt);
+}
+
+/* De voettekst (privacy, app) hoort bij de publieke site; in het werkplatform zit hij in de weg. */
+body:has(.fs) .site-foot {
+  display: none;
+}
+
+.fs-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.fs-chev {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+.fs .fs-alleen-mobiel {
+  display: none;
+}
+
+/* ── Zijbalk ─────────────────────────────────────────────────────────────────────────── */
+.fs-side {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  flex: 0 0 var(--fs-side);
+  width: var(--fs-side);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-2);
+  border-right: 1px solid var(--line);
+  z-index: 30;
+}
+.fs-side-kop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 10px;
+}
+.fs-merk {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-decoration: none;
+  color: var(--txt);
+}
+.fs-merk-naam {
+  font-family: var(--font-display), var(--font-body), sans-serif;
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+.fs-merk-sub {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--dim);
+}
+
+.fs-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 10px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.fs-lijst {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.fs-lijst-top {
+  margin: 2px 0 6px;
+}
+.fs-groep {
+  margin-top: 4px;
+}
+.fs-groep-kop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 8px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--dim);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  cursor: pointer;
+  text-align: left;
+}
+.fs-groep-kop:hover {
+  color: var(--txt);
+}
+
+.fs-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--dim-strong);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+.fs-link:hover {
+  background: color-mix(in srgb, var(--panel-2) 80%, transparent);
+  color: var(--txt);
+}
+.fs-link.on {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--txt);
+  font-weight: 600;
+}
+.fs-link.on::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+}
+.fs-link.on .fs-icon {
+  color: var(--accent);
+}
+.fs-link .fs-icon {
+  color: var(--dim);
+}
+.fs-link:hover .fs-icon {
+  color: var(--dim-strong);
+}
+.fs-link-tekst {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Teller: hoeveel er nog open staat bij dit onderdeel. Koraal = vraagt aandacht. */
+.fs-teller {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--pop);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.fs-teller-klein {
+  margin-left: auto;
+}
+
+.fs-side-voet {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+}
+.fs-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 22%, var(--panel-2));
+  color: var(--txt);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.fs-wie {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+.fs-wie strong {
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fs-wie small {
+  font-size: 0.72rem;
+  color: var(--dim);
+}
+
+/* ── Topbalk ─────────────────────────────────────────────────────────────────────────── */
+.fs-kolom {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.fs-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: var(--fs-top);
+  padding: 0 24px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.fs-kruimel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+.fs-kruimel-groep {
+  color: var(--dim);
+}
+.fs-kruimel strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fs-kruimel .fs-chev {
+  color: var(--dim);
+}
+
+.fs-zoek {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  max-width: 400px;
+  min-width: 0;
+  height: 36px;
+  margin: 0 auto;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--dim);
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+.fs-zoek:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  color: var(--dim-strong);
+}
+.fs-zoek > span:first-of-type {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fs-sneltoets {
+  display: inline-flex;
+  gap: 3px;
+}
+.fs kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--bg-2);
+  color: var(--dim);
+  font: inherit;
+  font-size: 0.68rem;
+}
+
+.fs-top-rechts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.fs-icoonknop {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: var(--dim-strong);
+  cursor: pointer;
+}
+.fs-icoonknop:hover {
+  background: var(--panel);
+  color: var(--txt);
+}
+.fs-bel-n {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--pop);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+.fs-open-taken {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 10px 0 6px;
+  border: 1px solid color-mix(in srgb, var(--pop) 40%, var(--line));
+  border-radius: 999px;
+  color: var(--dim-strong);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+.fs-open-taken:hover {
+  border-color: var(--pop);
+  color: var(--txt);
+}
+
+.fs-gebruiker {
+  position: relative;
+}
+.fs-gebruiker summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 8px 3px 3px;
+  border-radius: 10px;
+  list-style: none;
+  cursor: pointer;
+}
+.fs-gebruiker summary::-webkit-details-marker {
+  display: none;
+}
+.fs-gebruiker summary:hover,
+.fs-gebruiker[open] summary {
+  background: var(--panel);
+}
+.fs-gebruiker-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 230px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--card-shadow);
+}
+.fs-gebruiker-menu a,
+.fs-gebruiker-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.fs-gebruiker-menu a:hover,
+.fs-gebruiker-menu button:hover {
+  background: var(--panel-2);
+}
+
+/* ── De pagina ───────────────────────────────────────────────────────────────────────── */
+.fs-main {
+  flex: 1;
+  min-width: 0;
+}
+/* Binnen het platform is de ruimte de werkruimte: de pagina vult ze, met een rustige maximumbreedte
+   zodat een tabel op een brede monitor niet over twee meter uitrekt. */
+.fs-main .site {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 24px 28px 72px;
+}
+.fs-main .page-title {
+  margin-top: 0;
+}
+
+/* ── Zoekpalet (Ctrl+K) ─────────────────────────────────────────────────────────────── */
+.fs-pal-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh 16px 16px;
+  background: rgba(5, 6, 8, 0.62);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.fs-pal {
+  width: min(640px, 100%);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+.fs-pal-zoek {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+  color: var(--dim);
+}
+.fs-pal-zoek input {
+  flex: 1;
+  height: 54px;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--txt);
+  font: inherit;
+  font-size: 1rem;
+}
+.fs-pal-lijst {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  max-height: 52vh;
+  overflow-y: auto;
+}
+.fs-pal-lijst li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.fs-pal-lijst li.on {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.fs-pal-lijst li .fs-icon {
+  color: var(--accent);
+}
+.fs-pal-tekst {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+.fs-pal-tekst strong {
+  font-size: 0.9rem;
+}
+.fs-pal-tekst small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dim);
+  font-size: 0.76rem;
+}
+.fs-pal-groep {
+  flex: none;
+  color: var(--dim);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.fs-pal-lijst .fs-pal-leeg {
+  justify-content: center;
+  padding: 22px;
+  color: var(--dim);
+  cursor: default;
+}
+
+/* ── Smaller scherm: zijbalk wordt een uitschuifmenu ──────────────────────────────────── */
+@media (max-width: 1100px) {
+  .fs-alleen-breed {
+    display: none;
+  }
+  .fs-sneltoets {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .fs .fs-alleen-mobiel {
+    display: inline-grid;
+  }
+  .fs-side {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 60;
+    transform: translateX(-100%);
+    transition: transform var(--dur-2, 0.2s) var(--ease-out, ease-out);
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+  }
+  .fs-side.open {
+    transform: translateX(0);
+  }
+  .fs-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(5, 6, 8, 0.6);
+  }
+  .fs-top {
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .fs-main .site {
+    padding: 16px 14px 56px;
+  }
+  .fs-zoek {
+    flex: 0 0 36px;
+    width: 36px;
+    margin: 0 0 0 auto;
+    padding: 0;
+    justify-content: center;
+  }
+  .fs-zoek > span {
+    display: none;
+  }
+  .fs-top-rechts {
+    margin-left: 0;
+  }
+  .fs-open-taken-tekst {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fs-side {
+    transition: none;
+  }
+}
+@media print {
+  .fs-side,
+  .fs-top {
+    display: none;
+  }
+}

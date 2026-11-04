@@ -1,48 +1,69 @@
-/* Federatiedashboard (/federatie): wat er te doen is, en de tools om het te doen. */
-.fd-taken, .fd-tools { margin: 6px 0 22px; }
-.fd-kop { font-size: 1.05rem; margin: 0 0 10px; }
-.fd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
-.fd-taak {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-left-width: 5px;
-  border-radius: 12px;
-  background: var(--panel);
-}
+/* Federatiedashboard (/federatie): kerncijfers, wat er te doen is en wat er vandaag gespeeld wordt.
+   De tools zelf staan in de zijbalk van het werkplatform (components/fed-shell). */
+.fd-hoofd .page-sub { margin-bottom: 14px; }
+.fd-hoofd .page-sub::first-letter { text-transform: uppercase; }
+
+/* ── Kerncijfers ── */
+.fd-tegels { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.fd-tegel { padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.fd-tegel-label { margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); }
+.fd-tegel-waarde { margin: 4px 0 0; font-size: 1.9rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; font-family: var(--font-display), var(--font-body), sans-serif; }
+.fd-tegel-hint { margin: 2px 0 0; font-size: 0.78rem; color: var(--dim); }
+.fd-tegel-rood .fd-tegel-waarde { color: #ff7a6b; }
+.fd-tegel-oranje .fd-tegel-waarde { color: #f6c544; }
+.fd-tegel-goed .fd-tegel-waarde { color: #0fe0a6; }
+
+/* ── Twee kolommen: takenlijst links, vandaag + modus rechts ── */
+.fd-kolommen { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
+.fd-zij { display: flex; flex-direction: column; gap: 16px; }
+.fd-paneel { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); overflow: hidden; }
+.fd-paneel-kop { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.fd-paneel-kop h2 { margin: 0; font-size: 1rem; }
+.fd-paneel-sub { font-size: 0.78rem; color: var(--dim); text-decoration: none; }
+a.fd-paneel-sub:hover { color: var(--accent); }
+.fd-leeg { margin: 0; padding: 22px 18px; color: var(--dim); font-size: 0.9rem; }
+
+/* ── Takenlijst ── */
+.fd-rijen { list-style: none; margin: 0; padding: 0; }
+.fd-rij { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; gap: 4px 14px; align-items: center; padding: 14px 18px 14px 15px; border-bottom: 1px solid var(--line); border-left: 3px solid transparent; }
+.fd-rij:last-child { border-bottom: 0; }
+.fd-rij:hover { background: color-mix(in srgb, var(--panel-2) 45%, transparent); }
 .fd-rood { border-left-color: #e0533d; }
 .fd-oranje { border-left-color: #f6c544; }
-.fd-groen { border-left-color: #0fe0a6; opacity: 0.7; }
-.fd-taak-kop { display: flex; align-items: center; gap: 8px; }
-.fd-icoon { font-size: 1.2rem; }
-.fd-aantal { font-size: 1.5rem; font-weight: 800; line-height: 1; }
-.fd-rood .fd-aantal { color: #e0533d; }
-.fd-oranje .fd-aantal { color: #f6c544; }
-.fd-groen .fd-aantal { color: #0fe0a6; }
-.fd-titel { font-weight: 700; font-size: 0.92rem; }
-.fd-uitleg { margin: 0; font-size: 0.78rem; color: var(--dim); }
-.fd-items { margin: 0; padding-left: 16px; font-size: 0.78rem; display: flex; flex-direction: column; gap: 2px; }
-.fd-items a { color: var(--txt); }
-.fd-actie { align-self: flex-start; margin-top: auto; font-weight: 700; font-size: 0.85rem; color: var(--accent); }
-.fd-toolgroepen { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
-.fd-toolgroep { display: flex; flex-direction: column; gap: 8px; }
-.fd-toolgroep h3 { margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); }
-.fd-tool {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--panel);
-  color: var(--txt);
-  text-decoration: none;
-}
-.fd-tool:hover { border-color: var(--accent); }
-.fd-tool-icoon { font-size: 1.5rem; }
-.fd-tool strong { display: block; font-size: 0.92rem; }
-.fd-tool small { display: block; font-size: 0.76rem; color: var(--dim); }
-.fd-inorde { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0 0; font-size: 0.78rem; color: var(--dim); }
+.fd-groen { border-left-color: #0fe0a6; }
+.fd-rij-icoon { font-size: 1.25rem; text-align: center; }
+.fd-rij-tekst strong { display: block; font-size: 0.93rem; }
+.fd-rij-tekst p { margin: 2px 0 0; font-size: 0.8rem; color: var(--dim); }
+.fd-rij-items { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 0.78rem; }
+.fd-rij-items li { color: var(--dim-strong); }
+.fd-rij-items a { color: var(--dim-strong); text-decoration: none; }
+.fd-rij-items a:hover { color: var(--accent); text-decoration: underline; }
+.fd-pil { min-width: 34px; padding: 3px 10px; border-radius: 999px; text-align: center; font-weight: 800; font-size: 0.95rem; font-variant-numeric: tabular-nums; background: color-mix(in srgb, var(--panel-2) 80%, transparent); }
+.fd-rood .fd-pil { background: color-mix(in srgb, #e0533d 22%, transparent); color: #ff8b7c; }
+.fd-oranje .fd-pil { background: color-mix(in srgb, #f6c544 20%, transparent); color: #f6c544; }
+.fd-knop { padding: 8px 14px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: 9px; color: var(--accent); font-size: 0.84rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.fd-knop:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: var(--accent); }
+.fd-inorde { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0; padding: 12px 18px; border-top: 1px solid var(--line); font-size: 0.78rem; color: var(--dim); }
 .fd-chip { padding: 3px 9px; border: 1px solid color-mix(in srgb, #0fe0a6 40%, var(--line)); border-radius: 999px; color: #0fe0a6; }
+
+/* ── Vandaag ── */
+.fd-vandaag { list-style: none; margin: 0; padding: 4px 0; }
+.fd-vandaag li { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 18px; font-size: 0.86rem; }
+.fd-vandaag li:hover { background: color-mix(in srgb, var(--panel-2) 45%, transparent); }
+.fd-uur { color: var(--dim); font-variant-numeric: tabular-nums; }
+.fd-ploegen { color: var(--txt); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fd-ploegen:hover { color: var(--accent); }
+.fd-status { padding: 2px 9px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; border: 1px solid var(--line); color: var(--dim); }
+.fd-status-live { color: #fff; background: var(--pop); border-color: var(--pop); }
+.fd-status-af { color: #0fe0a6; border-color: color-mix(in srgb, #0fe0a6 40%, var(--line)); }
+.fd-status-afgelast { color: #f6c544; border-color: color-mix(in srgb, #f6c544 40%, var(--line)); }
+.fd-paneel > .score-mode-switch, .fd-paneel > section, .fd-paneel > div { margin: 0; }
+
+@media (max-width: 1180px) {
+  .fd-kolommen { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .fd-rij { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .fd-rij .fd-knop { grid-column: 2 / -1; justify-self: start; }
+  .fd-tegels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
