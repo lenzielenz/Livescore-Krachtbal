@@ -64,6 +64,20 @@ worden nadat het Volume is gekoppeld.
 - **Build faalt met `next/font/google queries have exactly one entry`** (of `Can't resolve '@vercel/turbopack-next/internal/font/google/font'`, via `src/app/(frontend)/layout.tsx`): `next/font/google` (Sora, Inter) haalt de lettertypes **tijdens de build** bij Google op; lukt dat even niet, dan faalt de hele build en toont de Railway-log enkel "exit code 1". Dat is tijdelijk en geen codefout: de vorige versie blijft gewoon draaien. Rol opnieuw uit (nieuwe commit op `main`, of *Redeploy* in het dashboard); de MCP-`redeploy` hergebruikt de mislukte build en helpt dus niet. De echte fout staat in de buildlog onder "Build error occurred" (`get-logs` met `types: ["build"]`); `get-deployment-diagnosis` kan hem niet vinden.
 
 
+## Een migratie lokaal testen zoals Railway ze draait
+
+Lokaal draait SQLite met dev-push, dus een fout in een handgeschreven Postgres-migratie merk je pas bij
+de uitrol. Zo test je ze vooraf op een echte Postgres, zonder Docker:
+
+1. Een wegwerp-Postgres: `npm i embedded-postgres` in een losse map en start ze met
+   `initdbFlags: ['--encoding=UTF8', '--locale=C']` (zonder UTF-8 falen inserts met emoji of "→",
+   wat op Railway wél werkt) op een vrije poort — **niet** 54329, dat is de dev-databank van Magazijn.
+2. `DATABASE_URL=postgres://… pnpm payload migrate` — alle migraties van nul, zoals bij een eerste uitrol.
+3. De app ertegen starten met **`PAYLOAD_MIGRATING=true`**: dat schakelt Payloads dev-push uit, zodat
+   een tabel of kolom die in de migratie ontbreekt niet stilletjes bijgemaakt wordt maar als fout
+   opduikt zodra de code ze gebruikt. Met `PLATFORM_OMGEVING=demo` zet je dan de demowereld klaar en
+   klik je door de nieuwe functie.
+
 ## Video-analyse op de server (Python + opencv)
 
 De knop **"🤖 Analyseer de video"** op de analysepagina laat de server het rekenwerk doen:

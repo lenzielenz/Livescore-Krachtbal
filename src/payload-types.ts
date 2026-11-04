@@ -81,6 +81,7 @@ export interface Config {
     inschrijvingen: Inschrijvingen;
     verplaatsingsaanvragen: Verplaatsingsaanvragen;
     klachten: Klachten;
+    dossiers: Dossier;
     'medische-kaart-aanvragen': MedischeKaartAanvragen;
     meldingen: Meldingen;
     matches: Match;
@@ -149,6 +150,7 @@ export interface Config {
     inschrijvingen: InschrijvingenSelect<false> | InschrijvingenSelect<true>;
     verplaatsingsaanvragen: VerplaatsingsaanvragenSelect<false> | VerplaatsingsaanvragenSelect<true>;
     klachten: KlachtenSelect<false> | KlachtenSelect<true>;
+    dossiers: DossiersSelect<false> | DossiersSelect<true>;
     'medische-kaart-aanvragen': MedischeKaartAanvragenSelect<false> | MedischeKaartAanvragenSelect<true>;
     meldingen: MeldingenSelect<false> | MeldingenSelect<true>;
     matches: MatchesSelect<false> | MatchesSelect<true>;
@@ -1432,6 +1434,53 @@ export interface Klachten {
   behandeldDoor?: (number | null) | User;
   behandeldOp?: string | null;
   pdfVoorHeropenen?: (number | null) | Media;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Opvolging van aanvragen en taken op het bord /federatie/aanvragen. De aanvraag zelf staat in haar eigen collection.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "dossiers".
+ */
+export interface Dossier {
+  id: number;
+  bron:
+    | 'verplaatsing'
+    | 'registratie'
+    | 'klacht'
+    | 'boete'
+    | 'ongeval'
+    | 'kaart'
+    | 'afgelasting'
+    | 'inschrijving'
+    | 'taak';
+  /**
+   * Het id in de collection van die soort. Leeg voor een vrije taak.
+   */
+  bronId?: number | null;
+  /**
+   * Voor een vrije taak; bij een aanvraag toont het bord de aanvraag zelf.
+   */
+  titel?: string | null;
+  omschrijving?: string | null;
+  behandelaar?: (number | null) | User;
+  deadline?: string | null;
+  wachtOp?: ('club' | 'scheidsrechter' | 'speler' | 'extern') | null;
+  wachtOpTekst?: string | null;
+  notities?:
+    | {
+        door?: (number | null) | User;
+        op?: string | null;
+        tekst: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Enkel voor een vrije taak.
+   */
+  afgerondOp?: string | null;
+  aangemaaktDoor?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -2825,6 +2874,10 @@ export interface PayloadLockedDocument {
         value: number | Klachten;
       } | null)
     | ({
+        relationTo: 'dossiers';
+        value: number | Dossier;
+      } | null)
+    | ({
         relationTo: 'medische-kaart-aanvragen';
         value: number | MedischeKaartAanvragen;
       } | null)
@@ -3361,6 +3414,32 @@ export interface KlachtenSelect<T extends boolean = true> {
   behandeldDoor?: T;
   behandeldOp?: T;
   pdfVoorHeropenen?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "dossiers_select".
+ */
+export interface DossiersSelect<T extends boolean = true> {
+  bron?: T;
+  bronId?: T;
+  titel?: T;
+  omschrijving?: T;
+  behandelaar?: T;
+  deadline?: T;
+  wachtOp?: T;
+  wachtOpTekst?: T;
+  notities?:
+    | T
+    | {
+        door?: T;
+        op?: T;
+        tekst?: T;
+        id?: T;
+      };
+  afgerondOp?: T;
+  aangemaaktDoor?: T;
   updatedAt?: T;
   createdAt?: T;
 }

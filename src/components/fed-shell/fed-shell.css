@@ -582,3 +582,115 @@ body:has(.fs) .site-foot {
     display: none;
   }
 }
+
+/* ── Knoppen, formulieren en dialogen van het platform ──────────────────────────────── */
+.fs-knop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.fs-knop:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); background: var(--panel-2); }
+.fs-knop:disabled { opacity: 0.5; cursor: default; }
+.fs-knop-primair { background: color-mix(in srgb, var(--accent) 20%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); color: #fff; }
+.fs-knop-primair:hover { background: color-mix(in srgb, var(--accent) 32%, var(--panel)); border-color: var(--accent); }
+.fs-knop-gevaar { border-color: color-mix(in srgb, var(--pop) 45%, var(--line)); color: #ff8b7c; }
+.fs-knop-gevaar:hover { background: color-mix(in srgb, var(--pop) 14%, var(--panel)); border-color: var(--pop); }
+
+.fs-snel { position: relative; }
+.fs-snel-knop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px 0 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+  color: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fs-snel-knop:hover { background: color-mix(in srgb, var(--accent) 30%, var(--panel)); border-color: var(--accent); }
+.fs-snel-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 280px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--card-shadow);
+}
+.fs-snel-menu a,
+.fs-snel-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.fs-snel-menu a:hover,
+.fs-snel-menu button:hover { background: var(--panel-2); }
+.fs-snel-menu .fs-icon { color: var(--accent); }
+.fs-snel-scheiding { height: 1px; margin: 4px 8px; background: var(--line); }
+
+.fs-dlg-bg { align-items: center; padding: 16px; }
+.fs-dlg {
+  width: min(480px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+.fs-dlg-breed { width: min(720px, 100%); }
+.fs-dlg-kop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.fs-dlg-kop h2 { margin: 0; font-size: 1.02rem; }
+.fs-dlg-body { padding: 16px 18px 18px; }
+.fs-dlg-uitleg { margin: 4px 0 0; font-size: 0.82rem; color: var(--dim); line-height: 1.4; }
+.fs-dlg-uitleg a { color: var(--accent); }
+.fs-dlg-acties { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.fs-form { display: flex; flex-direction: column; gap: 12px; }
+.fs-form label { display: flex; flex-direction: column; gap: 5px; font-size: 0.82rem; color: var(--dim-strong); }
+.fs-form label small { font-weight: 400; color: var(--dim); }
+.fs-form-rij { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fs-link-vak { display: flex; gap: 8px; margin-top: 12px; }
+.fs-link-vak input { flex: 1; min-width: 0; min-height: 36px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg-2); color: var(--txt); font: inherit; font-size: 0.82rem; }
+@media (max-width: 900px) {
+  .fs-snel-knop { padding: 0 8px; }
+  .fs-form-rij { grid-template-columns: 1fr; }
+}

@@ -10,6 +10,7 @@ import { uitloggen, zetKijkmodus } from '@/lib/sessie-client'
 import { FedPalette } from './FedPalette'
 import { FedShellProvider } from './context'
 import { FedIcon } from './FedIcon'
+import { SnelMenu } from './SnelMenu'
 import './fed-shell.css'
 
 // Het werkplatform voor de federatie: vaste zijbalk met alle tools in groepen, een topbalk met
@@ -18,7 +19,7 @@ import './fed-shell.css'
 // onder /beheer) doet dit niets: zie FedShellGate en inShell().
 
 type Taak = { sleutel: string; href: string; aantal: number; dringend: 'rood' | 'oranje' | 'groen' }
-type TakenStand = { taken: Taak[]; totaal: number }
+type TakenStand = { taken: Taak[]; totaal: number; aanvragen?: { nieuw: number; bezig: number; wacht: number; open: number } | null }
 
 const TAKEN_KEY = 'kb-fed-taken'
 const GROEPEN_KEY = 'kb-fed-groepen'
@@ -58,7 +59,13 @@ function ShellBinnen({ naam, rolLabel, isAdmin, pad, children }: { naam: string;
   const [klap, setKlap] = useState<Record<string, boolean>>({})
   const gebruikersmenu = useRef<HTMLDetailsElement>(null)
 
-  const tellers = useMemo(() => (stand ? tellersPerItem(groepen, stand.taken) : {}), [groepen, stand])
+  // Het bord krijgt als teller wat er NIEUW binnenkwam (nog niemand mee bezig): dat is wat aandacht vraagt.
+  const tellers = useMemo(() => {
+    if (!stand) return {}
+    const t = tellersPerItem(groepen, stand.taken)
+    if (stand.aanvragen?.nieuw) t.aanvragen = stand.aanvragen.nieuw
+    return t
+  }, [groepen, stand])
   const standaardOpen = (key: string, heeftTeller: boolean) => key === 'overzicht' || actieveGroep?.key === key || heeftTeller
   const isOpen = (g: { key: string; items: { key: string }[] }) => klap[g.key] ?? standaardOpen(g.key, g.items.some((i) => tellers[i.key]))
 
@@ -249,6 +256,7 @@ function ShellBinnen({ naam, rolLabel, isAdmin, pad, children }: { naam: string;
           </button>
 
           <div className="fs-top-rechts">
+            <SnelMenu />
             {totaal > 0 && (
               <Link href="/federatie" className="fs-open-taken" title="Open taken op het dashboard">
                 <span className="fs-teller">{totaal}</span>

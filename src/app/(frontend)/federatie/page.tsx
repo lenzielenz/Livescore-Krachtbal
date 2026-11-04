@@ -4,6 +4,8 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { brusselsDayBoundsUtc, dateStrBE, formatDateBE, formatTimeBE } from '@/lib/datetime'
+import { BRON_META, KOLOMMEN, deadlineStand, kolomVan, sorteerKolom, tellingen } from '@/lib/aanvragen-bord'
+import { aanvragenLijst } from '@/lib/federatie-aanvragen'
 import { type Taak, federatieTaken } from '@/lib/federatie-dashboard'
 import { getPayloadClient } from '@/lib/payload-client'
 import { getScoreMode } from '@/lib/score-mode'
@@ -48,9 +50,10 @@ export default async function FederatiePage() {
   const payload = await getPayloadClient()
   const nu = new Date()
   const { start, end } = brusselsDayBoundsUtc(dateStrBE(nu))
-  const [scoreMode, taken, vandaagRes] = await Promise.all([
+  const [scoreMode, taken, bord, vandaagRes] = await Promise.all([
     getScoreMode(payload),
     federatieTaken(payload),
+    aanvragenLijst(payload, nu).catch(() => []),
     payload
       .find({
         collection: 'matches',
@@ -79,6 +82,14 @@ export default async function FederatiePage() {
   const dezeWeek = som((t) => t.dringend === 'oranje')
   const vandaag = vandaagRes.docs as unknown as { id: number; date?: string; status?: string; afgelast?: boolean; homeTeam?: unknown; awayTeam?: unknown }[]
   const live = vandaag.filter((m) => m.status === 'live' && !m.afgelast).length
+  // Het bord: hoeveel staat er in elke kolom, en wat ligt er bij mij (dringendste eerst, hoogstens 6).
+  const bordTel = tellingen(bord)
+  const mijnId = Number((me as { id: number | string }).id)
+  const mijn = sorteerKolom(
+    bord.filter((a) => a.open && a.dossier?.behandelaar?.id === mijnId),
+    'bezig',
+    nu.getTime(),
+  ).slice(0, 6)
 
   return (
     <>
@@ -139,6 +150,40 @@ export default async function FederatiePage() {
           </section>
 
           <div className="fd-zij">
+            <section className="fd-paneel" aria-labelledby="fd-bord-titel">
+              <header className="fd-paneel-kop">
+                <h2 id="fd-bord-titel">Aanvragen &amp; taken</h2>
+                <Link className="fd-paneel-sub" href="/federatie/aanvragen">Open het bord →</Link>
+              </header>
+              <div className="fd-bord">
+                {KOLOMMEN.map((k) => (
+                  <Link key={k.key} href={`/federatie/aanvragen`} className={`fd-bord-kolom fd-bord-${k.key}`}>
+                    <span className="fd-bord-n">{bordTel[k.key]}</span>
+                    <span className="fd-bord-label">{k.titel}</span>
+                  </Link>
+                ))}
+              </div>
+              {mijn.length > 0 ? (
+                <ul className="fd-mijn">
+                  {mijn.map((a) => {
+                    const dl = deadlineStand(a.dossier?.deadline, nu.getTime())
+                    return (
+                      <li key={a.sleutel}>
+                        <Link href={`/federatie/aanvragen?dossier=${encodeURIComponent(a.sleutel)}`}>
+                          <span aria-hidden>{BRON_META[a.bron].icoon}</span>
+                          <span className="fd-mijn-titel">{a.titel}</span>
+                          {kolomVan(a) === 'wacht' && <span className="fd-mijn-tag">wacht</span>}
+                          {dl && <span className={`fd-mijn-tag fd-mijn-${dl.toon}`}>{dl.tekst}</span>}
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : (
+                <p className="fd-leeg fd-leeg-klein">{bordTel.nieuw > 0 ? `Niets bij jou — wel ${bordTel.nieuw} nieuw op het bord.` : 'Niets bij jou in behandeling.'}</p>
+              )}
+            </section>
+
             <section className="fd-paneel" aria-labelledby="fd-vandaag-titel">
               <header className="fd-paneel-kop">
                 <h2 id="fd-vandaag-titel">Vandaag</h2>

@@ -21,6 +21,7 @@ import {
   Scale,
   Scissors,
   Settings,
+  SquareKanban,
   Stethoscope,
   Trophy,
   UserCheck,
@@ -31,6 +32,7 @@ import type { FedIcon as FedIconNaam } from '@/lib/federatie-nav'
 
 const ICONEN: Record<FedIconNaam, LucideIcon> = {
   dashboard: LayoutDashboard,
+  bord: SquareKanban,
   kalender: CalendarDays,
   inschrijvingen: ClipboardPen,
   planner: CalendarRange,
