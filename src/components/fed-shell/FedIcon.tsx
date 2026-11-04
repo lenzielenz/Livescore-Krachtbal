@@ -1,0 +1,63 @@
+import {
+  Activity,
+  ArrowLeftRight,
+  Award,
+  BookOpen,
+  Building2,
+  CalendarClock,
+  CalendarDays,
+  CalendarRange,
+  ChartColumn,
+  ClipboardPen,
+  CloudRain,
+  Euro,
+  FileText,
+  FileUp,
+  HeartPulse,
+  KeyRound,
+  LayoutDashboard,
+  type LucideIcon,
+  PenLine,
+  Scale,
+  Scissors,
+  Settings,
+  Stethoscope,
+  Trophy,
+  UserCheck,
+  Users,
+} from 'lucide-react'
+
+import type { FedIcon as FedIconNaam } from '@/lib/federatie-nav'
+
+const ICONEN: Record<FedIconNaam, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  kalender: CalendarDays,
+  inschrijvingen: ClipboardPen,
+  planner: CalendarRange,
+  verplaatsen: ArrowLeftRight,
+  weekend: CalendarClock,
+  afgelast: CloudRain,
+  import: FileUp,
+  bladen: FileText,
+  scheidsrechters: UserCheck,
+  aantekenaars: PenLine,
+  ongevallen: HeartPulse,
+  klachten: Scale,
+  boetes: Euro,
+  knipjes: Scissors,
+  clubs: Building2,
+  leden: Stethoscope,
+  statistieken: ChartColumn,
+  referendum: Award,
+  reglement: BookOpen,
+  beker: Trophy,
+  stadion: Activity,
+  accounts: Users,
+  rechten: KeyRound,
+  admin: Settings,
+}
+
+export function FedIcon({ naam, className = 'fs-icon' }: { naam: FedIconNaam; className?: string }) {
+  const Icoon = ICONEN[naam]
+  return <Icoon className={className} aria-hidden strokeWidth={1.9} />
+}

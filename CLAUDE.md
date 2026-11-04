@@ -95,6 +95,9 @@ Aantekenaar tikt worp  →  match-engine (mutatie, atomair + lock)
   per-IP-cap, rate-limiting en `SSE_HEADERS` (incl. `X-Accel-Buffering: no`).
 - **`src/lib/db-lock.ts`** — Postgres advisory lock per wedstrijd (cross-instance),
   bovenop een in-process mutex. No-op op SQLite.
+- **`src/components/fed-shell/`** + **`src/lib/federatie-nav.ts`** — het werkplatform voor federatie/admin
+  (zijbalk, topbalk, Ctrl+K). Een nieuwe federatietool? Voeg ze toe aan `FED_NAV`; zie
+  `docs/FEDERATIEFLOW.md` §6. Andere rollen zien de pagina's ongewijzigd.
 - **`src/collections/*.ts`** — 24 Payload-collections (datamodel). Globals:
   `src/globals/{Season,Settings}.ts`.
 - **Live-endpoints**: `src/app/api/match/[id]/{action,state,stream,react}/route.ts`.

@@ -1,59 +1,33 @@
 import Link from 'next/link'
 
-import { ProfileTools } from '@/components/ProfileTools'
 import { SiteHeader } from '@/components/SiteHeader'
-import { hasRole, isFederationLevel } from '@/lib/access'
+import { isFederationLevel } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
-import { federatieTaken } from '@/lib/federatie-dashboard'
+import { brusselsDayBoundsUtc, dateStrBE, formatDateBE, formatTimeBE } from '@/lib/datetime'
+import { type Taak, federatieTaken } from '@/lib/federatie-dashboard'
 import { getPayloadClient } from '@/lib/payload-client'
-import { getProfile } from '@/lib/profiles'
 import { getScoreMode } from '@/lib/score-mode'
 import { ScoreModeSwitch } from './ScoreModeSwitch'
 import './federatie-dashboard.css'
 
 export const dynamic = 'force-dynamic'
 
-// De grote knoppen op het dashboard: per taak van het seizoen, in de volgorde waarin je ze nodig hebt.
-const TOOLGROEPEN: { titel: string; tools: { href: string; icoon: string; label: string; uitleg: string }[] }[] = [
-  {
-    titel: 'Competitie',
-    tools: [
-      { href: '/beheer/kalender', icoon: '🗓️', label: 'Kalender opmaken', uitleg: 'Per reeks heen en terug, met vrije weekends.' },
-      { href: '/beheer/wedstrijden', icoon: '🔁', label: 'Wedstrijden verplaatsen', uitleg: 'Datum en uur aanpassen; clubs krijgen een melding.' },
-      { href: '/beheer/weekend', icoon: '📆', label: 'Speelweekend verplaatsen', uitleg: 'Een uitgesteld weekend (bv. week 43) in één keer naar een ander weekend; elke wedstrijd houdt dag en uur.' },
-      { href: '/beheer/afgelastingen', icoon: '⛈️', label: 'Afgelastingen', uitleg: "Door de scheidsrechter afgelast, met foto's; nieuwe datum plannen." },
-      { href: '/beheer/inschrijvingen', icoon: '📝', label: 'Inschrijvingen & kalender', uitleg: 'Ronde openen, inschrijvingen van de clubs verwerken, seizoenskalender met hun voorkeuren maken.' },
-      { href: '/beheer/planner', icoon: '🧩', label: 'Planner', uitleg: 'Wedstrijden per weekend verslepen; botsingen meteen zichtbaar; verplaatsingsaanvragen beslissen.' },
-      { href: '/wedstrijdbladen', icoon: '📄', label: 'Wedstrijdbladen', uitleg: 'Elk ingediend blad met de PDF; zoeken op ploeg, reeks en status.' },
-      { href: '/beheer/klachten', icoon: '⚖️', label: 'Klachten', uitleg: 'Klachten van clubs over een blad: heropenen of afwijzen.' },
-      { href: '/beheer/boetes', icoon: '💶', label: 'Boetes', uitleg: 'Voorstellen (forfait, blad te laat, aftrap later) beoordelen, opleggen, betalingen bevestigen.' },
-      { href: '/beheer/planning', icoon: '📅', label: 'Planning importeren', uitleg: 'Kalender of reeksindeling uit een bestand.' },
-      { href: '/federatie/reglement', icoon: '📖', label: 'Reglement & regels', uitleg: 'Versies, verslagen, vastspelen en eindrondes.' },
-    ],
-  },
-  {
-    titel: 'Mensen',
-    tools: [
-      { href: '/beheer/clubs', icoon: '🏟️', label: 'Clubs & logins', uitleg: 'Club aanmaken, clubbeheerder uitnodigen.' },
-      { href: '/beheer/scheidsrechters', icoon: '🧑‍⚖️', label: 'Scheidsrechters toewijzen', uitleg: 'Per speeldag, met automatisch invullen.' },
-      { href: '/beheer/leden', icoon: '🩺', label: 'Spelers keuren', uitleg: 'Aanvragen van clubs goedkeuren of afkeuren.' },
-      { href: '/ongevallen', icoon: '🚑', label: 'Blessures & ongevallen', uitleg: 'Aangiften en getuigschriften van spelers behandelen.' },
-    ],
-  },
-  {
-    titel: 'Seizoen',
-    tools: [
-      { href: '/federatie/statistieken', icoon: '📊', label: 'Statistieken', uitleg: 'Leden, jeugd, meisjes/jongens, forfaits, scheidsrechters, per club.' },
-      { href: '/federatie/referendum', icoon: '🏅', label: 'Speler van het jaar', uitleg: 'Stemronde openen, sluiten en uitslag bekendmaken.' },
-      { href: '/knipjes', icoon: '✂️', label: 'Knipjes', uitleg: 'Sancties en schorsingen.' },
-      { href: '/bekerfinale', icoon: '🏆', label: 'Bekerfinale', uitleg: 'Finaledag voorbereiden.' },
-    ],
-  },
-]
+const RANG: Record<Taak['dringend'], number> = { rood: 0, oranje: 1, groen: 2 }
 
-// Instappunt voor de federatie: van hieruit vind je beheer, planning, reglement,
-// knipjes en de bekerfinale. De tools komen uit lib/profiles (gedeeld met de header).
-// Enkel federatie/admin krijgen de hub; admin-only tools verschijnen alleen voor admins.
+const naamVan = (v: unknown): string => (v && typeof v === 'object' ? String((v as { name?: unknown }).name ?? '') : '')
+
+type VandaagStatus = { tekst: string; klasse: 'live' | 'af' | 'gepland' | 'afgelast' }
+function statusVan(m: { status?: unknown; afgelast?: unknown }): VandaagStatus {
+  if (m.afgelast) return { tekst: 'Afgelast', klasse: 'afgelast' }
+  if (m.status === 'live') return { tekst: 'Live', klasse: 'live' }
+  if (m.status === 'finished') return { tekst: 'Afgelopen', klasse: 'af' }
+  return { tekst: 'Gepland', klasse: 'gepland' }
+}
+
+// Het dashboard van de federatie: in één blik wat aandacht vraagt (dringendste eerst, met de knop
+// om het meteen op te lossen) en wat er vandaag gespeeld wordt. De tools zelf staan in de zijbalk
+// van het werkplatform (components/fed-shell, lib/federatie-nav) — niet meer als muur van knoppen
+// op deze pagina. Enkel federatie/admin; wie dat niet is, krijgt een uitnodiging om in te loggen.
 export default async function FederatiePage() {
   const me = await getAuthUser()
   if (!isFederationLevel(me)) {
@@ -71,85 +45,145 @@ export default async function FederatiePage() {
     )
   }
 
-  const profile = getProfile('federatie')
-  // De aantekenmodus staat bovenaan: het is de schakelaar met de grootste impact op het platform.
   const payload = await getPayloadClient()
-  const [scoreMode, taken] = await Promise.all([getScoreMode(payload), federatieTaken(payload)])
-  const open = taken.filter((t) => t.aantal > 0)
+  const nu = new Date()
+  const { start, end } = brusselsDayBoundsUtc(dateStrBE(nu))
+  const [scoreMode, taken, vandaagRes] = await Promise.all([
+    getScoreMode(payload),
+    federatieTaken(payload),
+    payload
+      .find({
+        collection: 'matches',
+        where: {
+          and: [
+            { analyseOnly: { not_equals: true } },
+            { isDemo: { not_equals: true } },
+            { date: { greater_than_equal: start } },
+            { date: { less_than: end } },
+          ],
+        },
+        sort: 'date',
+        depth: 1,
+        limit: 40,
+        pagination: false,
+        overrideAccess: true,
+      })
+      .catch(() => ({ docs: [] })),
+  ])
+
+  const open = taken.filter((t) => t.aantal > 0).sort((a, b) => RANG[a.dringend] - RANG[b.dringend] || b.aantal - a.aantal)
+  const inOrde = taken.filter((t) => t.aantal === 0)
+  const som = (f: (t: Taak) => boolean) => taken.filter(f).reduce((n, t) => n + t.aantal, 0)
+  const totaal = som(() => true)
+  const dringend = som((t) => t.dringend === 'rood')
+  const dezeWeek = som((t) => t.dringend === 'oranje')
+  const vandaag = vandaagRes.docs as unknown as { id: number; date?: string; status?: string; afgelast?: boolean; homeTeam?: unknown; awayTeam?: unknown }[]
+  const live = vandaag.filter((m) => m.status === 'live' && !m.afgelast).length
 
   return (
     <>
       <SiteHeader active="federatie" />
-      <div className="site site-breed">
-        <h1 className="page-title">
-          <span className="brand">Federatie</span>
-        </h1>
-        <section className="fd-taken" aria-labelledby="fd-taken-titel">
-          <h2 id="fd-taken-titel" className="fd-kop">
-            {open.length === 0 ? '✅ Alles in orde — niets te doen' : `Te doen (${open.reduce((n, t) => n + t.aantal, 0)})`}
-          </h2>
-          <div className="fd-grid">
-            {open.map((t) => (
-              <article key={t.sleutel} className={`fd-taak fd-${t.dringend}`}>
-                <div className="fd-taak-kop">
-                  <span className="fd-icoon" aria-hidden>{t.icoon}</span>
-                  <span className="fd-aantal">{t.aantal}</span>
-                  <span className="fd-titel">{t.titel}</span>
-                </div>
-                <p className="fd-uitleg">{t.uitleg}</p>
-                {t.items.length > 0 && (
-                  <ul className="fd-items">
-                    {t.items.map((i, n) => (
-                      <li key={n}>{i.href ? <Link href={i.href}>{i.label}</Link> : i.label}</li>
-                    ))}
-                  </ul>
-                )}
-                {t.aantal > 0 && (
-                  <Link className="fd-actie" href={t.href}>
-                    {t.actie} →
-                  </Link>
-                )}
-              </article>
-            ))}
-          </div>
-          {taken.some((t) => t.aantal === 0) && (
-            <p className="fd-inorde">
-              <span>In orde:</span>
-              {taken
-                .filter((t) => t.aantal === 0)
-                .map((t) => (
-                  <span key={t.sleutel} className="fd-chip">
-                    ✓ {t.titel}
-                  </span>
-                ))}
-            </p>
-          )}
+      <div className="site site-breed fd">
+        <header className="fd-hoofd">
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-sub">{formatDateBE(nu, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+        </header>
+
+        <section className="fd-tegels" aria-label="Kerncijfers">
+          <Tegel label="Open taken" waarde={totaal} hint={totaal === 0 ? 'Alles in orde' : `${open.length} soorten`} toon={totaal === 0 ? 'goed' : 'neutraal'} />
+          <Tegel label="Dringend" waarde={dringend} hint="Moet nu opgelost" toon={dringend > 0 ? 'rood' : 'goed'} />
+          <Tegel label="Deze week" waarde={dezeWeek} hint="Binnenkort aan de beurt" toon={dezeWeek > 0 ? 'oranje' : 'goed'} />
+          <Tegel label="Wedstrijden vandaag" waarde={vandaag.length} hint={live > 0 ? `${live} live` : vandaag.length === 0 ? 'Geen speeldag' : 'Nog niet begonnen'} toon="neutraal" />
         </section>
 
-        <section className="fd-tools" aria-labelledby="fd-tools-titel">
-          <h2 id="fd-tools-titel" className="fd-kop">Tools</h2>
-          <div className="fd-toolgroepen">
-            {TOOLGROEPEN.map((g) => (
-              <div key={g.titel} className="fd-toolgroep">
-                <h3>{g.titel}</h3>
-                {g.tools.map((tool) => (
-                  <Link key={tool.href} href={tool.href} className="fd-tool">
-                    <span className="fd-tool-icoon" aria-hidden>{tool.icoon}</span>
-                    <span>
-                      <strong>{tool.label}</strong>
-                      <small>{tool.uitleg}</small>
-                    </span>
-                  </Link>
+        <div className="fd-kolommen">
+          <section className="fd-paneel" aria-labelledby="fd-taken-titel">
+            <header className="fd-paneel-kop">
+              <h2 id="fd-taken-titel">{open.length === 0 ? 'Niets te doen' : 'Te doen'}</h2>
+              {open.length > 0 && <span className="fd-paneel-sub">Dringendste eerst</span>}
+            </header>
+            {open.length === 0 ? (
+              <p className="fd-leeg">✅ Alles in orde — er staat niets open.</p>
+            ) : (
+              <ul className="fd-rijen">
+                {open.map((t) => (
+                  <li key={t.sleutel} className={`fd-rij fd-${t.dringend}`}>
+                    <span className="fd-rij-icoon" aria-hidden>{t.icoon}</span>
+                    <div className="fd-rij-tekst">
+                      <strong>{t.titel}</strong>
+                      <p>{t.uitleg}</p>
+                      {t.items.length > 0 && (
+                        <ul className="fd-rij-items">
+                          {t.items.map((i, n) => (
+                            <li key={n}>{i.href ? <Link href={i.href}>{i.label}</Link> : i.label}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <span className="fd-pil" aria-label={`${t.aantal} open`}>{t.aantal}</span>
+                    <Link className="fd-knop" href={t.href}>
+                      {t.actie} →
+                    </Link>
+                  </li>
                 ))}
-              </div>
-            ))}
-          </div>
-        </section>
+              </ul>
+            )}
+            {inOrde.length > 0 && (
+              <p className="fd-inorde">
+                <span>In orde:</span>
+                {inOrde.map((t) => (
+                  <span key={t.sleutel} className="fd-chip">✓ {t.titel}</span>
+                ))}
+              </p>
+            )}
+          </section>
 
-        <p className="profile-lead">{profile.intro}</p>
-        <ScoreModeSwitch initial={scoreMode} />
-        <ProfileTools profile={profile} isAdmin={hasRole(me, 'admin')} />
+          <div className="fd-zij">
+            <section className="fd-paneel" aria-labelledby="fd-vandaag-titel">
+              <header className="fd-paneel-kop">
+                <h2 id="fd-vandaag-titel">Vandaag</h2>
+                <Link className="fd-paneel-sub" href="/beheer/wedstrijden">Alle wedstrijden →</Link>
+              </header>
+              {vandaag.length === 0 ? (
+                <p className="fd-leeg">Vandaag staan er geen wedstrijden gepland.</p>
+              ) : (
+                <ul className="fd-vandaag">
+                  {vandaag.map((m) => {
+                    const s = statusVan(m)
+                    return (
+                      <li key={m.id}>
+                        <span className="fd-uur">{m.date ? formatTimeBE(m.date) : ''}</span>
+                        <Link href={`/match/${m.id}`} className="fd-ploegen">
+                          {naamVan(m.homeTeam) || '?'} – {naamVan(m.awayTeam) || '?'}
+                        </Link>
+                        <span className={`fd-status fd-status-${s.klasse}`}>{s.tekst}</span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </section>
+
+            <section className="fd-paneel" aria-labelledby="fd-modus-titel">
+              <header className="fd-paneel-kop">
+                <h2 id="fd-modus-titel">Aantekenmodus</h2>
+                <span className="fd-paneel-sub">Heel het platform</span>
+              </header>
+              <ScoreModeSwitch initial={scoreMode} />
+            </section>
+          </div>
+        </div>
       </div>
     </>
+  )
+}
+
+function Tegel({ label, waarde, hint, toon }: { label: string; waarde: number; hint: string; toon: 'neutraal' | 'goed' | 'oranje' | 'rood' }) {
+  return (
+    <div className={`fd-tegel fd-tegel-${toon}`}>
+      <p className="fd-tegel-label">{label}</p>
+      <p className="fd-tegel-waarde">{waarde}</p>
+      <p className="fd-tegel-hint">{hint}</p>
+    </div>
   )
 }
