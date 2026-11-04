@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { FED_NAV, actiefItem, groepVan, inShell, navVoor, tellersPerItem, zoekItems } from '@/lib/federatie-nav'
@@ -147,6 +150,28 @@ describe('federatie-nav: clubluiken onder /beheer krijgen geen zijbalk', () => {
     for (const p of ['/federatie', '/beheer/boetes', '/beheer/leden', '/wedstrijdbladen', '/beheer/trainingsdag-niet']) {
       expect(inShell(p), p).toBe(true)
     }
+  })
+})
+
+describe('federatie-nav: elk luik met de shell-poort heeft ook een laadskelet', () => {
+  // Zonder loading.tsx binnen het luik toont een harde laadbeurt de oude header-layout (het skelet van de
+  // hele site) tot álles klaar is, waarna de zijbalk er plots inspringt. Met een skelet binnen het luik
+  // staat de zijbalk er meteen. Zie FedShellGate en docs/FEDERATIEFLOW.md §6.
+  const frontend = join(process.cwd(), 'src/app/(frontend)')
+  const luiken = readdirSync(frontend).filter((d) => {
+    try {
+      return readFileSync(join(frontend, d, 'layout.tsx'), 'utf8').includes('FedShellGate')
+    } catch {
+      return false
+    }
+  })
+
+  it('vindt de zes luiken van de federatie', () => {
+    expect(luiken.sort()).toEqual(['beheer', 'bekerfinale', 'federatie', 'knipjes', 'ongevallen', 'wedstrijdbladen'])
+  })
+
+  it.each(['beheer', 'bekerfinale', 'federatie', 'knipjes', 'ongevallen', 'wedstrijdbladen'])('%s heeft een loading.tsx', (luik) => {
+    expect(existsSync(join(frontend, luik, 'loading.tsx')), luik).toBe(true)
   })
 })
 

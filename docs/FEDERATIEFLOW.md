@@ -193,7 +193,9 @@ toe aan `FED_NAV` — dan staat ze in de zijbalk én in Ctrl+K — en een test b
 `lib/federatie-dashboard.ts` naar dezelfde `href` verwijzen. De tellers komen van
 `/api/federatie/taken`. De pagina's zelf blijven ongewijzigd: de gewone `SiteHeader` trekt zich terug
 zodra de shell er staat (`components/fed-shell/context.ts`). Draait de federatie daardoor ergens
-nieuw, voeg dan in die luik-map een `layout.tsx` toe met `<FedShellGate>`.
+nieuw, voeg dan in die luik-map een `layout.tsx` toe met `<FedShellGate>` én een `loading.tsx`
+(`export { default } from '../loading'`): zonder dat laatste toont een harde laadbeurt eerst de oude
+header-layout en springt de zijbalk er pas in als de pagina klaar is. Een test bewaakt dit.
 
 ## 7. Referendum — speler, speelster en belofte van het jaar
 
