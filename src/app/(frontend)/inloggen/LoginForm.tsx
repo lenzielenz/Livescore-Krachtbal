@@ -50,11 +50,11 @@ export function LoginForm() {
     <form className="login-form" onSubmit={submit}>
       <label className="login-label">
         E-mail
-        <input className="login-input" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input className="login-input" type="email" autoComplete="username" placeholder="naam@voorbeeld.be" value={email} onChange={(e) => setEmail(e.target.value)} required />
       </label>
       <label className="login-label">
         Wachtwoord
-        <input className="login-input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <input className="login-input" type="password" autoComplete="current-password" placeholder="Je wachtwoord" value={password} onChange={(e) => setPassword(e.target.value)} required />
       </label>
       <button type="submit" className="login-btn" disabled={busy}>
         {busy ? 'Bezig…' : 'Inloggen'}

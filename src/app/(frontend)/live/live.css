@@ -768,17 +768,6 @@
 .home-intro .brand {
   filter: drop-shadow(0 2px 14px color-mix(in srgb, var(--accent) 36%, transparent));
 }
-/* Roterende krachtbal-quote — ingetogen: een fluisterende ondertitel naast de titel,
-   geen blikvanger met gloeiend streepje meer. */
-.home-quote {
-  margin: 0 0 14px;
-  max-width: 62ch;
-  font-size: 0.84rem;
-  font-style: italic;
-  font-weight: 500;
-  line-height: 1.4;
-  color: var(--dim);
-}
 .home-intro-link {
   margin-left: auto;
   color: var(--accent);
@@ -878,97 +867,57 @@
   }
 }
 
-/* Registreer-uitnodiging (enkel uitgelogd) — compacte blikvanger, tekst links, knop rechts. */
-.home-cta {
-  position: relative;
+/* Registreer-uitnodiging (enkel uitgelogd): één smalle balk, de wedstrijden blijven hoog staan. */
+.home-cta-balk {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px 18px;
-  margin: 4px 0 16px;
-  padding: 13px 18px;
-  border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--line));
-  background:
-    radial-gradient(120% 170% at 0% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
-    linear-gradient(180deg, color-mix(in srgb, var(--accent) 9%, var(--panel)), var(--panel));
-  box-shadow:
-    0 8px 26px color-mix(in srgb, var(--accent) 15%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-.home-cta-text {
-  flex: 1 1 240px;
-  min-width: 0;
-}
-.home-cta-title {
-  margin: 0 0 2px;
-  font-size: 1.18rem;
-  font-weight: 900;
-  letter-spacing: -0.01em;
-  line-height: 1.1;
-  color: var(--txt);
-}
-.home-cta-title span {
-  color: var(--accent);
-}
-.home-cta-sub {
-  margin: 0;
-  font-size: 0.85rem;
-  line-height: 1.35;
-  color: var(--dim);
-}
-/* Drie punten die het platform samenvatten: live volgen · uitslag doorgeven · meedoen. */
-.home-cta-points {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  margin: 7px 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--txt);
-}
-.home-cta-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 14px;
-}
-.home-cta-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 18px;
+  gap: 10px;
+  margin: 4px 0 14px;
+  padding: 9px 14px;
   border-radius: 999px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 88%, white), var(--accent));
-  color: #0a1424;
-  font-size: 0.92rem;
-  font-weight: 800;
-  text-decoration: none;
-  white-space: nowrap;
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 30%, transparent);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.home-cta-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 42%, transparent);
-}
-.home-cta-login {
-  /* --dim las als uitgeschakelde tekst naast de primaire knop; dit is de tweede actie, geen bijzin. */
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 12%, var(--panel)), var(--panel));
   color: var(--dim-strong);
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 0.86rem;
+  line-height: 1.3;
   text-decoration: none;
-  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
-.home-cta-login:hover {
-  color: var(--accent);
-  text-decoration: underline;
+/* Eén regel, ook op een smalle gsm: nooit afbreken, in het uiterste geval afkappen. */
+.home-cta-balk > span:first-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 420px) {
+  .home-cta-balk { font-size: 0.79rem; padding: 9px 12px; gap: 6px; }
 }
-@media (max-width: 560px) {
-  .home-cta-title { font-size: 1.08rem; }
+.home-cta-balk b { color: var(--txt); font-weight: 800; }
+.home-cta-pijl { color: var(--accent); font-weight: 900; transition: transform 0.15s ease; }
+.home-cta-balk:hover { border-color: var(--accent); }
+.home-cta-balk:hover .home-cta-pijl { transform: translateX(3px); }
+
+/* Onder de titel: enkel als er nu iets live is. */
+.home-live {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 12px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--txt);
+}
+.home-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+  animation: home-live-puls 1.8s ease-out infinite;
+}
+@keyframes home-live-puls {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+  100% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-live-dot { animation: none; }
 }
 
 /* Push-meldingen opt-in (onderaan de zijbalk). */

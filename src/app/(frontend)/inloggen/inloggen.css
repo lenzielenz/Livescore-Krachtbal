@@ -64,12 +64,14 @@
 .login-input {
   padding: 13px 14px;
   border-radius: var(--r-control);
-  border: 1px solid var(--line);
-  background: var(--bg);
+  border: 1px solid color-mix(in srgb, #fff 14%, var(--line));
+  /* Iets lichter dan de kaart: zo zie je meteen waar je tikt (zwart op donker viel weg). */
+  background: color-mix(in srgb, #fff 6%, var(--panel));
   color: var(--txt);
   font-size: 1rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+.login-input::placeholder { color: var(--dim); opacity: 0.75; }
 .login-input:focus {
   outline: none;
   border-color: var(--accent);
