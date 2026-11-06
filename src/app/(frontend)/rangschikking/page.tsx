@@ -4,13 +4,11 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId, userTeamId, userTeamIds } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
-import { clinchStatus, openDuels, titelBoodschap, titelKansen } from '@/lib/championship'
-import { degradatieBoodschap } from '@/lib/degradatie'
-import { formatDateBE } from '@/lib/datetime'
+import { clinchStatus } from '@/lib/championship'
 import { buildScoreboards, clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksenMetData } from '@/lib/analyse-season'
-import { isAdultReeks, reeksNaam, type Reeks } from '@/lib/reeksen'
+import { isAdultReeks, type Reeks } from '@/lib/reeksen'
 import { buildSuperstars } from '@/lib/superstars'
 import { computeStandings, resolveForfait, type StandingsMatch } from '@/lib/standings'
 import { RangTable, type RangRow } from './RangTable'
@@ -143,59 +141,11 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
   // Enkel om de leider in goud te zetten zodra die wiskundig kampioen is.
   const titel = leaderId != null ? clinchStatus(table, remaining, leaderId, titelCtx) : null
 
-  // De titeltekst gaat over je eigen ploeg, en staat er enkel als die in deze reeks speelt: je
-  // eigen ploeg → anders (coach) een van je gekozen ploegen → anders een ploeg van je club.
-  const inTabel = (id: unknown) => {
-    const n = Number(id)
-    return id != null && table.some((r) => r.teamId === n) ? n : null
-  }
-  const eigenId =
-    inTabel(myTeamId) ??
-    myTeamIdsCoach.map(inTabel).find((id) => id != null) ??
-    (myClubNum != null ? (table.find((r) => teamInfo.get(r.teamId)?.clubId === myClubNum)?.teamId ?? null) : null)
-  const eigen = eigenId != null ? clinchStatus(table, remaining, eigenId, titelCtx) : null
-  // Titelkans: de rest van de kalender duizenden keren nagespeeld met de vorm van tot nu, ook de
-  // duels van de rivalen onderling (zie titelKansen). Pas zinvol na een paar speeldagen.
-  const naam = (id: number) => teamInfo.get(id)?.name ?? '—'
-  const eigenRij = eigenId != null ? table.find((r) => r.teamId === eigenId) : undefined
-  const kansen =
-    eigenId != null && eigen && !eigen.clinched && (eigenRij?.played ?? 0) >= 3 ? titelKansen(table, titelCtx) : null
-  const kansInfo = (() => {
-    if (!kansen || eigenId == null || !eigen) return null
-    const anderen = table.filter((r) => r.teamId !== eigenId).sort((x, y) => (kansen.get(y.teamId) ?? 0) - (kansen.get(x.teamId) ?? 0))
-    const fav = anderen[0]
-    const naaste = eigen.leading ? table.find((r) => r.teamId !== eigenId) : undefined
-    // Titelrivalen: wie minstens 3% kans maakt (of in de top vier staat), zonder de eigen ploeg.
-    const rivalen = new Set(table.filter((r, i) => r.teamId !== eigenId && ((kansen.get(r.teamId) ?? 0) >= 0.03 || i < 4)).map((r) => r.teamId))
-    const duels = openDuels(titelCtx, eigenId, rivalen)
-      .slice(0, 4)
-      .map((d) => (d.date ? `${naam(d.tegenstanderId)} (${formatDateBE(d.date, { weekday: 'short', day: 'numeric', month: 'long' })})` : naam(d.tegenstanderId)))
-    return {
-      eigen: kansen.get(eigenId) ?? 0,
-      favoriet: fav ? { naam: naam(fav.teamId), kans: kansen.get(fav.teamId) ?? 0 } : null,
-      naaste: naaste ? { naam: naam(naaste.teamId), punten: naaste.points } : null,
-      duels,
-    }
-  })()
-  const titelMsg = titelBoodschap({
-    kansen: kansInfo,
-    status: eigen,
-    ploegNaam: eigenId != null ? (teamInfo.get(eigenId)?.name ?? null) : null,
-    reeksLabel: reeksNaam(reeks),
-    teamsInTable: table.length,
-    achterstand: eigen ? (table[0]?.points ?? 0) - eigen.points : 0,
-  })
-
   // Degradatie-/gevarenzone: enkel bij volwassen reeksen (jeugd kan niet stijgen/dalen). Bij
   // krachtbal zakt enkel de allerlaatste van de reeks — de zone is dus altijd één ploeg groot.
   const RELEGATION = 1
   const adult = isAdultReeks(reeks as Reeks)
   const dangerFrom = adult && table.length >= 6 ? table.length - RELEGATION : -1
-  // Staat je eigen ploeg in de gevarenzone, dan krijgt ze — net als bij de titel — een eigen regel.
-  const gevaarMsg =
-    dangerFrom >= 0 && eigenId != null
-      ? degradatieBoodschap({ table, remaining, teamId: eigenId, naam: (id) => teamInfo.get(id)?.name ?? '—' })
-      : null
 
   // Positie t.o.v. een week geleden: rangschikking uit de wedstrijden van vóór 7 dagen.
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
@@ -260,18 +210,6 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
             <span className="rang-arrow disabled" aria-hidden>›</span>
           )}
         </div>
-
-        {titelMsg && (
-          <p className={`rang-titel${titelMsg.clinched ? ' clinched' : ''}`}>
-            <span aria-hidden>{titelMsg.clinched ? '🏆' : '🎯'}</span> {titelMsg.text}
-          </p>
-        )}
-
-        {gevaarMsg && (
-          <p className={`rang-titel rang-gevaar${gevaarMsg.zeker ? ' zeker' : ''}`}>
-            <span aria-hidden>{gevaarMsg.zeker ? '⬇️' : '⚠️'}</span> {gevaarMsg.text}
-          </p>
-        )}
 
         {rows.length === 0 ? (
           <p className="empty">Nog geen ploegen of wedstrijden in deze reeks.</p>

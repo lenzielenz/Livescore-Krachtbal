@@ -200,7 +200,6 @@
 }
 .lb-datelabel {
   font-weight: 700;
-  text-transform: capitalize;
   max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
@@ -1538,3 +1537,9 @@
   letter-spacing: 0.04em;
   color: var(--dim);
 }
+
+/* Vóór de aftrap staat het uur alleen in het midden van de kaart (geen "VS" meer): iets groter. */
+.lbl-center .lb-time.groot { font-size: 1rem; padding: 4px 13px; letter-spacing: 0.02em; }
+/* Thuis/Uit sorteren: één kop per groep in plaats van een tagje boven elke kaart. */
+.lb-tu-kop { margin: 14px 0 6px 4px; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.lb-rowwrap:first-child .lb-tu-kop { margin-top: 2px; }
