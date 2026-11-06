@@ -103,11 +103,12 @@
   /* Diepte: een gouden gloed linksboven (de erelijst draait om prijzen), een lichtband bovenaan
      en een donkerder onderkant — i.p.v. één vlak grijs paneel. */
   background:
-    radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, #ffb703 26%, transparent), transparent 55%),
-    radial-gradient(90% 50% at 100% 100%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 26%),
-    linear-gradient(180deg, color-mix(in srgb, var(--panel) 84%, #fff 16%), color-mix(in srgb, var(--panel) 90%, #000 10%));
-  border: 1px solid color-mix(in srgb, #fff 9%, var(--line));
+    radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, #ffb703 18%, transparent), transparent 55%),
+    radial-gradient(90% 50% at 100% 100%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 22%),
+    /* Bijna zwart: op een diepe ondergrond springen goud, zilver, koper en blauw er pas echt uit. */
+    linear-gradient(180deg, #0f1218, #06070a);
+  border: 1px solid color-mix(in srgb, #fff 8%, #1a1e26);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
     0 18px 40px -22px rgba(0, 0, 0, 0.85),

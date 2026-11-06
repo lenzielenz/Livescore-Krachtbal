@@ -107,15 +107,16 @@ body {
   font-family: var(--font-body), 'Segoe UI', ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif;
   /* Vaste donkere basiskleur: voorkomt een wit vlak in het overscroll-gebied
      (waar de 'fixed' gradient niet doorloopt) bij voorbij-scrollen op mobiel. */
-  background-color: #070809;
-  /* Premium, diepe achtergrond met levendige kleurgloed (aurora-gevoel) i.p.v. een vlak zwart vlak.
-     Neutrale bijna-zwarte basis met blauw/koraal-accenten die wat meer poppen. */
+  background-color: #030405;
+  /* Diepe, bijna zwarte achtergrond met een ingetogen kleurgloed (aurora-gevoel). Bewust donker:
+     kaarten, clubkleuren, medailles en accenten komen er zo veel beter op uit dan op de vroegere,
+     helderdere teal/koraal-waas. */
   background-image:
-    radial-gradient(1150px 660px at 50% -10%, color-mix(in srgb, var(--accent) 21%, transparent), transparent 60%),
-    radial-gradient(900px 560px at 4% 2%, color-mix(in srgb, var(--home) 13%, transparent), transparent 55%),
-    radial-gradient(900px 560px at 97% 1%, color-mix(in srgb, var(--away) 18%, transparent), transparent 55%),
-    radial-gradient(820px 620px at 88% 92%, color-mix(in srgb, var(--pop) 15%, transparent), transparent 60%),
-    linear-gradient(180deg, #0c0e12 0%, #070809 100%);
+    radial-gradient(1150px 660px at 50% -10%, color-mix(in srgb, var(--accent) 11%, transparent), transparent 60%),
+    radial-gradient(900px 560px at 4% 2%, color-mix(in srgb, var(--home) 6%, transparent), transparent 55%),
+    radial-gradient(900px 560px at 97% 1%, color-mix(in srgb, var(--away) 8%, transparent), transparent 55%),
+    radial-gradient(820px 620px at 88% 92%, color-mix(in srgb, var(--pop) 7%, transparent), transparent 60%),
+    linear-gradient(180deg, #07080b 0%, #030405 100%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
