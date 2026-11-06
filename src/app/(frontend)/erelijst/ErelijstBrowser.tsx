@@ -130,9 +130,9 @@ export function ErelijstBrowser({
                       {/* De drie soorten prijzen als kleine chips: het getal springt eruit, het
                           soort prijs staat er gedempt naast. */}
                       <span className="erl-board-detail erl-stats">
-                        <span className="erl-stat"><span aria-hidden>🥇</span><b>{c.titels}</b> kampioen</span>
-                        <span className="erl-stat"><span aria-hidden>🏆</span><b>{c.bekers}</b> beker</span>
-                        <span className="erl-stat"><span aria-hidden>⭐</span><b>{c.referendumprijzen}</b> referendum</span>
+                        <span className="erl-stat erl-stat-titel"><span aria-hidden>🥇</span><b>{c.titels}</b> kampioen</span>
+                        <span className="erl-stat erl-stat-beker"><span aria-hidden>🏆</span><b>{c.bekers}</b> beker</span>
+                        <span className="erl-stat erl-stat-ref"><span aria-hidden>⭐</span><b>{c.referendumprijzen}</b> referendum</span>
                       </span>
                       <span className="erl-aandeel" aria-hidden />
                     </div>

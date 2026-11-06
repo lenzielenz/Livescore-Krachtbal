@@ -103,7 +103,8 @@
   /* Diepte: een gouden gloed linksboven (de erelijst draait om prijzen), een lichtband bovenaan
      en een donkerder onderkant — i.p.v. één vlak grijs paneel. */
   background:
-    radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, #e8b23d 14%, transparent), transparent 55%),
+    radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, #ffb703 26%, transparent), transparent 55%),
+    radial-gradient(90% 50% at 100% 100%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 26%),
     linear-gradient(180deg, color-mix(in srgb, var(--panel) 84%, #fff 16%), color-mix(in srgb, var(--panel) 90%, #000 10%));
   border: 1px solid color-mix(in srgb, #fff 9%, var(--line));
@@ -141,8 +142,8 @@
   gap: 12px;
   padding: 10px 12px 11px;
   border-radius: 12px;
-  background: color-mix(in srgb, #fff 3%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 4%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 11%, transparent), color-mix(in srgb, var(--accent) 2%, transparent) 70%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
   transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 /* Enkel echte hover (muis): op een gsm bleef de laatst aangetikte rij anders opgelicht staan. */
@@ -153,14 +154,16 @@
   }
 }
 /* Podium: een was in goud/zilver/brons met een gekleurd balkje links. */
-.erl-rank-1 { --erl-tint: #f2c14e; }
-.erl-rank-2 { --erl-tint: #c9d1dc; }
-.erl-rank-3 { --erl-tint: #d08a4c; }
+/* Verzadigd goud, helder zilver met een koele zweem en warm koper — geen gedempte pasteltinten. */
+.erl-rank-1 { --erl-tint: #ffc21a; }
+.erl-rank-2 { --erl-tint: #b9d3f2; }
+.erl-rank-3 { --erl-tint: #ff8a3d; }
 .erl-rank-1, .erl-rank-2, .erl-rank-3 {
-  background: linear-gradient(90deg, color-mix(in srgb, var(--erl-tint) 15%, transparent), color-mix(in srgb, var(--erl-tint) 3%, transparent) 70%);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--erl-tint) 30%, transparent), color-mix(in srgb, var(--erl-tint) 8%, transparent) 75%);
   box-shadow:
-    inset 3px 0 0 0 var(--erl-tint),
-    inset 0 0 0 1px color-mix(in srgb, var(--erl-tint) 18%, transparent);
+    inset 4px 0 0 0 var(--erl-tint),
+    inset 0 0 0 1px color-mix(in srgb, var(--erl-tint) 38%, transparent),
+    0 8px 22px -14px color-mix(in srgb, var(--erl-tint) 80%, transparent);
 }
 /* Naam en detail krijgen elk hun eigen regel i.p.v. één krappe rij, zodat een lange clubnaam
    ("'t Klaverken Buggenhout") of een lange prijzenlijst nooit afgekapt wordt of de naam
@@ -189,26 +192,26 @@
   font-size: 0.82rem;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
-  color: var(--dim-strong);
-  background: linear-gradient(180deg, color-mix(in srgb, #fff 10%, var(--panel)), color-mix(in srgb, #000 15%, var(--panel)));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 0 1px color-mix(in srgb, #fff 8%, var(--line));
+  color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 55%, var(--panel)), color-mix(in srgb, var(--accent) 22%, var(--panel)));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 3px 10px -3px color-mix(in srgb, var(--accent) 60%, transparent);
   flex-shrink: 0;
 }
 /* Medailles: metaalverloop met een glanzende bovenrand en een zachte gloed. */
 .erl-rank-1 .erl-rank {
   color: #2a1d00;
-  background: linear-gradient(180deg, #fff3c4 0%, #f2c14e 48%, #c98f1c 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -2px 3px rgba(120, 70, 0, 0.35), 0 0 0 1px #b8860b, 0 4px 14px -2px color-mix(in srgb, #f2c14e 65%, transparent);
+  background: linear-gradient(180deg, #fff6c8 0%, #ffc21a 45%, #d98a00 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -2px 3px rgba(120, 70, 0, 0.35), 0 0 0 1px #c47f00, 0 4px 16px -2px color-mix(in srgb, #ffc21a 85%, transparent);
 }
 .erl-rank-2 .erl-rank {
   color: #1c2028;
-  background: linear-gradient(180deg, #ffffff 0%, #c9d1dc 50%, #8e99a8 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 -2px 3px rgba(40, 50, 70, 0.3), 0 0 0 1px #8e99a8, 0 4px 12px -3px color-mix(in srgb, #c9d1dc 55%, transparent);
+  background: linear-gradient(180deg, #ffffff 0%, #cfe0f5 48%, #7f97b5 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 -2px 3px rgba(40, 50, 70, 0.3), 0 0 0 1px #7f97b5, 0 4px 14px -3px color-mix(in srgb, #b9d3f2 80%, transparent);
 }
 .erl-rank-3 .erl-rank {
   color: #2b1300;
-  background: linear-gradient(180deg, #f6cfa6 0%, #d08a4c 50%, #93531f 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -2px 3px rgba(90, 40, 0, 0.35), 0 0 0 1px #93531f, 0 4px 12px -3px color-mix(in srgb, #d08a4c 55%, transparent);
+  background: linear-gradient(180deg, #ffd9b0 0%, #ff8a3d 48%, #b04a0c 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -2px 3px rgba(90, 40, 0, 0.35), 0 0 0 1px #b04a0c, 0 4px 14px -3px color-mix(in srgb, #ff8a3d 80%, transparent);
 }
 .erl-board-naam {
   font-weight: 800;
@@ -236,6 +239,15 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 7%, transparent);
   white-space: nowrap;
 }
+/* Elk soort prijs een eigen kleur: goud (titel), amber (beker), violet (referendum). */
+.erl-stat-titel { --erl-chip: #ffc21a; }
+.erl-stat-beker { --erl-chip: #ff9f1c; }
+.erl-stat-ref { --erl-chip: #b388ff; }
+.erl-stat[class*='erl-stat-'] {
+  background: color-mix(in srgb, var(--erl-chip) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--erl-chip) 38%, transparent);
+  color: color-mix(in srgb, var(--erl-chip) 45%, var(--dim-strong));
+}
 .erl-stat b {
   color: var(--txt);
   font-weight: 800;
@@ -244,8 +256,8 @@
 /* Dun balkje: hoeveel prijzen t.o.v. de nummer één — in één oogopslag de verhoudingen. */
 .erl-aandeel {
   display: block;
-  height: 3px;
-  margin-top: 3px;
+  height: 4px;
+  margin-top: 4px;
   border-radius: 999px;
   background: color-mix(in srgb, #fff 6%, transparent);
   overflow: hidden;
@@ -257,8 +269,8 @@
   inset: 0 auto 0 0;
   width: calc(var(--aandeel, 0) * 100%);
   border-radius: inherit;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--erl-tint) 55%, transparent), var(--erl-tint));
-  box-shadow: 0 0 8px color-mix(in srgb, var(--erl-tint) 50%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--erl-tint) 70%, transparent), var(--erl-tint));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--erl-tint) 80%, transparent);
 }
 .erl-board-totaal {
   display: inline-flex;
@@ -270,9 +282,10 @@
   font-weight: 900;
   font-size: 0.92rem;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in srgb, var(--erl-tint) 80%, #fff);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--erl-tint) 30%, transparent), color-mix(in srgb, var(--erl-tint) 8%, transparent));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 0 1px color-mix(in srgb, var(--erl-tint) 35%, transparent);
+  color: color-mix(in srgb, var(--erl-tint) 70%, #fff);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--erl-tint) 48%, transparent), color-mix(in srgb, var(--erl-tint) 16%, transparent));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 0 0 1px color-mix(in srgb, var(--erl-tint) 60%, transparent), 0 4px 14px -6px color-mix(in srgb, var(--erl-tint) 90%, transparent);
+  text-shadow: 0 1px 6px color-mix(in srgb, var(--erl-tint) 60%, transparent);
   flex-shrink: 0;
 }
 /* Zelfde kanttekening als .erl-reeks-totaal .erl-meer verderop: .erl-board is geen grid-ouder,
