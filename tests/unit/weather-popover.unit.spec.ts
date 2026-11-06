@@ -22,15 +22,30 @@ const DAG = {
   },
 }
 
-const UREN = {
-  hourly: {
-    time: [new Date(Date.now() + 600_000).toISOString().slice(0, 19)],
-    temperature_2m: [19],
-    weather_code: [1],
-    precipitation_probability: [40],
-    wind_speed_10m: [22],
-    wind_direction_10m: [225],
+// Het uitgebreide weerbericht (components/Weerbericht.tsx) haalt nu, uren en dagen in één keer op.
+const BERICHT = {
+  current: {
+    time: '2026-11-07T14:15',
+    temperature_2m: 19,
+    apparent_temperature: 18,
+    weather_code: 1,
+    is_day: 1,
+    wind_speed_10m: 22,
+    wind_gusts_10m: 30,
+    wind_direction_10m: 225,
+    relative_humidity_2m: 70,
+    precipitation: 0,
   },
+  hourly: {
+    time: ['2026-11-07T14:00', '2026-11-07T15:00'],
+    temperature_2m: [19, 20],
+    weather_code: [1, 1],
+    precipitation_probability: [40, 20],
+    wind_speed_10m: [22, 24],
+    wind_direction_10m: [225, 230],
+    is_day: [1, 1],
+  },
+  daily: { time: ['2026-11-07'], weather_code: [1], temperature_2m_max: [21], temperature_2m_min: [13], precipitation_probability_max: [40] },
 }
 
 const compact = () => render(createElement(WeatherWidget, { variant: 'compact' }))
@@ -43,7 +58,7 @@ beforeEach(() => {
       if (url.includes('my-weather-place')) {
         return { ok: true, json: async () => ({ lat: 51, lon: 3, place: 'Brugge' }) }
       }
-      if (url.includes('hourly=')) return { ok: true, json: async () => UREN }
+      if (url.includes('current=')) return { ok: true, json: async () => BERICHT }
       return { ok: true, json: async () => DAG }
     }) as unknown as typeof fetch,
   )
@@ -58,15 +73,15 @@ afterEach(() => {
 })
 
 describe('weerbericht in de kopbalk', () => {
-  it('toont de wind in de uren-voorspelling', async () => {
+  it('toont de wind in het weerbericht', async () => {
     compact()
     const chip = await screen.findByRole('button', { name: /21/ })
     await act(async () => {
       chip.click()
     })
-    // De windregel van het eerstvolgende uur: snelheid, richting én wat het betekent.
-    await waitFor(() => expect(screen.getByText(/22 km\/u ZW/)).toBeTruthy())
-    expect(screen.getByText(/vrij krachtig/)).toBeTruthy()
+    // De windtegel: richting én wat de snelheid betekent, plus het speeladvies dat erbij hoort.
+    await waitFor(() => expect(screen.getByText(/uit ZW · vrij krachtig/)).toBeTruthy())
+    expect(screen.getByText(/Merkbare wind/)).toBeTruthy()
   })
 
   it('vaagt weg bij een klik ernaast in plaats van te verdwijnen', async () => {
