@@ -49,9 +49,9 @@ const PROFILE_VISIBLE: Record<string, (a: { isClub: boolean; isCoach: boolean; i
   federatie: (a) => a.isFed,
 }
 
-// Het Meer-menu licht op zodra je op een van deze secties zit. Analyse en Training zijn twee
-// aparte menu-items (de analyse-hub bevat zelf al z'n tools; training is een eigen luik).
-const MENU_SECTIONS: NavSection[] = ['stand', 'analyse', 'training', 'tornooi', 'clubs', 'scheidsrechters', 'federatie']
+// Het Meer-menu licht op zodra je op een van deze secties zit. Het vroegere "Coach"-luik
+// (Analyse, Training) staat niet meer in het menu; die pagina's zelf bestaan nog wel.
+const MENU_SECTIONS: NavSection[] = ['stand', 'tornooi', 'clubs', 'scheidsrechters', 'federatie']
 
 // Binnen het federatieplatform (zijbalk + topbalk) is deze header overbodig: de shell neemt
 // navigatie, meldingen en account over. De wrapper houdt de hooks (en netwerkcalls) van de
@@ -63,10 +63,6 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
 
 function SiteHeaderInner({ active = null }: { active?: NavSection }) {
   const [open, setOpen] = useState(false)
-  // Analyse-toegang (admin/analyse) en training-toegang (analyse of club-beheerder) bepalen
-  // welke menu-items verschijnen.
-  const [canAnalyse, setCanAnalyse] = useState(false)
-  const [canTraining, setCanTraining] = useState(false)
   const [loggedIn, setLoggedIn] = useState(false)
   const [roleFlags, setRoleFlags] = useState({ isClub: false, isCoach: false, isReferee: false, isFed: false })
   // Kijkmodus pas ná het mounten lezen (cookie bestaat niet op de server → geen hydration-mismatch).
@@ -80,8 +76,6 @@ function SiteHeaderInner({ active = null }: { active?: NavSection }) {
     const cached = readNavAuth()
     if (cached) {
       setLoggedIn(cached.state.loggedIn)
-      setCanAnalyse(cached.state.canAnalyse)
-      setCanTraining(cached.state.canTraining)
       setRoleFlags({ isClub: Boolean(cached.state.isClub), isCoach: Boolean(cached.state.isCoach), isReferee: Boolean(cached.state.isReferee), isFed: Boolean(cached.state.isFed) })
     }
     if (cached?.fresh) return
@@ -91,8 +85,6 @@ function SiteHeaderInner({ active = null }: { active?: NavSection }) {
         // Wie wat ziet per rol: lib/menu-rechten.ts.
         const state = menuRechten((d as { user?: unknown } | null)?.user ?? null)
         setLoggedIn(state.loggedIn)
-        setCanAnalyse(state.canAnalyse)
-        setCanTraining(state.canTraining)
         setRoleFlags({ isClub: state.isClub, isCoach: state.isCoach, isReferee: state.isReferee, isFed: state.isFed })
         writeNavAuth(state)
       })
@@ -129,8 +121,6 @@ function SiteHeaderInner({ active = null }: { active?: NavSection }) {
   // Kijkmodus: de navigatie toont wat een VERS lid ziet — alle rol-gebonden ingangen weg.
   // (De echte vlaggen blijven bewaard voor het menu-item en de exit-banner.)
   const zichtFlags = kijkmodus ? { isClub: false, isCoach: false, isReferee: false, isFed: false } : roleFlags
-  const zichtAnalyse = kijkmodus ? false : canAnalyse
-  const zichtTraining = kijkmodus || verborgenInDemo('/beheer/training') ? false : canTraining
   // Toon enkel de profiel-ingangen die bij je rol horen (supporter ziet er geen).
   const visibleProfiles = PROFILES.filter((p) => PROFILE_VISIBLE[p.key]?.(zichtFlags))
 
@@ -198,22 +188,6 @@ function SiteHeaderInner({ active = null }: { active?: NavSection }) {
                       </Link>
                     ))}
                   </div>
-                  {/* Analyse en training staan apart als eigen "Coach"-luik. */}
-                  {(zichtAnalyse || zichtTraining) && (
-                    <div className="sh-more-group">
-                      <div className="sh-more-grouphead">Coach</div>
-                      {zichtAnalyse && (
-                        <Link href="/analyse" className="sh-more-item" onClick={() => setOpen(false)}>
-                          📈 Analyse
-                        </Link>
-                      )}
-                      {zichtTraining && (
-                        <Link href="/beheer/training" className="sh-more-item" onClick={() => setOpen(false)}>
-                          🏋️ Training
-                        </Link>
-                      )}
-                    </div>
-                  )}
                   {/* "Aan de slag" (profiel-instappunten) enkel voor wie de bijhorende rol heeft —
                       een supporter (of uitgelogde bezoeker) krijgt deze tools niet te zien. */}
                   {/* Kantine- en veldscherm horen bij de club: ze staan in "Mijn club", niet hier. Een
