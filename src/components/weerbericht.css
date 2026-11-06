@@ -1,0 +1,514 @@
+/* Uitgebreid weerbericht (components/Weerbericht.tsx). Hangt onder dezelfde .wx-pop-laag als de
+   vroegere urenlijst (positie, in-/uitfaden en Escape blijven gelijk), maar breder en rijker:
+   een bewegende weerscène, tegels, een urenstrip met temperatuurlijn en de komende dagen.
+   Alle beweging is transform/opacity (compositor), en enkel zolang het venster open is. */
+
+.wx-pop.wbr {
+  width: min(390px, calc(100vw - 16px));
+  padding: 0;
+  overflow-x: hidden;
+  background: linear-gradient(180deg, #0d1118, #07090d);
+  border: 1px solid color-mix(in srgb, #fff 9%, #1a1f28);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.wbr-sluit {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(6, 10, 16, 0.45);
+  color: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.wbr-sluit:hover { background: rgba(6, 10, 16, 0.7); }
+.wbr-laden {
+  padding: 34px 16px;
+  text-align: center;
+  color: var(--dim);
+  font-size: 0.9rem;
+}
+.wbr-laden-wolk { display: inline-block; animation: wbr-zweef 2.4s ease-in-out infinite; }
+@keyframes wbr-zweef {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* ── Held: bewegende scène + het weer van nu ─────────────────────────────── */
+.wbr-held {
+  position: relative;
+  height: 190px;
+  overflow: hidden;
+  border-radius: 18px 18px 0 0;
+}
+.wbr-held-tekst {
+  position: absolute;
+  left: 18px;
+  bottom: 14px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
+}
+.wbr-plaats { font-size: 0.76rem; font-weight: 700; letter-spacing: 0.03em; opacity: 0.92; }
+.wbr-temp {
+  font-family: var(--font-display), var(--font-body), sans-serif;
+  font-size: 3.6rem;
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(180deg, #fff 30%, #dfe8f2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.45));
+}
+.wbr-label { font-size: 1.05rem; font-weight: 800; margin-top: 2px; }
+.wbr-sub { font-size: 0.8rem; font-weight: 600; opacity: 0.88; }
+
+.wbr-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  /* Hemel per weertype; onderaan altijd naar donker zodat de tekst leesbaar blijft. */
+  background: linear-gradient(180deg, #3f8fe0 0%, #2a6fc2 55%, #123a6b 100%);
+}
+.wbr-scene::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(180deg, transparent 35%, rgba(4, 7, 12, 0.55) 100%);
+  pointer-events: none;
+}
+.wbr-halfbewolkt { background: linear-gradient(180deg, #4d8fd6 0%, #3470b5 55%, #163a66 100%); }
+.wbr-bewolkt { background: linear-gradient(180deg, #7b8a9e 0%, #56657a 55%, #262f3d 100%); }
+.wbr-mist { background: linear-gradient(180deg, #9aa6b4 0%, #6d7988 55%, #2c3440 100%); }
+.wbr-motregen, .wbr-regen { background: linear-gradient(180deg, #4f5d72 0%, #36435a 55%, #151c28 100%); }
+.wbr-sneeuw { background: linear-gradient(180deg, #a9bdd6 0%, #7d93b2 55%, #2d3a52 100%); }
+.wbr-onweer { background: linear-gradient(180deg, #33334a 0%, #23243a 55%, #0e0f1a 100%); }
+.wbr-scene.nacht { background: linear-gradient(180deg, #0b1630 0%, #0a1226 55%, #050913 100%); }
+.wbr-scene.nacht.wbr-bewolkt, .wbr-scene.nacht.wbr-mist { background: linear-gradient(180deg, #1d2534 0%, #141a26 55%, #07090f 100%); }
+.wbr-scene.nacht.wbr-regen, .wbr-scene.nacht.wbr-motregen, .wbr-scene.nacht.wbr-onweer { background: linear-gradient(180deg, #141a2a 0%, #0e1320 55%, #05070d 100%); }
+
+/* Zon: gloeiende schijf die zacht pulseert, met langzaam draaiende stralen. */
+.wbr-zon {
+  position: absolute;
+  top: 22px;
+  right: 46px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 35%, #fff7c2 0%, #ffd23f 45%, #ff9f1c 100%);
+  box-shadow: 0 0 30px 8px rgba(255, 196, 60, 0.55), 0 0 80px 24px rgba(255, 170, 40, 0.3);
+  animation: wbr-zon-puls 4s ease-in-out infinite;
+  z-index: 1;
+}
+.wbr-zon-stralen {
+  position: absolute;
+  inset: -34px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 220, 120, 0.42) 0deg 6deg, transparent 6deg 30deg);
+  -webkit-mask: radial-gradient(circle, transparent 38px, #000 40px, #000 60px, transparent 66px);
+  mask: radial-gradient(circle, transparent 38px, #000 40px, #000 60px, transparent 66px);
+  animation: wbr-draai 28s linear infinite;
+}
+@keyframes wbr-zon-puls {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+@keyframes wbr-draai {
+  to { transform: rotate(360deg); }
+}
+
+/* Maan (sikkel via een schaduw) en twinkelende sterren 's nachts. */
+.wbr-maan {
+  position: absolute;
+  top: 24px;
+  right: 54px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  box-shadow: inset -14px -6px 0 0 #f3efd9, 0 0 26px 4px rgba(243, 239, 217, 0.25);
+  transform: rotate(-18deg);
+  z-index: 1;
+  animation: wbr-zweef 6s ease-in-out infinite;
+}
+.wbr-ster {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 6px 1px rgba(255, 255, 255, 0.7);
+  animation: wbr-twinkel 3.2s ease-in-out infinite;
+}
+@keyframes wbr-twinkel {
+  0%, 100% { opacity: 0.25; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.25); }
+}
+
+/* Wolken: drie bollen (element + ::before/::after) die traag over de hemel drijven. */
+.wbr-wolk {
+  --wbr-schaal: 1;
+  position: absolute;
+  left: 0;
+  z-index: 1;
+  width: 130px;
+  height: 40px;
+  border-radius: 40px;
+  background: linear-gradient(180deg, #ffffff, #dbe3ec);
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.35);
+  opacity: 0.94;
+  animation: wbr-drijf 26s linear infinite;
+}
+.wbr-wolk::before,
+.wbr-wolk::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: inherit;
+}
+.wbr-wolk::before { width: 58px; height: 58px; left: 18px; top: -28px; }
+.wbr-wolk::after { width: 44px; height: 44px; left: 64px; top: -20px; }
+.wbr-wolk.donker { background: linear-gradient(180deg, #8a96a8, #5b6679); opacity: 0.97; }
+.nacht .wbr-wolk { background: linear-gradient(180deg, #5c6678, #3a4252); opacity: 0.9; }
+@keyframes wbr-drijf {
+  from { transform: translateX(-160px) scale(var(--wbr-schaal)); }
+  to { transform: translateX(440px) scale(var(--wbr-schaal)); }
+}
+
+/* Regen en motregen: schuine strepen die vallen. */
+.wbr-druppel {
+  position: absolute;
+  top: -20px;
+  z-index: 1;
+  width: 2px;
+  height: 16px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(190, 220, 255, 0), rgba(190, 220, 255, 0.85));
+  animation: wbr-val 0.7s linear infinite;
+}
+.wbr-druppel.fijn { height: 9px; width: 1.5px; opacity: 0.7; }
+@keyframes wbr-val {
+  from { transform: translate(0, 0) rotate(12deg); }
+  to { transform: translate(-40px, 230px) rotate(12deg); }
+}
+/* Sneeuw: vlokken die wiegend naar beneden dwarrelen. */
+.wbr-vlok {
+  position: absolute;
+  top: -10px;
+  z-index: 1;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+  animation: wbr-dwarrel 3.6s linear infinite;
+}
+@keyframes wbr-dwarrel {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(10px, 55px); }
+  50% { transform: translate(-6px, 110px); }
+  75% { transform: translate(8px, 165px); }
+  100% { transform: translate(0, 220px); }
+}
+/* Onweer: af en toe een flits over de hemel en een bliksemschicht. */
+.wbr-flits {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(220, 230, 255, 0.55);
+  opacity: 0;
+  animation: wbr-flits 5.5s linear infinite;
+}
+.wbr-bliksem {
+  position: absolute;
+  top: 40px;
+  left: 42%;
+  z-index: 1;
+  width: 26px;
+  height: 70px;
+  background: linear-gradient(180deg, #fffbe0, #ffd84a);
+  clip-path: polygon(55% 0, 20% 52%, 46% 52%, 30% 100%, 82% 40%, 54% 40%, 72% 0);
+  filter: drop-shadow(0 0 10px rgba(255, 230, 120, 0.9));
+  opacity: 0;
+  animation: wbr-flits 5.5s linear infinite;
+}
+@keyframes wbr-flits {
+  0%, 62%, 66%, 70%, 100% { opacity: 0; }
+  63%, 68% { opacity: 1; }
+}
+/* Mist: brede, zachte banen die heen en weer schuiven. */
+.wbr-mist {
+  position: absolute;
+  left: -30%;
+  z-index: 1;
+  width: 160%;
+  height: 26px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(235, 240, 246, 0.55), transparent);
+  filter: blur(4px);
+  animation: wbr-mist 12s ease-in-out infinite alternate;
+}
+@keyframes wbr-mist {
+  from { transform: translateX(-12%); }
+  to { transform: translateX(12%); }
+}
+/* Wind: dunne strepen die over het beeld schieten; sneller bij meer wind. */
+.wbr-windstreep {
+  position: absolute;
+  left: 0;
+  z-index: 1;
+  width: 70px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  animation: wbr-waai var(--wbr-windduur, 1.6s) linear infinite;
+}
+@keyframes wbr-waai {
+  from { transform: translateX(-90px); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  to { transform: translateX(440px); opacity: 0; }
+}
+
+/* ── Speeladvies ─────────────────────────────────────────────────────────── */
+.wbr-advies {
+  margin: 12px 12px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--txt);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, transparent), color-mix(in srgb, var(--accent) 6%, transparent));
+  box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* ── Tegels ──────────────────────────────────────────────────────────────── */
+.wbr-tegels {
+  display: grid;
+  /* Wind op de volle breedte, daaronder regenkans, vochtigheid en zon naast elkaar. */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px;
+}
+.wbr-tegel {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px 10px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.wbr-tegel-wind {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+}
+.wbr-tegel-tekst { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wbr-tegel-kop { font-size: 0.64rem; font-weight: 800; letter-spacing: 0.04em; white-space: nowrap; text-transform: uppercase; color: var(--dim); }
+.wbr-tegel-waarde { font-size: 1.35rem; font-weight: 900; line-height: 1.05; color: var(--txt); font-variant-numeric: tabular-nums; }
+.wbr-tegel-waarde small { font-size: 0.72rem; font-weight: 700; color: var(--dim); margin-left: 2px; }
+.wbr-tegel-sub { font-size: 0.76rem; color: var(--dim-strong); }
+.wbr-tegel-zon { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; font-size: 0.86rem; font-weight: 800; color: var(--txt); font-variant-numeric: tabular-nums; }
+.wbr-meter {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.wbr-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #5aa9ff, #2f7bff);
+  box-shadow: 0 0 8px rgba(80, 160, 255, 0.7);
+  transform-origin: left;
+  animation: wbr-groei 0.9s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.wbr-meter.vocht > span { background: linear-gradient(90deg, #7ce0d0, #22b8a6); box-shadow: 0 0 8px rgba(40, 200, 180, 0.6); }
+@keyframes wbr-groei {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* Windkompas: de pijl staat op de windrichting en wiegt mee, sneller bij meer wind. */
+.wbr-kompas {
+  position: relative;
+  flex: 0 0 auto;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02) 70%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), inset 0 0 0 9px rgba(255, 255, 255, 0.025), 0 6px 18px -8px rgba(0, 0, 0, 0.8);
+}
+.wbr-kompas > span[class^='wbr-kompas-'] { position: absolute; font-size: 0.6rem; font-weight: 800; color: var(--dim); }
+.wbr-kompas-n { top: 4px; left: 50%; transform: translateX(-50%); color: #ff6b6b !important; }
+.wbr-kompas-z { bottom: 4px; left: 50%; transform: translateX(-50%); }
+.wbr-kompas-o { right: 6px; top: 50%; transform: translateY(-50%); }
+.wbr-kompas-w { left: 6px; top: 50%; transform: translateY(-50%); }
+.wbr-kompas .wbr-kompas-pijl {
+  inset: 12px;
+  font-size: 0;
+  animation: wbr-wieg 2.6s ease-in-out infinite;
+}
+.wbr-kompas-pijl > span {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 27px solid var(--accent);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 70%, transparent));
+}
+.wbr-kompas-pijl > span::after {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 25px;
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+@keyframes wbr-wieg {
+  0%, 100% { transform: rotate(calc(var(--wbr-rot) - 7deg)); }
+  50% { transform: rotate(calc(var(--wbr-rot) + 7deg)); }
+}
+.wbr-kompas-kern {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15);
+}
+
+/* ── Komende uren ────────────────────────────────────────────────────────── */
+.wbr-kop {
+  margin: 0;
+  padding: 2px 14px 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.wbr-uren {
+  overflow-x: auto;
+  padding: 0 6px 8px;
+  scrollbar-width: thin;
+}
+.wbr-uren-binnen { position: relative; }
+.wbr-lijn { display: block; position: absolute; top: 18px; left: 0; pointer-events: none; }
+.wbr-lijn-pad { stroke: #ffb547; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(0 0 4px rgba(255, 181, 71, 0.6)); }
+.wbr-lijn-punt { fill: #ffb547; }
+.wbr-lijn-nu { fill: #fff; stroke: #ffb547; stroke-width: 2; }
+.wbr-uren-rij { display: flex; }
+.wbr-uur {
+  flex: 0 0 var(--wbr-kolom, 54px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 0 0 4px;
+  border-radius: 12px;
+}
+.wbr-uur.nu { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 18%, transparent), transparent); }
+.wbr-uur-temp { font-size: 0.8rem; font-weight: 800; color: var(--txt); font-variant-numeric: tabular-nums; height: 18px; line-height: 18px; }
+/* Ruimte voor de temperatuurlijn die erover ligt. */
+.wbr-uur-ico { margin-top: 46px; font-size: 1.15rem; line-height: 1; }
+.wbr-uur-wind { display: inline-flex; align-items: center; gap: 2px; font-size: 0.7rem; color: var(--dim-strong); font-variant-numeric: tabular-nums; }
+.wbr-uur-pijl { display: inline-block; color: var(--accent); font-weight: 900; }
+.wbr-uur-regen {
+  position: relative;
+  width: 10px;
+  height: 30px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.wbr-uur-regen > span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #7dbbff, #2f7bff);
+  transform-origin: bottom;
+  animation: wbr-stijg 0.8s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+@keyframes wbr-stijg {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+.wbr-uur-kans { font-size: 0.66rem; font-weight: 700; color: #7dbbff; height: 12px; line-height: 12px; font-variant-numeric: tabular-nums; }
+.wbr-uur-label { font-size: 0.7rem; font-weight: 700; color: var(--dim); }
+.wbr-uur.nu .wbr-uur-label { color: var(--accent); }
+
+/* ── Komende dagen ───────────────────────────────────────────────────────── */
+.wbr-dagen { padding: 4px 0 4px; border-top: 1px solid rgba(255, 255, 255, 0.06); margin-top: 2px; }
+.wbr-dagen .wbr-kop { padding-top: 10px; }
+.wbr-dag {
+  display: grid;
+  grid-template-columns: 4.6em 1.6em 3.4em 2.2em 1fr 2.2em;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 0.86rem;
+}
+.wbr-dag:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+.wbr-dag-naam { font-weight: 800; color: var(--txt); }
+.wbr-dag-ico { font-size: 1.05rem; text-align: center; }
+.wbr-dag-kans { font-size: 0.72rem; font-weight: 700; color: #7dbbff; }
+.wbr-dag-min { text-align: right; color: var(--dim); font-variant-numeric: tabular-nums; }
+.wbr-dag-max { font-weight: 800; color: var(--txt); font-variant-numeric: tabular-nums; }
+.wbr-dag-balk {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+}
+.wbr-dag-balk > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #5aa9ff, #ffd23f 60%, #ff8a3d);
+  box-shadow: 0 0 8px rgba(255, 190, 80, 0.45);
+}
+
+.wbr-voet {
+  margin: 0;
+  padding: 10px 14px 12px;
+  font-size: 0.68rem;
+  color: var(--dim);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Wie liever geen beweging ziet, krijgt een stilstaande scène. */
+@media (prefers-reduced-motion: reduce) {
+  .wbr *, .wbr *::before, .wbr *::after { animation: none !important; }
+  .wbr-wolk { transform: translateX(160px) scale(var(--wbr-schaal)); }
+  .wbr-druppel, .wbr-vlok, .wbr-windstreep, .wbr-flits, .wbr-bliksem { display: none; }
+  .wbr-kompas-pijl { transform: rotate(var(--wbr-rot)); }
+}
