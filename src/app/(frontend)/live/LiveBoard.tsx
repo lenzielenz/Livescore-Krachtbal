@@ -76,6 +76,17 @@ type StoredScrollState = { date: string; scrollY: number }
 const shiftDate = shiftDateStr
 
 /** Korte dagnaam voor de speeldagenlijst: "Vandaag", anders "za 12 sep". */
+/** "75 wedstrijden", "1 wedstrijd". */
+function wedstrijdenTekst(n: number): string {
+  return `${n} ${n === 1 ? 'wedstrijd' : 'wedstrijden'}`
+}
+
+/** Bij Thuis/Uit sorteren: speelt je club thuis, uit, of geen van beide? */
+function thuisUitGroep(m: { home: { clubId?: number | null }; away: { clubId?: number | null } }, clubId: number): 'thuis' | 'uit' | 'andere' {
+  return m.home.clubId === clubId ? 'thuis' : m.away.clubId === clubId ? 'uit' : 'andere'
+}
+const THUIS_UIT_KOP = { thuis: '🏠 Thuis', uit: '✈ Uit', andere: 'Andere wedstrijden' } as const
+
 function dagLabel(datum: string, today: string): string {
   if (datum === today) return 'Vandaag'
   return formatDateBE(brusselsNoonUtc(datum), {
@@ -498,9 +509,10 @@ export function LiveBoard({
     requestAnimationFrame(() => window.scrollTo(0, y))
   }, [groups])
 
+  // "zaterdag 7 november": zoals je het zegt, zonder voorloopnul en zonder de datum nog eens in cijfers.
   const dateLabel = formatDateBE(brusselsNoonUtc(date), {
     weekday: 'long',
-    day: '2-digit',
+    day: 'numeric',
     month: 'long',
   })
   // Mag er voor deze speeldag al gepronostikeerd worden? (open vanaf zondagmiddernacht ervoor)
@@ -606,9 +618,9 @@ export function LiveBoard({
             <summary className="lb-datesum">
               <span className="lb-datelabel">{view === 'weekend' ? 'Weekend' : date === today ? 'Vandaag' : dateLabel}</span>
               <span className="lb-datesub">
-                {view === 'weekend' ? weekendLabel : date.split('-').reverse().join('-')}
+                {view === 'weekend' ? weekendLabel : date === today ? dateLabel : null}
                 {(view === 'weekend' ? aantalWeekend : aantalVandaag) > 0 && (
-                  <span className="lb-datecount">{view === 'weekend' ? aantalWeekend : aantalVandaag}</span>
+                  <span className="lb-datecount">{wedstrijdenTekst(view === 'weekend' ? aantalWeekend : aantalVandaag)}</span>
                 )}
                 <span aria-hidden> ⌄</span>
               </span>
@@ -699,7 +711,7 @@ export function LiveBoard({
             href={`/?date=${date}&view=${view === 'weekend' ? 'dag' : 'weekend'}`}
             className={`lb-sort-btn ${view === 'weekend' ? 'on' : ''}`}
           >
-            {view === 'weekend' ? '🗓 Weekend' : '📅 Dag'}
+            {view === 'weekend' ? '🗓 Weekend' : '🗓 Dag'}
           </Link>
           {!dayEmpty && groups.length > 0 && (
             <>
@@ -781,7 +793,7 @@ export function LiveBoard({
                   </button>
                 </div>
               )}
-              {!isCollapsed && list.map((m) => {
+              {!isCollapsed && list.map((m, idx) => {
                 const played = m.status !== 'scheduled'
                 const live = m.status === 'live'
                 const hasStats = played && (m.crosses || m.timeouts)
@@ -796,20 +808,18 @@ export function LiveBoard({
                 // Bij tijdstip/thuis-uit sorteren en/of een actieve zoekopdracht over meerdere
                 // dagen (searchSeizoen) vervangt dit tagje de reeks-kop van de groep.
                 const tags = [
-                  sortBy === 'thuisuit' && myClubId != null
-                    ? m.home.clubId === myClubId
-                      ? '🏠 Thuis'
-                      : m.away.clubId === myClubId
-                        ? '✈ Uit'
-                        : null
-                    : null,
                   flatSort ? m.reeks : null,
                   // In weekend-weergave (za+zo door elkaar) én bij een zoekopdracht over meerdere
                   // dagen (searchSeizoen): toon per kaart op welke dag ze precies valt.
                   view === 'weekend' || query.trim().length >= 2 ? dagLabel(dateStrBE(new Date(m.kickoff)), today) : null,
                 ].filter((t): t is string => Boolean(t))
+                // Thuis/Uit sorteren: één kop boven elke groep (Thuis, Uit, Andere) in plaats van
+                // "🏠 Thuis" boven elke kaart.
+                const tuGroep = sortBy === 'thuisuit' && myClubId != null ? thuisUitGroep(m, myClubId) : null
+                const tuKop = tuGroep != null && (idx === 0 || thuisUitGroep(list[idx - 1], myClubId as number) !== tuGroep)
                 return (
                   <div key={m.id} className="lb-rowwrap">
+                    {tuKop && <h3 className="lb-tu-kop">{THUIS_UIT_KOP[tuGroep]}</h3>}
                     {tags.length > 0 && <span className="lb-row-reeks">{tags.join(' · ')}</span>}
                     {/* "live" hier = de kaart-look (zie hierboven), niet de wedstrijdstatus. "now"
                         schakelt de dure bewegende/blur-effecten (aurora, glans, matglas) in — enkel
@@ -871,10 +881,10 @@ export function LiveBoard({
                             ) : m.awaitingResult && supportersMode ? (
                               <span className="lb-needsresult" title="Vermoedelijk gespeeld — nog geen uitslag doorgegeven">🏁 uitslag?</span>
                             ) : (
-                              <span className="lb-time">{m.time}</span>
+                              <span className={`lb-time${played ? '' : ' groot'}`}>{m.time}</span>
                             )}
-                            {/* Nog te spelen: geen kale "vs" maar een verzorgde chip (lbl-vs). */}
-                            <span className={`lbl-score${played ? '' : ' lbl-vs'}`}>{played ? `${m.score.home} – ${m.score.away}` : 'VS'}</span>
+                            {/* De stand enkel als er gespeeld wordt of werd; vóór de aftrap staat het uur alleen. */}
+                            {played && <span className="lbl-score">{`${m.score.home} – ${m.score.away}`}</span>}
                             {hasStats && (
                               <span className="lb-stats">
                                 <span title="Kruisjes">✖ {m.crosses?.home ?? 0}–{m.crosses?.away ?? 0}</span>
