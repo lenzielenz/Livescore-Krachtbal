@@ -4,6 +4,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { hasRole, isClubStaff, isFederationLevel, userClubId, userFollowedClubIds, userPlayerId, userTeamId, userTeamIds } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
+import { appVoorId, grootteTekst } from '@/lib/app-downloads'
 import { buildMatchState, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { getProfile } from '@/lib/profiles'
@@ -139,6 +140,10 @@ export default async function HubPage() {
     }
   }
 
+  // De Android-app om de score live in te vullen (Krachtbal Aantekenaar): versie en grootte uit het
+  // APK-bestand zelf (lib/app-downloads.ts). Ontbreekt het bestand, dan blijft de kaart weg.
+  const tafelApp = await appVoorId('aantekenaar').catch(() => null)
+
   // Laatste nieuws.
   const news = await payload
     .find({ collection: 'news', where: { published: { equals: true } }, sort: '-publishedAt', depth: 0, limit: 3 })
@@ -201,6 +206,30 @@ export default async function HubPage() {
             <p className="hub-empty">
               {me ? <>Stel je club in — of volg er een paar zonder lid te zijn — op <Link href="/profiel">je profiel</Link>.</> : <><Link href="/inloggen">Log in</Link> en kies je club om alles op maat te zien.</>}
             </p>
+          </section>
+        )}
+
+        {/* De app om de score live in te vullen: rechtstreeks het APK-bestand downloaden, met de
+            uitleg (installeren, controlegetal, de federatie-app) op /app. */}
+        {tafelApp && (
+          <section className="hub-sec">
+            <h2 className="hub-h2">Score live invullen</h2>
+            <div className="hub-app">
+              <span className="hub-app-icoon" aria-hidden>📱</span>
+              <div className="hub-app-tekst">
+                <strong>{tafelApp.naam}</strong>
+                <span>Wedstrijd kiezen, klok starten en de score, kruisjes en time-outs live invullen. Werkt ook bij slecht bereik.</span>
+                <small>
+                  Android · versie {tafelApp.versie} · {grootteTekst(tafelApp.grootte)}
+                </small>
+              </div>
+              <div className="hub-app-knoppen">
+                <a className="hub-app-download" href={`/api/app/${tafelApp.id}`} download={tafelApp.bestand}>
+                  ⬇ Download de app
+                </a>
+                <Link href="/app" className="hub-app-uitleg">Zo installeer je ze →</Link>
+              </div>
+            </div>
           </section>
         )}
 
