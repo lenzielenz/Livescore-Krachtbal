@@ -116,16 +116,25 @@ export function ErelijstBrowser({
               <p className="erl-board-sub">Kampioenschappen + bekers + referendumprijzen van haar spelers samengeteld, per club zoals genoteerd in het archief.</p>
               <ol className="erl-board-lijst">
                 {topClubs.map((c, i) => (
-                  <li key={c.naam} className={`erl-board-item erl-rank-${i < 3 ? i + 1 : 'x'}`}>
+                  <li
+                    key={c.naam}
+                    className={`erl-board-item erl-rank-${i < 3 ? i + 1 : 'x'}`}
+                    style={{ ['--aandeel' as string]: String(topClubs[0]?.totaal ? c.totaal / topClubs[0].totaal : 0) }}
+                  >
                     <span className="erl-rank">{i + 1}</span>
                     <div className="erl-board-info">
                       <div className="erl-board-main">
                         <span className="erl-board-naam"><ClubNaam naam={c.naam} /></span>
                         <span className="erl-board-totaal">{c.totaal}</span>
                       </div>
-                      <span className="erl-board-detail">
-                        {c.titels}× 🥇 kampioen · {c.bekers}× 🏆 beker · {c.referendumprijzen}× ⭐ referendumprijs
+                      {/* De drie soorten prijzen als kleine chips: het getal springt eruit, het
+                          soort prijs staat er gedempt naast. */}
+                      <span className="erl-board-detail erl-stats">
+                        <span className="erl-stat"><span aria-hidden>🥇</span><b>{c.titels}</b> kampioen</span>
+                        <span className="erl-stat"><span aria-hidden>🏆</span><b>{c.bekers}</b> beker</span>
+                        <span className="erl-stat"><span aria-hidden>⭐</span><b>{c.referendumprijzen}</b> referendum</span>
                       </span>
+                      <span className="erl-aandeel" aria-hidden />
                     </div>
                   </li>
                 ))}
@@ -141,7 +150,11 @@ export function ErelijstBrowser({
               <p className="erl-board-sub">Referendumprijzen (speler/speelster/belofte van het jaar) door de jaren heen.</p>
               <ol className="erl-board-lijst">
                 {topLaureaten.map((l, i) => (
-                  <li key={l.naam} className={`erl-board-item erl-rank-${i < 3 ? i + 1 : 'x'}`}>
+                  <li
+                    key={l.naam}
+                    className={`erl-board-item erl-rank-${i < 3 ? i + 1 : 'x'}`}
+                    style={{ ['--aandeel' as string]: String(topLaureaten[0]?.aantal ? l.aantal / topLaureaten[0].aantal : 0) }}
+                  >
                     <span className="erl-rank">{i + 1}</span>
                     <div className="erl-board-info">
                       <div className="erl-board-main">
@@ -149,6 +162,7 @@ export function ErelijstBrowser({
                         <span className="erl-board-totaal">{l.aantal}</span>
                       </div>
                       <span className="erl-board-detail">{l.prijzen.join(', ')}</span>
+                      <span className="erl-aandeel" aria-hidden />
                     </div>
                   </li>
                 ))}
