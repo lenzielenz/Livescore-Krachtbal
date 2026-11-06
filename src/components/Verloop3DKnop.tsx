@@ -2,15 +2,16 @@
 
 import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import { ErrorCatch } from '@/components/ErrorCatch'
 import type { ShotPoint } from '@/lib/match-engine'
 import './match-stats.css'
 
-// Het 3D-wedstrijdverloop als extra bij elke wedstrijd: één knop op de wedstrijdpagina, en pas als
+// Het 3D-wedstrijdverloop als extra bij elke wedstrijd: één kleine knop in de scorekaart, en pas als
 // je erop tikt worden de worpen opgehaald (/api/match/[id]/verloop) en three geladen. De rest van
-// de pagina blijft precies zoals ze was. Het beeld opent over het hele scherm; sluiten met de knop
-// of Escape.
+// de pagina blijft precies zoals ze was. Het beeld opent over het hele scherm (via een portal naar
+// <body>, want de scorekaart is een eigen stacking context); sluiten met de knop of Escape.
 
 const Verloop3D = dynamic(() => import('@/components/Verloop3D').then((m) => m.Verloop3D), {
   ssr: false,
@@ -30,7 +31,7 @@ type Gegevens = {
   geschat?: boolean
 }
 
-export function Verloop3DKnop({ matchId }: { matchId: number }) {
+export function Verloop3DKnop({ matchId, klein = false }: { matchId: number; /** Compacte knop, in de scorekaart. */ klein?: boolean }) {
   const [open, setOpen] = useState(false)
   const [gegevens, setGegevens] = useState<Gegevens | null>(null)
   const [laden, setLaden] = useState(false)
@@ -73,10 +74,11 @@ export function Verloop3DKnop({ matchId }: { matchId: number }) {
 
   return (
     <>
-      <button type="button" className="verloop3d-open" onClick={openen}>
+      <button type="button" className={`verloop3d-open${klein ? ' klein' : ''}`} onClick={openen}>
         🏟️ Wedstrijdverloop in 3D
       </button>
-      {open && (
+      {open &&
+        createPortal(
         <div className="verloop3d-laag" role="dialog" aria-modal="true" aria-label="Wedstrijdverloop in 3D">
           <div className="verloop3d-paneel">
             <div className="verloop3d-kop">
@@ -111,8 +113,9 @@ export function Verloop3DKnop({ matchId }: { matchId: number }) {
               </ErrorCatch>
             )}
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </>
   )
 }
