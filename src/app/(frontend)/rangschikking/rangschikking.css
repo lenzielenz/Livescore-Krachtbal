@@ -278,17 +278,6 @@
 .rang-row:hover { background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 11%, transparent), transparent 70%); }
 .rang-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .rang-row.open { background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 15%, transparent), transparent 75%); }
-.rang-caret {
-  margin-left: auto;
-  padding-left: 8px;
-  color: var(--dim);
-  font-size: 0.8rem;
-  flex: 0 0 auto;
-  transition: color 0.15s ease;
-}
-.rang-row:hover .rang-caret,
-.rang-row.open .rang-caret { color: var(--accent); }
-
 /* Uitklapbaar detailpaneel onder een ploeg. */
 .rang-detailrow > td { padding: 0 !important; border-bottom: 1px solid var(--line); }
 .rang-detail {
@@ -341,7 +330,8 @@
 @media (prefers-reduced-motion: reduce) {
   .rang-leader { animation: none; background-position: 0 0, 999% 0; }
 }
-.rang-leader td:first-child { box-shadow: inset 4px 0 0 0 #ffb703, inset 0 0 20px -9px color-mix(in srgb, #ffb703 85%, transparent); }
+/* Enkel het gouden balkje: de binnengloed tekende een los, donker vierkantje achter de "1". */
+.rang-leader td:first-child { box-shadow: inset 4px 0 0 0 #ffb703; }
 .rang-leader .rang-name { font-weight: 800; }
 .rang-silver { background: linear-gradient(90deg, color-mix(in srgb, #cfd6de 9%, transparent), transparent 70%); }
 .rang-silver td:first-child { box-shadow: inset 4px 0 0 0 #cfd6de; }
@@ -351,7 +341,7 @@
    behandeling als de leider — een écht alarmrood i.p.v. het gedempte rood elders (bv. de
    positieverschil-pijltjes), zodat deze zone er meteen uitspringt als "gevaar". */
 .rang-danger { background: linear-gradient(90deg, color-mix(in srgb, #ff3b30 15%, transparent), transparent 70%); }
-.rang-danger td:first-child { box-shadow: inset 4px 0 0 0 #ff3b30, inset 0 0 18px -9px color-mix(in srgb, #ff3b30 80%, transparent); }
+.rang-danger td:first-child { box-shadow: inset 4px 0 0 0 #ff3b30; }
 /* Kampioensbadge naast de naam (enkel wanneer de titel wiskundig binnen is). */
 .rang-champ { font-size: 0.9em; }
 /* Kleursleutels in de legende. */
@@ -365,6 +355,8 @@
 }
 .rang-key.goud { background: #ffb703; }
 .rang-key.rood { background: #ff3b30; }
+.rang-key.zilver { background: #cfd6de; }
+.rang-key.brons { background: #cd7f32; }
 /* Eigen club (ingelogd) springt eruit — wint van de podium-styling wanneer ze samenvallen. */
 .rang-mine {
   background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 20%, transparent), color-mix(in srgb, var(--accent) 6%, transparent) 55%, transparent 85%);

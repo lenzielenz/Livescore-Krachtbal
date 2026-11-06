@@ -1183,7 +1183,10 @@ select.rang-picker {
   margin: 6px 0 18px;
 }
 .an-momentum .an-sub { margin: 0 0 10px; }
-.an-mom-svg { width: 100%; max-width: 480px; aspect-ratio: 320 / 130; height: auto; display: block; margin-inline: auto; }
+/* De tekening vult de breedte; MomentumChart past de viewBox-breedte aan zodat ze nooit hoger
+   dan 200px wordt en niets uitrekt (de aspect-ratio volgt via de inline-stijl). */
+.an-mom-vak { width: 100%; }
+.an-mom-svg { width: 100%; aspect-ratio: 320 / 130; height: auto; display: block; }
 .an-mom-zero { stroke: var(--line); stroke-width: 1; stroke-dasharray: 4 4; }
 /* Scheidingslijn waar een nieuwe helft begint (bv. de 2de helft). */
 .an-mom-half { stroke: var(--accent); stroke-width: 1; opacity: 0.6; }

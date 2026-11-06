@@ -752,12 +752,15 @@
 /* ── Startpagina: supporter-eerst ── */
 /* Slanke merk-intro boven het wedstrijdoverzicht — compact, zodat de wedstrijden
    meteen in beeld komen i.p.v. een grote koptekst. */
+/* Titel, live-regel en registratiebalk staan in dezelfde kolom als de wedstrijdlijst (640px),
+   zodat ze op een breed scherm netjes boven elkaar uitlijnen. */
 .home-intro {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 12px;
-  margin: 2px 0 2px;
+  max-width: 640px;
+  margin: 2px auto 2px;
 }
 .home-intro h1 {
   font-size: 1.5rem;
@@ -873,7 +876,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin: 4px 0 14px;
+  max-width: 640px;
+  margin: 4px auto 14px;
   padding: 9px 14px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
@@ -896,10 +900,12 @@
 
 /* Onder de titel: enkel als er nu iets live is. */
 .home-live {
+  max-width: 640px;
+  margin-inline: auto;
   display: flex;
   align-items: center;
   gap: 7px;
-  margin: 0 0 12px;
+  margin-block: 0 12px;
   font-size: 0.86rem;
   font-weight: 700;
   color: var(--txt);
