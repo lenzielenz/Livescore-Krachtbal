@@ -542,12 +542,14 @@
   font-size: 4.6rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1;
   letter-spacing: -0.02em;
   display: flex; gap: 16px; justify-content: center;
-  /* Subtiel parelmoer-verloop op de cijfers + diepte. */
-  background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--txt) 70%, #9fb4ab));
+  /* Gepolijst chroom: helder wit bovenaan, een zachte "horizon" net onder het midden en zilver
+     onderaan — zoals licht op een metalen scorebordcijfer. Een scherpe donkere onderrand (1e
+     schaduw) geeft reliëf, de brede tweede schaduw tilt de cijfers los van elke clubkleur. */
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 40%, #e6ecf2 52%, #c3cdd8 72%, #eef2f6 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 6px 26px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 6px 26px rgba(0, 0, 0, 0.55));
 }
 .sb-dash { color: var(--dim); font-weight: 300; -webkit-text-fill-color: var(--dim); }
 .sb-clock {
