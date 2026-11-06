@@ -65,9 +65,9 @@ describe('buildMatchReport', () => {
     expect(r.headline.startsWith('Assebroek')).toBe(true)
     expect(r.lead).toBe('Sint-Kruis – Assebroek eindigde op 10–24.')
   })
-  it('zet reeks en datum in de inleiding', () => {
+  it('herhaalt reeks en datum niet in de inleiding (die staan al bovenaan de pagina)', () => {
     const r = buildMatchReport({ ...base([], { home: 1, away: 0 }), reeks: '1ste Nationale Heren', datum: '8/08/2026' })
-    expect(r.lead).toContain('(1ste Nationale Heren · 8/08/2026)')
+    expect(r.lead).toBe('Sint-Kruis – Assebroek eindigde op 1–0.')
   })
   it('beschrijft een omkeer na de rust', () => {
     const goals = [goal('home', 1, 2), goal('home', 1, 2), goal('away', 2, 2), goal('away', 2, 2), goal('away', 2, 2)]

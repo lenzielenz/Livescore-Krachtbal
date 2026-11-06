@@ -107,15 +107,16 @@ body {
   font-family: var(--font-body), 'Segoe UI', ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif;
   /* Vaste donkere basiskleur: voorkomt een wit vlak in het overscroll-gebied
      (waar de 'fixed' gradient niet doorloopt) bij voorbij-scrollen op mobiel. */
-  background-color: #070809;
-  /* Premium, diepe achtergrond met levendige kleurgloed (aurora-gevoel) i.p.v. een vlak zwart vlak.
-     Neutrale bijna-zwarte basis met blauw/koraal-accenten die wat meer poppen. */
+  background-color: #030405;
+  /* Diepe, bijna zwarte achtergrond met een ingetogen kleurgloed (aurora-gevoel). Bewust donker:
+     kaarten, clubkleuren, medailles en accenten komen er zo veel beter op uit dan op de vroegere,
+     helderdere teal/koraal-waas. */
   background-image:
-    radial-gradient(1150px 660px at 50% -10%, color-mix(in srgb, var(--accent) 21%, transparent), transparent 60%),
-    radial-gradient(900px 560px at 4% 2%, color-mix(in srgb, var(--home) 13%, transparent), transparent 55%),
-    radial-gradient(900px 560px at 97% 1%, color-mix(in srgb, var(--away) 18%, transparent), transparent 55%),
-    radial-gradient(820px 620px at 88% 92%, color-mix(in srgb, var(--pop) 15%, transparent), transparent 60%),
-    linear-gradient(180deg, #0c0e12 0%, #070809 100%);
+    radial-gradient(1150px 660px at 50% -10%, color-mix(in srgb, var(--accent) 11%, transparent), transparent 60%),
+    radial-gradient(900px 560px at 4% 2%, color-mix(in srgb, var(--home) 6%, transparent), transparent 55%),
+    radial-gradient(900px 560px at 97% 1%, color-mix(in srgb, var(--away) 8%, transparent), transparent 55%),
+    radial-gradient(820px 620px at 88% 92%, color-mix(in srgb, var(--pop) 7%, transparent), transparent 60%),
+    linear-gradient(180deg, #07080b 0%, #030405 100%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -251,16 +252,21 @@ h3,
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
+  /* Geen losse puntjes tussen de links: op gsm belandde er een aan het regeleinde. Ruimte doet
+     hetzelfde werk, en de smalle maximumbreedte breekt de vier links mooi in twee keer twee. */
+  gap: 6px 20px;
   font-size: 0.78rem;
   color: var(--dim);
+}
+@media (max-width: 480px) {
+  .site-foot { max-width: 300px; }
 }
 /* Op een scherm (kantine-tv, veldscherm) valt de voettekst weg: die staat ónder een scherm dat
    exact één schermhoogte hoog is, en duwde zo de onderrand van het bord uit beeld — op een tv kan
    niemand daarnaartoe scrollen. Zie components/SchermModus.tsx. */
 body.kb-scherm .site-foot { display: none; }
 /* De links zijn maar 15px hoog en staan onderaan in de duimzone; de padding vergroot het raakvlak
-   en de negatieve marge compenseert die weer, zodat het uitzicht (gap 8px) identiek blijft. */
+   en de negatieve marge compenseert die weer, zodat het uitzicht identiek blijft. */
 .site-foot a { color: var(--dim); text-decoration: none; padding: 10px 4px; margin: -10px -4px; }
 .site-foot a:hover { color: var(--txt); text-decoration: underline; }
 
@@ -1463,6 +1469,8 @@ body.kb-scherm .site-foot { display: none; }
   margin-bottom: 2px;
 }
 .match-meta-bit::before { content: "·"; margin: 0 8px; color: var(--line); }
+/* De reeks staat op een eigen regel: het eerste bit erna begint de regel, zonder puntje ervoor. */
+.match-meta-reeks + .match-meta-bit::before { content: none; }
 .match-meta-cal { color: var(--accent); font-weight: 700; text-decoration: none; }
 .match-meta-cal:hover { text-decoration: underline; }
 /* Locatie → Google Maps: zelfde chip als de agenda-/videolink hierboven, geen apart uiterlijk —
@@ -1886,3 +1894,18 @@ body.kb-scherm .site-foot { display: none; }
 .cs-lijsten { display: grid; gap: 4px 18px; }
 @media (min-width: 900px) { .cs-lijsten { grid-template-columns: 1fr 1fr; } }
 .cs-sterk { font-weight: 800; }
+
+/* Uitklapblokken (<details>) zonder eigen opmaak: een pijltje in de huisstijl i.p.v. het
+   driehoekje van de browser. Via :where() zonder gewicht en via list-style-type, zodat elk blok
+   dat zelf al een pijl of geen marker heeft (list-style: none of display: flex) onaangeroerd blijft. */
+:where(summary) {
+  cursor: pointer;
+  list-style-type: '›  ';
+}
+:where(details[open]) > :where(summary) {
+  list-style-type: '⌄  ';
+}
+:where(summary)::marker {
+  color: var(--accent);
+  font-weight: 900;
+}

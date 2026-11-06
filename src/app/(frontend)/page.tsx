@@ -6,7 +6,6 @@ import { userClubId, userTeamId, userTeamIds } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { aantekenRolVan } from '@/lib/wedstrijddag-acties'
 import { dateStrBE } from '@/lib/datetime'
-import { quoteForDay } from '@/lib/krachtbal-quotes'
 import { LIVE_VIEW_COOKIE, type LiveView } from '@/lib/live-view'
 import { getPayloadClient } from '@/lib/payload-client'
 import { isSupportersMode } from '@/lib/score-mode'
@@ -36,9 +35,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // Alle dagen mét wedstrijden, zodat de pijltjes de lege dagen overslaan en de kiezer per dag
   // toont hoeveel er gepland staat.
   const speeldagen = await loadSpeeldagen()
-  // Eén vast lijntje per dag (seed = vandaag): blijft staan bij het wisselen van datum,
-  // maar levert elke dag een verse krachtbal-quote op.
-  const quote = quoteForDay(today)
+  // Onder de titel enkel iets concreets: hoeveel wedstrijden er nu live zijn. Geen vaste
+  // oneliner meer — die stond er elke dag en zei niets over vandaag.
+  const nuLive = days.filter((m) => m.status === 'live').length
   const me = await getAuthUser()
   const cid = userClubId(me)
   const myClubId = cid != null && Number.isFinite(Number(cid)) ? Number(cid) : null
@@ -66,30 +65,23 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 ❓ Zo werkt het
               </Link>
             </div>
-            {/* Roterende quote — feit, wist-je-datje of een gekke oneliner. */}
-            <p className="home-quote">{quote}</p>
+            {nuLive > 0 && (
+              <p className="home-live">
+                <span className="home-live-dot" aria-hidden /> {nuLive} {nuLive === 1 ? 'wedstrijd' : 'wedstrijden'} nu live
+              </p>
+            )}
           </>
         )}
 
+        {/* Registreer-uitnodiging (enkel uitgelogd): één smalle balk, zodat de wedstrijden hoog
+            blijven beginnen. Kijken kan zonder account; inloggen zit in het menu. */}
         {!me && (
-          <section className="home-cta">
-            <div className="home-cta-text">
-              <h2 className="home-cta-title">Wees erbij. <span>Élke match.</span></h2>
-              <p className="home-cta-sub">
-                Kijken kan gratis — zonder account. Met een account doe je mee.
-              </p>
-              {/* Het hele verhaal in drie punten — zo snapt een nieuwkomer meteen wat hier kan. */}
-              <ul className="home-cta-points">
-                <li>🔴 Volg élke match live</li>
-                {supportersMode && <li>🏁 Match gedaan? Geef zelf de uitslag door</li>}
-                <li>🔮 Pronostiek, held van de match &amp; badges</li>
-              </ul>
-            </div>
-            <div className="home-cta-actions">
-              <Link href="/registreren" className="home-cta-btn">Gratis registreren →</Link>
-              <Link href="/inloggen" className="home-cta-login">Al lid? Inloggen</Link>
-            </div>
-          </section>
+          <Link href="/registreren" className="home-cta-balk">
+            <span>
+              <b>Gratis account:</b> volg, voorspel, verdien badges
+            </span>
+            <span aria-hidden className="home-cta-pijl">→</span>
+          </Link>
         )}
 
         {/* Geen tornooi-wedstrijden op de homepage — wél de snellink met aftelklok naar de

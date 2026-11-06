@@ -542,12 +542,14 @@
   font-size: 4.6rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1;
   letter-spacing: -0.02em;
   display: flex; gap: 16px; justify-content: center;
-  /* Subtiel parelmoer-verloop op de cijfers + diepte. */
-  background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--txt) 70%, #9fb4ab));
+  /* Gepolijst chroom: helder wit bovenaan, een zachte "horizon" net onder het midden en zilver
+     onderaan — zoals licht op een metalen scorebordcijfer. Een scherpe donkere onderrand (1e
+     schaduw) geeft reliëf, de brede tweede schaduw tilt de cijfers los van elke clubkleur. */
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 40%, #e6ecf2 52%, #c3cdd8 72%, #eef2f6 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 6px 26px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 6px 26px rgba(0, 0, 0, 0.55));
 }
 .sb-dash { color: var(--dim); font-weight: 300; -webkit-text-fill-color: var(--dim); }
 .sb-clock {
@@ -565,16 +567,6 @@
 .sb-half { font-size: 0.8rem; color: var(--dim-strong); text-transform: uppercase; letter-spacing: 0.06em; }
 /* Melding (enkel bij extra minuten): tot welke minuut deze helft loopt. */
 .sb-playto { margin-top: 4px; font-size: 0.78rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
-/* Afgelopen wedstrijd: de klok toont de vastgezette eindtijd, met een duidelijk eind-label. */
-.sb-clock.done { color: var(--dim-strong); border-color: var(--line); background: color-mix(in srgb, #fff 4%, transparent); }
-.sb-final { font-size: 0.8rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; }
-/* Op gsm dwong "AFGELOPEN · EINDSTAND" (179px op één regel) de middenkolom breed, waardoor de
-   ploegnamen ernaast op 68px over vier regels braken. Twee regels voor het label geeft de namen
-   hun ruimte terug. */
-@media (max-width: 480px) {
-  .sb-final { white-space: normal; max-width: 7.5rem; line-height: 1.25; }
-}
-
 .sb-dots { display: inline-flex; gap: 5px; }
 .sb-dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--line); background: transparent; }
 .sb-dots.to .sb-dot.on { background: var(--accent); border-color: var(--accent); }

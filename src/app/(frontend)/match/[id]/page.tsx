@@ -639,9 +639,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         initialInstants={initialInstants}
         momentumGoals={share?.goals}
         momentumTimeouts={share?.timeouts}
+        onderMomentum={
+          // Extra, in de scorekaart: het wedstrijdverloop in 3D opent pas als je erop tikt.
+          <Verloop3DKnop matchId={matchId} klein />
+        }
       />
-      {/* Extra, los van de rest: het wedstrijdverloop in 3D opent pas als je erop tikt. */}
-      <Verloop3DKnop matchId={matchId} />
       {me && state.match.status === 'finished' && (
         <MatchActivitySummary
           reactions={(matchDoc?.liveReactions as Record<string, number> | null) ?? {}}
@@ -668,24 +670,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         <LiveStream url={String(matchDoc.livestreamUrl)} live={state.match.status === 'live'} />
       )}
         </>
-      )}
-
-      {/* Niet ingelogd? Toon dan wat je hier mist — concreet, niet als reclame. Wie enkel de
-          score komt halen, heeft alles al gezien; wie meedoet, krijgt er een wedstrijd bij. */}
-      {!me && (
-        <section className="match-meedoen">
-          <h2 className="match-meedoen-titel">Meedoen kan ook</h2>
-          <ul className="match-meedoen-lijst">
-            <li><span aria-hidden>💬</span> Moedig aan in de tribune — je bericht verschijnt live op het scorebord</li>
-            <li><span aria-hidden>🔮</span> Voorspel de uitslag en klim in de pronostiekstand</li>
-            <li><span aria-hidden>⭐</span> Stem op de held van de match</li>
-            <li><span aria-hidden>🎫</span> Duid aan dat je erbij was — dat vult je supporterspaspoort en levert badges op</li>
-          </ul>
-          <div className="match-meedoen-knoppen">
-            <Link href="/registreren" className="match-meedoen-btn">Gratis account →</Link>
-            <Link href="/inloggen" className="match-meedoen-link">Al lid? Inloggen</Link>
-          </div>
-        </section>
       )}
 
       {/* "Ik ben erbij" — supporters bouwen zo hun seizoenspaspoort op. Pas op de dag zelf: je
@@ -757,6 +741,25 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             />
           )}
         </>
+      )}
+
+      {/* Niet ingelogd? Toon dan wat je hier mist — concreet, niet als reclame. Wie enkel de
+          score komt halen, heeft alles al gezien; wie meedoet, krijgt er een wedstrijd bij. Staat
+          ná het verslag en de statistieken: eerst spreekt de wedstrijd zelf. */}
+      {!me && (
+        <section className="match-meedoen">
+          <h2 className="match-meedoen-titel">Meedoen kan ook</h2>
+          <ul className="match-meedoen-lijst">
+            <li><span aria-hidden>💬</span> Moedig aan in de tribune — je bericht verschijnt live op het scorebord</li>
+            <li><span aria-hidden>🔮</span> Voorspel de uitslag en klim in de pronostiekstand</li>
+            <li><span aria-hidden>⭐</span> Stem op de held van de match</li>
+            <li><span aria-hidden>🎫</span> Duid aan dat je erbij was — dat vult je supporterspaspoort en levert badges op</li>
+          </ul>
+          <div className="match-meedoen-knoppen">
+            <Link href="/registreren" className="match-meedoen-btn">Gratis account →</Link>
+            <Link href="/inloggen" className="match-meedoen-link">Al lid? Inloggen</Link>
+          </div>
+        </section>
       )}
 
       {/* Rechtzetten van wat de import fout had: het aanvangsuur en de ploegnaam/club. Enkel voor

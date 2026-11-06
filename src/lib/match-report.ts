@@ -114,10 +114,9 @@ function headlineFor(i: ReportInput): string {
   return `${winner} haalt het nipt van ${loser}`
 }
 
+// Reeks en datum staan al bovenaan de wedstrijdpagina; de inleiding herhaalt ze niet.
 function leadFor(i: ReportInput): string {
-  const context = [i.reeks, i.datum].filter(Boolean).join(' · ')
-  const base = `${i.home} – ${i.away} eindigde op ${i.score.home}–${i.score.away}.`
-  return context ? `${base} (${context})` : base
+  return `${i.home} – ${i.away} eindigde op ${i.score.home}–${i.score.away}.`
 }
 
 /** Alinea over het verloop: ruststand, omkeer, en de scherpste reeks. */

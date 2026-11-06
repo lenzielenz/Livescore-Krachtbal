@@ -74,9 +74,9 @@ export default async function NieuwsPage() {
             </p>
           </article>
         )}
-        {grid.length === 0 ? (
-          <p className="empty">Nog geen nieuws. Kom snel terug! 👀</p>
-        ) : (
+        {/* Er staat altijd een uitgelicht bericht hierboven, dus een lege grid is geen "nog geen
+            nieuws" — dan tonen we gewoon niets extra. */}
+        {grid.length > 0 && (
           <div className="nw-grid">
             {grid.map((n) => {
               const id = n.id as number

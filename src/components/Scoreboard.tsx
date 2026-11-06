@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import { isAdultReeks, type KrachtbalKleur, type Reeks } from '@/lib/reeksen'
@@ -74,6 +74,7 @@ export function Scoreboard({
   initialInstants,
   momentumGoals,
   momentumTimeouts,
+  onderMomentum,
 }: {
   matchId: number
   initial: { state: MatchState; timeline: TimelineItem[] }
@@ -104,6 +105,8 @@ export function Scoreboard({
   momentumGoals?: { side: 'home' | 'away'; points: number; half: number; gameClock?: number }[]
   /** Time-outs voor het scoreverloop. */
   momentumTimeouts?: { side: 'home' | 'away'; half: number; gameClock: number }[]
+  /** Iets kleins dat bij de wedstrijd hoort, onder het momentum (bv. de 3D-knop). */
+  onderMomentum?: ReactNode
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
   const [timeline, setTimeline] = useState<TimelineItem[]>(initial.timeline)
@@ -611,11 +614,11 @@ export function Scoreboard({
             <span className="sb-dash">–</span>
             <span className={goal?.side === 'away' ? 'sb-pulse' : ''}>{state.score.away}</span>
           </div>
-          <div className={`sb-clock ${state.match.status === 'finished' ? 'done' : ''}`}>{fmtClock(clock)}</div>
-          {state.match.status === 'finished' ? (
-            <div className="sb-final">Afgelopen · eindstand</div>
-          ) : (
+          {/* Na het einde zegt de klok niets meer, en "afgelopen" staat al in de pil bovenaan:
+              enkel de eindstand blijft. */}
+          {state.match.status !== 'finished' && (
             <>
+              <div className="sb-clock">{fmtClock(clock)}</div>
               <div className="sb-half">Helft {state.match.currentHalf}</div>
               {/* Enkel iets tonen als er minuten bijkomen: dan loopt deze helft tot een latere minuut. */}
               {requestedMin > 0 && (
@@ -649,6 +652,7 @@ export function Scoreboard({
           colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
         />
       )}
+      {onderMomentum && <div className="sb-verloop3d">{onderMomentum}</div>}
 
       {/* Uitgelogd zie je enkel de score en de tijd. Al de rest (tijdlijn, reacties, vieringen,
           tribune) zit achter login — met een korte uitnodiging. */}

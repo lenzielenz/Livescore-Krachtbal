@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
+
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, readableOnDark } from '@/lib/club-colors'
 
 // Scoreverloop ("momentum"): de cumulatieve voorsprong (thuis − uit) na elk doelpunt, in de
@@ -8,9 +10,13 @@ import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, readableOnDark } from '@/lib/cl
 type Goal = { side: 'home' | 'away'; points: number; half: number; gameClock?: number }
 type Timeout = { side: 'home' | 'away'; half: number; gameClock: number }
 
-const W = 320
+// Basisverhouding 320 × 130. Op een breed scherm groeit enkel de breedte van de tekening mee
+// (tot hoogstens MAX_HOOGTE px hoog op het scherm): zo vult de grafiek de kaart, zonder dat de
+// stippen, sterren en labels uitgerekt worden.
+const W_MIN = 320
 const H = 130
 const PAD = 8
+const MAX_HOOGTE = 200
 
 const timeKey = (half: number, gameClock: number) => half * 100000 + gameClock
 
@@ -38,6 +44,23 @@ export function MomentumChart({
   teams: { home: string; away: string }
   colors?: { home: string | null; away: string | null }
 }) {
+  const vakRef = useRef<HTMLDivElement>(null)
+  const [W, setW] = useState(W_MIN)
+  useEffect(() => {
+    const el = vakRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const meet = () => {
+      const breed = el.clientWidth
+      if (!breed) return
+      const hoog = Math.min((breed * H) / W_MIN, MAX_HOOGTE)
+      setW(Math.max(W_MIN, Math.round((breed * H) / hoog)))
+    }
+    meet()
+    const ro = new ResizeObserver(meet)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   if (goals.length < 1) return null
 
   const homeC = readableOnDark(colors?.home ?? DEFAULT_HOME_COLOR)
@@ -97,7 +120,8 @@ export function MomentumChart({
   return (
     <div className="an-momentum" style={{ ['--home' as string]: homeC, ['--away' as string]: awayC }}>
       <h2 className="an-sub">📈 Momentum — scoreverloop</h2>
-      <svg className="an-mom-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Scoreverloop">
+      <div ref={vakRef} className="an-mom-vak">
+      <svg className="an-mom-svg" viewBox={`0 0 ${W} ${H}`} style={{ aspectRatio: `${W} / ${H}` }} preserveAspectRatio="none" role="img" aria-label="Scoreverloop">
         <defs>
           <linearGradient id="momFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--home)" stopOpacity="0.5" />
@@ -144,6 +168,7 @@ export function MomentumChart({
           />
         ))}
       </svg>
+      </div>
       <div className="an-mom-legend">
         <span><i className="h" style={{ background: homeC }} /> {teams.home} leidt</span>
         <span><i className="a" style={{ background: awayC }} /> {teams.away} leidt</span>

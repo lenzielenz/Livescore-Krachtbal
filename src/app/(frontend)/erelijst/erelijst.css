@@ -96,18 +96,36 @@
   }
 }
 .erl-board {
-  border-radius: 16px;
-  padding: 16px 16px 10px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 18px 16px 12px;
+  /* Diepte: een gouden gloed linksboven (de erelijst draait om prijzen), een lichtband bovenaan
+     en een donkerder onderkant — i.p.v. één vlak grijs paneel. */
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 30%),
-    linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, #fff 12%), var(--panel));
-  border: 1px solid var(--line);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 6px rgba(0, 0, 0, 0.3);
+    radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, #ffb703 18%, transparent), transparent 55%),
+    radial-gradient(90% 50% at 100% 100%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 22%),
+    /* Bijna zwart: op een diepe ondergrond springen goud, zilver, koper en blauw er pas echt uit. */
+    linear-gradient(180deg, #0f1218, #06070a);
+  border: 1px solid color-mix(in srgb, #fff 8%, #1a1e26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 18px 40px -22px rgba(0, 0, 0, 0.85),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+}
+.erl-board .erl-section-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--txt);
 }
 .erl-board-sub {
   color: var(--dim);
   font-size: 0.8rem;
-  margin: 0 0 12px;
+  line-height: 1.4;
+  margin: 0 0 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid color-mix(in srgb, #fff 7%, var(--line));
 }
 .erl-board-lijst {
   list-style: none;
@@ -115,17 +133,38 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 .erl-board-item {
+  --erl-tint: var(--accent);
+  position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 7px 6px;
-  border-radius: 8px;
+  gap: 12px;
+  padding: 10px 12px 11px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 11%, transparent), color-mix(in srgb, var(--accent) 2%, transparent) 70%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
-.erl-board-item:hover {
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+/* Enkel echte hover (muis): op een gsm bleef de laatst aangetikte rij anders opgelicht staan. */
+@media (hover: hover) {
+  .erl-board-item:hover {
+    background: color-mix(in srgb, var(--erl-tint) 9%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--erl-tint) 28%, transparent);
+  }
+}
+/* Podium: een was in goud/zilver/brons met een gekleurd balkje links. */
+/* Verzadigd goud, helder zilver met een koele zweem en warm koper — geen gedempte pasteltinten. */
+.erl-rank-1 { --erl-tint: #ffc21a; }
+.erl-rank-2 { --erl-tint: #b9d3f2; }
+.erl-rank-3 { --erl-tint: #ff8a3d; }
+.erl-rank-1, .erl-rank-2, .erl-rank-3 {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--erl-tint) 30%, transparent), color-mix(in srgb, var(--erl-tint) 8%, transparent) 75%);
+  box-shadow:
+    inset 4px 0 0 0 var(--erl-tint),
+    inset 0 0 0 1px color-mix(in srgb, var(--erl-tint) 38%, transparent),
+    0 8px 22px -14px color-mix(in srgb, var(--erl-tint) 80%, transparent);
 }
 /* Naam en detail krijgen elk hun eigen regel i.p.v. één krappe rij, zodat een lange clubnaam
    ("'t Klaverken Buggenhout") of een lange prijzenlijst nooit afgekapt wordt of de naam
@@ -135,8 +174,8 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  padding-top: 1px;
+  gap: 4px;
+  padding-top: 2px;
 }
 .erl-board-main {
   display: flex;
@@ -148,51 +187,106 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 22px;
+  min-width: 28px;
+  height: 28px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   font-weight: 900;
-  color: var(--dim);
-  background: color-mix(in srgb, var(--line) 60%, transparent);
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 55%, var(--panel)), color-mix(in srgb, var(--accent) 22%, var(--panel)));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 3px 10px -3px color-mix(in srgb, var(--accent) 60%, transparent);
   flex-shrink: 0;
 }
+/* Medailles: metaalverloop met een glanzende bovenrand en een zachte gloed. */
 .erl-rank-1 .erl-rank {
-  color: #1a1400;
-  background: linear-gradient(180deg, #ffe9a8, #e8b23d);
-  box-shadow: 0 0 0 1px color-mix(in srgb, #e8b23d 55%, transparent), 0 2px 6px -1px color-mix(in srgb, #e8b23d 60%, transparent);
+  color: #2a1d00;
+  background: linear-gradient(180deg, #fff6c8 0%, #ffc21a 45%, #d98a00 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -2px 3px rgba(120, 70, 0, 0.35), 0 0 0 1px #c47f00, 0 4px 16px -2px color-mix(in srgb, #ffc21a 85%, transparent);
 }
 .erl-rank-2 .erl-rank {
-  color: #1a1a1e;
-  background: linear-gradient(180deg, #eef1f5, #b9c1cc);
-  box-shadow: 0 0 0 1px color-mix(in srgb, #b9c1cc 55%, transparent);
+  color: #1c2028;
+  background: linear-gradient(180deg, #ffffff 0%, #cfe0f5 48%, #7f97b5 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 -2px 3px rgba(40, 50, 70, 0.3), 0 0 0 1px #7f97b5, 0 4px 14px -3px color-mix(in srgb, #b9d3f2 80%, transparent);
 }
 .erl-rank-3 .erl-rank {
-  color: #241300;
-  background: linear-gradient(180deg, #e3b48a, #b6773f);
-  box-shadow: 0 0 0 1px color-mix(in srgb, #b6773f 55%, transparent);
+  color: #2b1300;
+  background: linear-gradient(180deg, #ffd9b0 0%, #ff8a3d 48%, #b04a0c 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -2px 3px rgba(90, 40, 0, 0.35), 0 0 0 1px #b04a0c, 0 4px 14px -3px color-mix(in srgb, #ff8a3d 80%, transparent);
 }
 .erl-board-naam {
-  font-weight: 700;
-  font-size: 0.9rem;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--txt);
   min-width: 0;
 }
 .erl-board-detail {
   color: var(--dim);
   font-size: 0.76rem;
 }
+/* Prijzen als chips: het getal helder, het soort prijs gedempt. */
+.erl-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.erl-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #fff 5%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 7%, transparent);
+  white-space: nowrap;
+}
+/* Elk soort prijs een eigen kleur: goud (titel), amber (beker), violet (referendum). */
+.erl-stat-titel { --erl-chip: #ffc21a; }
+.erl-stat-beker { --erl-chip: #ff9f1c; }
+.erl-stat-ref { --erl-chip: #b388ff; }
+.erl-stat[class*='erl-stat-'] {
+  background: color-mix(in srgb, var(--erl-chip) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--erl-chip) 38%, transparent);
+  color: color-mix(in srgb, var(--erl-chip) 45%, var(--dim-strong));
+}
+.erl-stat b {
+  color: var(--txt);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+/* Dun balkje: hoeveel prijzen t.o.v. de nummer één — in één oogopslag de verhoudingen. */
+.erl-aandeel {
+  display: block;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #fff 6%, transparent);
+  overflow: hidden;
+  position: relative;
+}
+.erl-aandeel::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--aandeel, 0) * 100%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--erl-tint) 70%, transparent), var(--erl-tint));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--erl-tint) 80%, transparent);
+}
 .erl-board-totaal {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 26px;
-  padding: 2px 8px;
+  min-width: 34px;
+  padding: 3px 10px;
   border-radius: 999px;
   font-weight: 900;
-  font-size: 0.85rem;
-  color: var(--accent);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 26%, transparent), color-mix(in srgb, var(--accent) 6%, transparent));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--erl-tint) 70%, #fff);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--erl-tint) 48%, transparent), color-mix(in srgb, var(--erl-tint) 16%, transparent));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 0 0 1px color-mix(in srgb, var(--erl-tint) 60%, transparent), 0 4px 14px -6px color-mix(in srgb, var(--erl-tint) 90%, transparent);
+  text-shadow: 0 1px 6px color-mix(in srgb, var(--erl-tint) 60%, transparent);
   flex-shrink: 0;
 }
 /* Zelfde kanttekening als .erl-reeks-totaal .erl-meer verderop: .erl-board is geen grid-ouder,
