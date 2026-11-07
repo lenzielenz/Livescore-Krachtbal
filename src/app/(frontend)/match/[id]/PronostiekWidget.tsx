@@ -180,11 +180,13 @@ export function PronostiekWidget({
       <h3 className="pn-h">
         <span className="pn-dot" aria-hidden />
         🔮 Pronostiek
-        <span className="pn-cta">vul nu in</span>
         {typeof remaining === 'number' && (
-          <span className="pn-left">nog {remaining}{max ? `/${max}` : ''} dit weekend</span>
+          <span className="pn-left" title="Pronostieken die je dit weekend nog kan doorgeven">
+            nog {remaining}{max ? `/${max}` : ''}
+          </span>
         )}
       </h3>
+      <p className="pn-sub">Vul je eindstand in vóór de aftrap.</p>
       {/* Tap-eerst: twee kolommen met grote − / + knoppen rond het cijfer — niemand hoeft te
           typen of iets te lezen om dit te snappen. Het cijfer blijft wél een invoerveld voor wie
           liever tikt. */}
@@ -208,7 +210,7 @@ export function PronostiekWidget({
         </div>
       )}
       <p className="pn-hint">
-        Eén keer doorgeven, daarna staat het vast. Niemand ziet je tip.
+        Eén keer doorgeven. Niemand ziet je tip.
       </p>
       {err && <p className="pn-err">{err}</p>}
     </section>

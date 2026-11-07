@@ -504,7 +504,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           {/* Bij een wedstrijd die nog moet komen staan de agenda-knoppen groot in het blok
               hieronder — dan hoeft dit chipje er niet nóg eens bij. */}
           {state.match.status === 'scheduled' && matchDoc?.date && !toekomstig && (
-            <a className="match-meta-bit match-meta-cal" href={`/api/match/${matchId}/ics`}>📅 In agenda</a>
+            <a className="match-meta-bit match-meta-cal" href={`/api/match/${matchId}/ics`} title="Zet deze wedstrijd in je agenda" aria-label="Zet deze wedstrijd in je agenda">🗓️</a>
           )}
           {/* Enkel een link tonen als er al een video is — een uitnodiging om er ÉÉN toe te voegen
               hoort hier niet meer: de tribune moet naar foto's leiden, niet naar video-onderhoud. */}
@@ -512,6 +512,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             <Link className="match-meta-bit match-meta-video" href={`/analyse/${matchId}#video`}>
               🎥 Video bekijken
             </Link>
+          )}
+          {/* Weer aan het veld als klein chipje in de kopregel; tik → details over de volle breedte
+              eronder. Het verbergt zichzelf buiten het voorspelvenster en na de napraatperiode. */}
+          {matchDoc?.date && (weatherLat != null || weatherPlace) && (
+            <MatchWeather date={String(matchDoc.date)} lat={weatherLat} lng={weatherLng} place={weatherPlace} variant="chip" />
           )}
         </div>
       )}
@@ -644,12 +649,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         pronostiekOpen={Boolean(matchDatum) && pronostiekOpen(matchDatum as string)}
         openVanafTekst={matchDatum ? formatDateTimeBE(pronostiekOpenVanaf(matchDatum), { dateStyle: 'full' }) : null}
       />
-      {/* Weerbericht aan het veld voor de thuislocatie, onder het scorebord en de pronostiek. Het
-          paneel verbergt zichzelf zodra de napraatperiode voorbij is (een paar uur na de aftrap) —
-          ook voor afgelopen wedstrijden blijft het dus even staan, net als de tribune. */}
-      {matchDoc?.date && (weatherLat != null || weatherPlace) && (
-        <MatchWeather date={String(matchDoc.date)} lat={weatherLat} lng={weatherLng} place={weatherPlace} />
-      )}
       {/* Planning voor wie mag — aftrap verschuiven (lib/aftrap.ts), verplaatsing aanvragen of
           beantwoorden (lib/verplaatsing.ts). Onderaan en ingeklapt: de wedstrijd zelf staat eerst.
           Wacht er een aanvraag op een antwoord, dan staat het blok open. */}

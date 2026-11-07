@@ -69,11 +69,15 @@ export function MatchWeather({
   lat,
   lng,
   place,
+  variant = 'paneel',
 }: {
   date: string
   lat?: number | null
   lng?: number | null
   place?: string | null
+  /** 'chip': een klein knopje in de kopregel van de wedstrijd (naast datum en agenda); de details
+      klappen open over de volle breedte eronder. 'paneel': de vroegere losse balk. */
+  variant?: 'paneel' | 'chip'
 }) {
   const [fc, setFc] = useState<Forecast | null>(null)
   const [state, setState] = useState<'loading' | 'ok' | 'none'>('loading')
@@ -216,19 +220,8 @@ export function MatchWeather({
         ? { ico: '🥶', val: `${hero.feels}°` }
         : null
 
-  return (
-    <section className={`mw mw-c ${verdict.cls}`} aria-label="Weerbericht aan het veld">
-      {/* Ingeklapte samenvatting: één rustig regeltje dat past op een drukke matchpagina. */}
-      <button type="button" className="mw-sum" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <span className="mw-sum-ico" aria-hidden>{hero.emoji}</span>
-        <span className="mw-sum-temp">{hero.temp}°</span>
-        <span className="mw-sum-txt">{shortVerdict}</span>
-        {summaryChip && <span className="mw-sum-rain">{summaryChip.ico} {summaryChip.val}</span>}
-        {fc.place && <span className="mw-sum-place">📍 {fc.place}</span>}
-        <span className="mw-sum-chev" aria-hidden>{open ? '▴' : '▾'}</span>
-      </button>
-
-      {open && (
+  // De uitgeklapte details: dezelfde voor de balk en de chip.
+  const detail = (
         <div className="mw-detail">
           <div className="mw-hero-facts">
             <span className="mw-fact">
@@ -271,7 +264,51 @@ export function MatchWeather({
             ))}
           </div>
         </div>
-      )}
+  )
+
+  // Chip in de kopregel: icoon, temperatuur en het belangrijkste kerncijfer; tik → de details
+  // openen als paneel over de volle breedte van de kopregel (die wikkelt, zie .match-meta).
+  if (variant === 'chip') {
+    return (
+      <>
+        <button
+          type="button"
+          className={`mw-chip ${verdict.cls}`}
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          title={`Weer aan het veld: ${verdict.text}`}
+        >
+          <span aria-hidden>{hero.emoji}</span> {hero.temp}°
+          {summaryChip && <span className="mw-chip-extra">{summaryChip.ico} {summaryChip.val}</span>}
+          <span className="mw-chip-chev" aria-hidden>{open ? '▴' : '▾'}</span>
+        </button>
+        {open && (
+          <section className={`mw mw-c mw-uit ${verdict.cls}`} aria-label="Weerbericht aan het veld">
+            <div className="mw-uit-kop">
+              <b>Weer aan het veld</b>
+              {fc.place && <span className="mw-sum-place">📍 {fc.place}</span>}
+              <button type="button" className="mw-uit-sluit" onClick={() => setOpen(false)} aria-label="Weerbericht sluiten">✕</button>
+            </div>
+            {detail}
+          </section>
+        )}
+      </>
+    )
+  }
+
+  return (
+    <section className={`mw mw-c ${verdict.cls}`} aria-label="Weerbericht aan het veld">
+      {/* Ingeklapte samenvatting: één rustig regeltje dat past op een drukke matchpagina. */}
+      <button type="button" className="mw-sum" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <span className="mw-sum-ico" aria-hidden>{hero.emoji}</span>
+        <span className="mw-sum-temp">{hero.temp}°</span>
+        <span className="mw-sum-txt">{shortVerdict}</span>
+        {summaryChip && <span className="mw-sum-rain">{summaryChip.ico} {summaryChip.val}</span>}
+        {fc.place && <span className="mw-sum-place">📍 {fc.place}</span>}
+        <span className="mw-sum-chev" aria-hidden>{open ? '▴' : '▾'}</span>
+      </button>
+
+      {open && detail}
     </section>
   )
 }
