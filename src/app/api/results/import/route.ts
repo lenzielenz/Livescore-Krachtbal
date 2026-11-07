@@ -3,7 +3,8 @@ import { competitionWhere } from '@/lib/analyse-access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksCategorie, type Reeks } from '@/lib/reeksen'
-import { cleanTeamName, isPlayed, norm, parseResultsHtml } from '@/lib/results-import'
+import { dedupeKey } from '@/lib/dedupe'
+import { cleanTeamName, isPlayed, parseResultsHtml } from '@/lib/results-import'
 import { clubVanPloeg } from '@/lib/season-import'
 import { buildFixedSimpleScore } from '@/lib/simple-score'
 
@@ -39,32 +40,33 @@ export async function POST(req: Request) {
 
     // Ploegen → opzoeken op (reeks, naam), met val-terug op een unieke naam over alle reeksen.
     const teamsRes = await payload.find({ collection: 'teams', where: competitionWhere(), depth: 0, limit: 5000 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    // Naamsleutel zoals de seizoensimport en de opkuistool (lib/dedupe.ts): hoofdletters,
+    // leestekens en spaties tellen niet mee. Met enkel kleine letters vond "Buffalo s Sijsele" onze
+    // "Buffalo's Sijsele" niet, en maakte deze import er een tweede ploeg (én wedstrijden) bij.
     const byName = new Map<string, { id: number; reeks: string }[]>()
     for (const t of teamsRes.docs) {
-      const key = norm(String((t as { name?: unknown }).name ?? ''))
+      const key = dedupeKey(String((t as { name?: unknown }).name ?? ''))
       if (!key) continue
       const arr = byName.get(key) ?? []
       arr.push({ id: (t as { id: number }).id, reeks: String((t as { reeks?: unknown }).reeks ?? '') })
       byName.set(key, arr)
     }
-    const resolveTeam = (name: string, reeks: string): number | null => {
-      const list = byName.get(norm(name)) ?? []
-      if (list.length === 0) return null
-      const exact = list.find((x) => x.reeks === reeks)
-      if (exact) return exact.id
-      // Geen exacte reeks-match: enkel hergebruiken als de naam uniek én van dezelfde reeks is.
-      return null
-    }
+    // Alle ploegen met die naam in die reeks, oudste eerst (dat is de ploeg van de kalender).
+    const teamsInReeks = (name: string, reeks: string): number[] =>
+      (byName.get(dedupeKey(name)) ?? []).filter((x) => x.reeks === reeks).map((x) => x.id).sort((a, b) => a - b)
+    const resolveTeam = (name: string, reeks: string): number | null => teamsInReeks(name, reeks)[0] ?? null
 
     // Clubs indexeren (voor het aanmaken van ontbrekende ploegen).
     const clubsRes = await payload.find({ collection: 'clubs', where: competitionWhere(), depth: 0, limit: 5000 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
     const clubByName = new Map<string, number>()
     for (const c of clubsRes.docs) {
-      const k = norm(String((c as { name?: unknown }).name ?? ''))
-      if (k) clubByName.set(k, (c as { id: number }).id)
+      const k = dedupeKey(String((c as { name?: unknown }).name ?? ''))
+      // Bij dubbele clubs de oudste houden (de rest is opkuiswerk voor de opkuistool).
+      const id = (c as { id: number }).id
+      if (k && (!clubByName.has(k) || id < (clubByName.get(k) as number))) clubByName.set(k, id)
     }
     const ensureClub = async (clubName: string): Promise<number> => {
-      const k = norm(clubName)
+      const k = dedupeKey(clubName)
       const ex = clubByName.get(k)
       if (ex != null) return ex
       const created = await payload.create({ collection: 'clubs', data: { name: cleanTeamName(clubName) }, overrideAccess: true })
@@ -85,7 +87,7 @@ export async function POST(req: Request) {
       if (found != null) return found
       if (!createTeams) return null
       if (!commit) {
-        const fk = `${norm(name)}|${reeks}`
+        const fk = `${dedupeKey(name)}|${reeks}`
         wouldCreate.add(fk)
         let fid = fakeId.get(fk)
         if (fid == null) { fid = -(fakeId.size + 1); fakeId.set(fk, fid) }
@@ -98,9 +100,9 @@ export async function POST(req: Request) {
         overrideAccess: true,
       })
       const id = (t as { id: number }).id
-      const arr = byName.get(norm(name)) ?? []
+      const arr = byName.get(dedupeKey(name)) ?? []
       arr.push({ id, reeks })
-      byName.set(norm(name), arr)
+      byName.set(dedupeKey(name), arr)
       teamsCreated++
       return id
     }
@@ -110,13 +112,29 @@ export async function POST(req: Request) {
     const existingRes = reeksSet.length
       ? await payload.find({ collection: 'matches', where: { reeks: { in: reeksSet } }, depth: 0, limit: 8000 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
       : { docs: [] as Record<string, unknown>[] }
-    const existKey = new Map<string, number>()
+    // Per (reeks, thuis, uit) alle wedstrijden met hun datum: een uitslag hoort bij de wedstrijd
+    // van die ploegen op (of binnen een week van) die datum — ook als de federatie een verplaatste
+    // wedstrijd nog op de oude datum heeft staan, of als de UTC-datum een dag verschoven is.
+    const perPaar = new Map<string, { id: number; date: string }[]>()
     for (const m of existingRes.docs) {
+      if ((m as { analyseOnly?: boolean }).analyseOnly) continue
       const hid = rel((m as { homeTeam?: unknown }).homeTeam)
       const aid = rel((m as { awayTeam?: unknown }).awayTeam)
-      const d = String((m as { date?: unknown }).date ?? '').slice(0, 10)
       const rk = String((m as { reeks?: unknown }).reeks ?? '')
-      if (hid != null && aid != null) existKey.set(`${rk}|${hid}|${aid}|${d}`, (m as { id: number }).id)
+      if (hid == null || aid == null) continue
+      const k = `${rk}|${hid}|${aid}`
+      const arr = perPaar.get(k) ?? []
+      arr.push({ id: (m as { id: number }).id, date: String((m as { date?: unknown }).date ?? '') })
+      perPaar.set(k, arr)
+    }
+    const WEEK_MS = 7 * 86_400_000
+    const bestaandeWedstrijd = (reeks: string, home: string, away: string, datum: string): number | undefined => {
+      const kandidaten = teamsInReeks(home, reeks).flatMap((h) => teamsInReeks(away, reeks).flatMap((a) => perPaar.get(`${reeks}|${h}|${a}`) ?? []))
+      const doel = new Date(`${datum}T12:00:00Z`).getTime()
+      return kandidaten
+        .map((m) => ({ m, afstand: Math.abs(new Date(m.date).getTime() - doel) }))
+        .filter((x) => Number.isFinite(x.afstand) && x.afstand <= WEEK_MS)
+        .sort((a, b) => a.afstand - b.afstand || a.m.id - b.m.id)[0]?.m.id
     }
 
     let toCreate = 0
@@ -138,8 +156,7 @@ export async function POST(req: Request) {
 
       const dateISO = r.date ? `${r.date}T${r.time && /^\d{1,2}:\d{2}/.test(r.time) ? (r.time.length === 5 ? `${r.time}:00` : r.time) : '00:00:00'}` : ''
       if (!dateISO) continue
-      const key = `${r.reeks}|${hid}|${aid}|${r.date}`
-      const existingId = existKey.get(key)
+      const existingId = bestaandeWedstrijd(r.reeks, r.home, r.away, r.date)
       const op: Op = { kind: existingId ? 'update' : 'create', id: existingId, reeks: r.reeks as Reeks, hid, aid, dateISO, home: r.homeScore, away: r.awayScore }
       if (existingId) toUpdate++
       else toCreate++

@@ -1,7 +1,8 @@
 import type { Payload } from 'payload'
 
 import { competitionWhere } from './analyse-access'
-import { isPlayed, norm, type RawResult } from './results-import'
+import { dedupeKey } from './dedupe'
+import { isPlayed, type RawResult } from './results-import'
 import { buildFixedSimpleScore, readSimpleScore } from './simple-score'
 
 // Officiële uitslagen op onze kalender toepassen.
@@ -78,20 +79,25 @@ export async function pasUitslagenToe(
   const teamsRes = await payload
     .find({ collection: 'teams', where: competitionWhere(), depth: 0, limit: 5000, overrideAccess: true })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  // Naamsleutel zoals de seizoensimport en de opkuistool (lib/dedupe.ts): hoofdletters,
+  // leestekens en spaties tellen niet mee. Met de vroegere sleutel (enkel kleine letters) vond
+  // "Buffalo s Sijsele" (federatie) onze "Buffalo's Sijsele" niet, en bleven haar uitslagen liggen.
   const teamsPerNaam = new Map<string, { id: number; reeks: string }[]>()
   for (const t of teamsRes.docs) {
-    const key = norm(String((t as { name?: unknown }).name ?? ''))
+    const key = dedupeKey(String((t as { name?: unknown }).name ?? ''))
     if (!key) continue
     const arr = teamsPerNaam.get(key) ?? []
     arr.push({ id: (t as { id: number }).id, reeks: String((t as { reeks?: unknown }).reeks ?? '') })
     teamsPerNaam.set(key, arr)
   }
-  const zoekPloeg = (naam: string, reeks: string): number | null => {
-    const lijst = teamsPerNaam.get(norm(naam)) ?? []
-    const exact = lijst.find((x) => x.reeks === reeks)
-    if (exact) return exact.id
+  // Alle ploegen met die naam in die reeks (oudste eerst). Staat een ploeg er dubbel in (nog niet
+  // opgekuist), dan zoeken we de wedstrijd bij elk van hen i.p.v. blind de nieuwste te nemen.
+  const zoekPloegen = (naam: string, reeks: string): number[] => {
+    const lijst = teamsPerNaam.get(dedupeKey(naam)) ?? []
+    const inReeks = lijst.filter((x) => x.reeks === reeks).map((x) => x.id).sort((a, b) => a - b)
+    if (inReeks.length) return inReeks
     // Zonder reeks-treffer enkel accepteren als de naam over het hele platform uniek is.
-    return lijst.length === 1 ? lijst[0].id : null
+    return lijst.length === 1 ? [lijst[0].id] : []
   }
 
   // Onze wedstrijden van de betrokken reeksen, geïndexeerd op ploegenpaar.
@@ -147,16 +153,16 @@ export async function pasUitslagenToe(
       continue
     }
     const omschrijving = `${r.date || '?'} · ${r.home} ${r.homeScore}–${r.awayScore} ${r.away} (${r.reeks})`
-    const hid = zoekPloeg(r.home, r.reeks)
-    const aid = zoekPloeg(r.away, r.reeks)
-    if (hid == null || aid == null) {
+    const thuisIds = zoekPloegen(r.home, r.reeks)
+    const uitIds = zoekPloegen(r.away, r.reeks)
+    if (!thuisIds.length || !uitIds.length) {
       if (rapport.onbekend.length < 60) rapport.onbekend.push(omschrijving)
       continue
     }
 
     // Zelfde ploegen in dezelfde reeks: eerst exact op datum, anders de dichtstbijzijnde binnen
     // een week (een verplaatste wedstrijd houdt bij de federatie soms de oude datum).
-    const kandidaten = perPaar.get(`${r.reeks}|${hid}|${aid}`) ?? []
+    const kandidaten = thuisIds.flatMap((hid) => uitIds.flatMap((aid) => perPaar.get(`${r.reeks}|${hid}|${aid}`) ?? []))
     let wedstrijd: Wedstrijd | undefined = kandidaten.find((m) => m.date.slice(0, 10) === r.date)
     if (!wedstrijd && r.date) {
       const doel = new Date(`${r.date}T12:00:00`).getTime()
