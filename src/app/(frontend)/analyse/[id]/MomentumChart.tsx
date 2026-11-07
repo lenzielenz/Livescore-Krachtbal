@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, readableOnDark } from '@/lib/club-colors'
 
@@ -44,6 +44,8 @@ export function MomentumChart({
   teams: { home: string; away: string }
   colors?: { home: string | null; away: string | null }
 }) {
+  // Eigen id's per grafiek: twee grafieken op één pagina deelden anders hetzelfde verloop.
+  const gid = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const vakRef = useRef<HTMLDivElement>(null)
   const [W, setW] = useState(W_MIN)
   useEffect(() => {
@@ -119,54 +121,69 @@ export function MomentumChart({
 
   return (
     <div className="an-momentum" style={{ ['--home' as string]: homeC, ['--away' as string]: awayC }}>
-      <h2 className="an-sub">📈 Momentum — scoreverloop</h2>
+      <h2 className="an-sub">📈 Scoreverloop</h2>
       <div ref={vakRef} className="an-mom-vak">
       <svg className="an-mom-svg" viewBox={`0 0 ${W} ${H}`} style={{ aspectRatio: `${W} / ${H}` }} preserveAspectRatio="none" role="img" aria-label="Scoreverloop">
         <defs>
-          <linearGradient id="momFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--home)" stopOpacity="0.5" />
-            <stop offset="50%" stopColor="var(--home)" stopOpacity="0.05" />
-            <stop offset="50%" stopColor="var(--away)" stopOpacity="0.05" />
-            <stop offset="100%" stopColor="var(--away)" stopOpacity="0.5" />
+          {/* Verloop in schermcoördinaten (userSpaceOnUse): de kleur hangt aan de hoogte in de
+              grafiek, niet aan de vorm. Met de standaard (objectBoundingBox) kleurde de vlakte
+              boven de nullijn soms over de hele breedte in de thuiskleur. */}
+          <linearGradient id={`${gid}h`} gradientUnits="userSpaceOnUse" x1="0" y1={PAD} x2="0" y2={mid}>
+            <stop offset="0%" stopColor="var(--home)" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="var(--home)" stopOpacity="0.06" />
           </linearGradient>
+          <linearGradient id={`${gid}a`} gradientUnits="userSpaceOnUse" x1="0" y1={mid} x2="0" y2={H - PAD}>
+            <stop offset="0%" stopColor="var(--away)" stopOpacity="0.06" />
+            <stop offset="100%" stopColor="var(--away)" stopOpacity="0.55" />
+          </linearGradient>
+          <clipPath id={`${gid}boven`}>
+            <rect x="0" y="0" width={W} height={mid} />
+          </clipPath>
+          <clipPath id={`${gid}onder`}>
+            <rect x="0" y={mid} width={W} height={H - mid} />
+          </clipPath>
         </defs>
-        {/* Time-out-lijnen (gevraagde minuten). */}
+        {/* Schaal: stippellijnen op de grootste voorsprong, met het verschil erbij. */}
+        <line x1={PAD} y1={yAt(maxAbs)} x2={W - PAD} y2={yAt(maxAbs)} className="an-mom-grid" />
+        <line x1={PAD} y1={yAt(-maxAbs)} x2={W - PAD} y2={yAt(-maxAbs)} className="an-mom-grid" />
+        {/* Links: het eindpunt (met ring) staat altijd rechts en mag niet onder een label vallen. */}
+        <text x={PAD} y={yAt(maxAbs) - 2} fontSize={6.5} textAnchor="start" className="an-mom-schaal" fill="var(--home)">+{maxAbs}</text>
+        <text x={PAD} y={yAt(-maxAbs) + 7.5} fontSize={6.5} textAnchor="start" className="an-mom-schaal" fill="var(--away)">+{maxAbs}</text>
+        {/* Time-outs: een dunne stippellijn in de kleur van de ploeg die ze nam. */}
         {timeouts.map((to, i) => {
           const x = toX(to)
           const c = to.side === 'home' ? 'var(--home)' : 'var(--away)'
-          return (
-            <g key={`to${i}`}>
-              <line x1={x} y1={PAD} x2={x} y2={H - PAD} stroke={c} strokeWidth={1} strokeDasharray="3 3" opacity={0.55} />
-              <text x={x} y={PAD + 7} fontSize={7} textAnchor="middle" fill={c} opacity={0.85}>T</text>
-            </g>
-          )
+          return <line key={`to${i}`} x1={x} y1={PAD + 9} x2={x} y2={H - PAD} stroke={c} strokeWidth={0.9} strokeDasharray="2 3" opacity={0.45} />
         })}
         <line x1={PAD} y1={mid} x2={W - PAD} y2={mid} className="an-mom-zero" />
-        {/* Start van een nieuwe helft (2de helft, verlenging, ...). */}
+        {/* Start van een nieuwe helft (2de helft, verlenging, ...): label bovenaan, los van de lijn. */}
         {halfLines.map((hl, i) => (
           <g key={`hl${i}`}>
-            <line x1={hl.x} y1={PAD} x2={hl.x} y2={H - PAD} className="an-mom-half" />
-            <text x={hl.x} y={H - PAD - 2} fontSize={7} textAnchor="middle" className="an-mom-half-lbl">{ordinal(hl.half)} helft</text>
+            <line x1={hl.x} y1={PAD + 9} x2={hl.x} y2={H - PAD} className="an-mom-half" />
+            <text x={hl.x} y={PAD + 5} fontSize={6.5} textAnchor="middle" className="an-mom-half-lbl">{ordinal(hl.half)} helft</text>
           </g>
         ))}
-        <path d={areaPath} fill="url(#momFill)" />
+        <path d={areaPath} fill={`url(#${gid}h)`} clipPath={`url(#${gid}boven)`} />
+        <path d={areaPath} fill={`url(#${gid}a)`} clipPath={`url(#${gid}onder)`} />
         <polyline points={linePts.join(' ')} className="an-mom-line" fill="none" />
-        {/* Gewone doelpunten: stippen. */}
+        {/* Gewone doelpunten: stippen, met een donkere rand zodat ze loskomen van de lijn. */}
         {seq.filter((s) => !s.rug).map((s, i) => (
-          <circle key={`d${i}`} cx={xAt(s.x)} cy={yAt(s.diff)} r={2.6} fill={s.side === 'home' ? 'var(--home)' : 'var(--away)'} />
+          <circle key={`d${i}`} cx={xAt(s.x)} cy={yAt(s.diff)} r={2.4} className="an-mom-dot" fill={s.side === 'home' ? 'var(--home)' : 'var(--away)'} />
         ))}
         {/* Rugworpen (+2): een grote ster met gouden rand, bovenop — duidelijk te onderscheiden. */}
         {seq.filter((s) => s.rug).map((s, i) => (
           <polygon
             key={`r${i}`}
-            points={starPoints(xAt(s.x), yAt(s.diff), 6.5)}
+            points={starPoints(xAt(s.x), yAt(s.diff), 6)}
             fill={s.side === 'home' ? 'var(--home)' : 'var(--away)'}
             stroke="#f4c430"
-            strokeWidth={1.4}
+            strokeWidth={1.3}
             strokeLinejoin="round"
             paintOrder="stroke"
           />
         ))}
+        {/* Eindpunt: een ring, zodat je meteen ziet waar het verloop eindigt. */}
+        <circle cx={xAt(n)} cy={yAt(finalDiff)} r={4.2} className="an-mom-eind" stroke={finalDiff >= 0 ? 'var(--home)' : 'var(--away)'} />
       </svg>
       </div>
       <div className="an-mom-legend">
