@@ -616,9 +616,11 @@ export function LiveBoard({
             }}
           >
             <summary className="lb-datesum">
-              <span className="lb-datelabel">{view === 'weekend' ? 'Weekend' : date === today ? 'Vandaag' : dateLabel}</span>
+              {/* Altijd gewoon de datum, met het aantal wedstrijden eronder. Een grote "Vandaag" met de
+                  datum klein ernaast nam op gsm drie regels in; dat vandaag vandaag is, toont de
+                  speeldagenlijst al. */}
+              <span className="lb-datelabel">{view === 'weekend' ? weekendLabel : dateLabel}</span>
               <span className="lb-datesub">
-                {view === 'weekend' ? weekendLabel : date === today ? dateLabel : null}
                 {(view === 'weekend' ? aantalWeekend : aantalVandaag) > 0 && (
                   <span className="lb-datecount">{wedstrijdenTekst(view === 'weekend' ? aantalWeekend : aantalVandaag)}</span>
                 )}
