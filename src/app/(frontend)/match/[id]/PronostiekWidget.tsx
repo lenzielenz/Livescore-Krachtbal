@@ -134,15 +134,9 @@ export function PronostiekWidget({
     )
   }
   // Niet (meer) ingevuld en de match is al bezig — voorspellen kan enkel nog vóór de aftrap
-  // (anders zou je de uitslag al kunnen kennen terwijl je "voorspelt").
-  if (status === 'live') {
-    return (
-      <div className="pn-line">
-        <span className="pn-line-ic">⏱</span>
-        <span>De wedstrijd is bezig — voorspellen kan niet meer.</span>
-      </div>
-    )
-  }
+  // (anders zou je de uitslag al kunnen kennen terwijl je "voorspelt"). Dan tonen we niets: een
+  // regel "kan niet meer" onder een live scorebord is enkel ruis.
+  if (status === 'live') return null
   if (status === 'scheduled' && !pronostiekOpen) {
     return (
       <div className="pn-line">
