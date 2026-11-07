@@ -628,8 +628,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         </>
       )}
 
-      {/* Pronostiek vlak onder het scorebord: zichtbaar maar ingeklapt (de widget toont één regel;
-          tik open om te voorspellen). Eens ingevuld is ze één compacte regel. */}
+      {/* Pronostiek vlak onder het scorebord: meteen invulbaar (ingeklapt vergaten mensen ze), maar
+          compact. Eens ingevuld is ze één slanke regel. */}
       <PronostiekWidget
         matchId={matchId}
         status={state.match.status}
