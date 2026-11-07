@@ -576,50 +576,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           />
         </>
       )}
-      {/* Wedstrijddag en planning voor wie mag: aftrap verschuiven (lib/aftrap.ts), verplaatsing
-          aanvragen of beantwoorden (lib/verplaatsing.ts). Onder de affiche, zodat de wedstrijd eerst staat. */}
-      {verplaatsingRolEcht && (
-        <Verplaatsing
-          matchId={matchId}
-          aanvraag={verplaatsingAanvraag && !['ingetrokken'].includes(verplaatsingAanvraag.status) ? verplaatsingAanvraag : null}
-          rol={verplaatsingRolEcht}
-        />
-      )}
-      {aftrapRecht.wijzigen && matchDoc?.date && (
-        <AftrapVerschuiven
-          matchId={matchId}
-          aftrap={String(matchDoc.date)}
-          magMeeschuiven={aftrapRecht.meeschuiven}
-          volgende={aftrapVolgende.map((v) => ({
-            id: v.id,
-            titel: `${(v.homeTeam as { name?: string } | null)?.name ?? '?'} – ${(v.awayTeam as { name?: string } | null)?.name ?? '?'}`,
-            aftrap: String(v.date),
-          }))}
-          geschiedenis={aftrapLog}
-        />
-      )}
-      {/* Weerbericht aan het veld voor de thuislocatie. Het paneel verbergt zichzelf zodra de
-          napraatperiode voorbij is (een paar uur na de aftrap) — ook voor afgelopen wedstrijden
-          blijft het dus even staan, net als de tribune. */}
-      {matchDoc?.date && (weatherLat != null || weatherPlace) && (
-        <MatchWeather date={String(matchDoc.date)} lat={weatherLat} lng={weatherLng} place={weatherPlace} />
-      )}
-      {/* Pronostiek bovenaan, vóór het scorebord — zo verdwijnt ze niet onder de reacties/tijdlijn.
-          Eens ingevuld wordt ze heel compact (zie de widget). */}
-      <PronostiekWidget
-        matchId={matchId}
-        status={state.match.status}
-        loggedIn={Boolean(me)}
-        homeName={state.teams.home.name}
-        awayName={state.teams.away.name}
-        initialHome={myPred ? myPred.home : null}
-        initialAway={myPred ? myPred.away : null}
-        remaining={predRemaining}
-        max={LIVE_PRONOSTIEK_MAX_PER_WEEKEND}
-        boosterTokens={myBoosters}
-        pronostiekOpen={Boolean(matchDatum) && pronostiekOpen(matchDatum as string)}
-        openVanafTekst={matchDatum ? formatDateTimeBE(pronostiekOpenVanaf(matchDatum), { dateStyle: 'full' }) : null}
-      />
       {/* Alles wat "live" is — bord, tijdlijn, tribune, vertrouwenslaag, stream — slaan we over
           zolang de wedstrijd nog moet komen. */}
       {!toekomstig && (
@@ -670,6 +626,63 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         <LiveStream url={String(matchDoc.livestreamUrl)} live={state.match.status === 'live'} />
       )}
         </>
+      )}
+
+      {/* Pronostiek vlak onder het scorebord: zichtbaar maar ingeklapt (de widget toont één regel;
+          tik open om te voorspellen). Eens ingevuld is ze één compacte regel. */}
+      <PronostiekWidget
+        matchId={matchId}
+        status={state.match.status}
+        loggedIn={Boolean(me)}
+        homeName={state.teams.home.name}
+        awayName={state.teams.away.name}
+        initialHome={myPred ? myPred.home : null}
+        initialAway={myPred ? myPred.away : null}
+        remaining={predRemaining}
+        max={LIVE_PRONOSTIEK_MAX_PER_WEEKEND}
+        boosterTokens={myBoosters}
+        pronostiekOpen={Boolean(matchDatum) && pronostiekOpen(matchDatum as string)}
+        openVanafTekst={matchDatum ? formatDateTimeBE(pronostiekOpenVanaf(matchDatum), { dateStyle: 'full' }) : null}
+      />
+      {/* Weerbericht aan het veld voor de thuislocatie, onder het scorebord en de pronostiek. Het
+          paneel verbergt zichzelf zodra de napraatperiode voorbij is (een paar uur na de aftrap) —
+          ook voor afgelopen wedstrijden blijft het dus even staan, net als de tribune. */}
+      {matchDoc?.date && (weatherLat != null || weatherPlace) && (
+        <MatchWeather date={String(matchDoc.date)} lat={weatherLat} lng={weatherLng} place={weatherPlace} />
+      )}
+      {/* Planning voor wie mag — aftrap verschuiven (lib/aftrap.ts), verplaatsing aanvragen of
+          beantwoorden (lib/verplaatsing.ts). Onderaan en ingeklapt: de wedstrijd zelf staat eerst.
+          Wacht er een aanvraag op een antwoord, dan staat het blok open. */}
+      {(verplaatsingRolEcht || (aftrapRecht.wijzigen && matchDoc?.date)) && (
+        <details
+          className="match-fold"
+          open={Boolean(verplaatsingAanvraag && ['wacht_tegenpartij', 'wacht_federatie'].includes(verplaatsingAanvraag.status))}
+        >
+          <summary className="match-fold-kop">
+            🗓️ Planning
+            <span className="match-fold-sub">aftrap verschuiven of verplaatsing aanvragen</span>
+          </summary>
+        {verplaatsingRolEcht && (
+          <Verplaatsing
+            matchId={matchId}
+            aanvraag={verplaatsingAanvraag && !['ingetrokken'].includes(verplaatsingAanvraag.status) ? verplaatsingAanvraag : null}
+            rol={verplaatsingRolEcht}
+          />
+        )}
+        {aftrapRecht.wijzigen && matchDoc?.date && (
+          <AftrapVerschuiven
+            matchId={matchId}
+            aftrap={String(matchDoc.date)}
+            magMeeschuiven={aftrapRecht.meeschuiven}
+            volgende={aftrapVolgende.map((v) => ({
+              id: v.id,
+              titel: `${(v.homeTeam as { name?: string } | null)?.name ?? '?'} – ${(v.awayTeam as { name?: string } | null)?.name ?? '?'}`,
+              aftrap: String(v.date),
+            }))}
+            geschiedenis={aftrapLog}
+          />
+        )}
+        </details>
       )}
 
       {/* "Ik ben erbij" — supporters bouwen zo hun seizoenspaspoort op. Pas op de dag zelf: je

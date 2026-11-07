@@ -171,18 +171,20 @@ export function PronostiekWidget({
     )
   }
 
-  // Actief → het enige paneel dat blijft staan, subtiel opvallend met een zachte accentgloed.
-  // Eén vaste <section> (geen inline-component): zo blijft het invoerveld gemount en behoudt het de
-  // focus/het toetsenbord tussen toetsaanslagen door.
+  // Actief → ingeklapt tot één rustige balk onder het scorebord ("Voorspel de uitslag ›"); een tik
+  // klapt het formulier open. Zo blijft de pronostiek zichtbaar zonder de wedstrijd weg te duwen.
+  // Eén vast <details>-element (geen inline-component): zo blijft het invoerveld gemount en behoudt
+  // het de focus/het toetsenbord tussen toetsaanslagen door.
   return (
-    <section className="pn pn-active">
-      <h3 className="pn-h">
+    <details className="pn pn-active pn-fold">
+      <summary className="pn-h pn-fold-kop">
         <span className="pn-dot" aria-hidden />
         🔮 Pronostiek
+        <span className="pn-fold-cta">Voorspel de uitslag</span>
         {typeof remaining === 'number' && (
-          <span className="pn-left">nog {remaining}{max ? `/${max}` : ''} dit weekend</span>
+          <span className="pn-left">nog {remaining}{max ? `/${max}` : ''}</span>
         )}
-      </h3>
+      </summary>
       {/* Tap-eerst: twee kolommen met grote − / + knoppen rond het cijfer — niemand hoeft te
           typen of iets te lezen om dit te snappen. Het cijfer blijft wél een invoerveld voor wie
           liever tikt. */}
@@ -209,6 +211,6 @@ export function PronostiekWidget({
         Je kan dit maar één keer doorgeven — daarna staat het vast. Niemand ziet je tip.
       </p>
       {err && <p className="pn-err">{err}</p>}
-    </section>
+    </details>
   )
 }

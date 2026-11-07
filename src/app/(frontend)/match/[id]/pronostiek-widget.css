@@ -101,3 +101,28 @@
 /* Weekendteller in de kop. */
 .pn-left { margin-left: auto; font-size: 0.74rem; font-weight: 700; color: var(--dim); }
 .pn-h { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+
+/* Ingeklapt (standaard): één slanke balk — zichtbaar, maar niet storend. Open: het formulier. */
+.pn-fold { padding: 0; }
+.pn-fold-kop {
+  list-style: none;
+  cursor: pointer;
+  align-items: center;
+  margin: 0;
+  padding: 11px 14px;
+  font-size: 0.92rem;
+}
+.pn-fold-kop::-webkit-details-marker { display: none; }
+.pn-fold-kop::after {
+  content: '›';
+  margin-left: 6px;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--accent);
+  transition: transform 0.18s ease;
+}
+.pn-fold[open] > .pn-fold-kop::after { transform: rotate(90deg); }
+.pn-fold-cta { font-size: 0.8rem; font-weight: 700; color: var(--accent); }
+.pn-fold .pn-left { margin-left: auto; }
+.pn-fold > :not(summary) { margin-left: 14px; margin-right: 14px; }
+.pn-fold > :last-child { margin-bottom: 14px; }
