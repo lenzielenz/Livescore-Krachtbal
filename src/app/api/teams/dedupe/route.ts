@@ -1,12 +1,15 @@
 import { hasRole, isFederationLevel } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { authUser } from '@/lib/api-auth'
-import { dedupeKey } from '@/lib/dedupe'
+import { dedupeKey, dubbeleWedstrijden, type WedstrijdVoorDedupe } from '@/lib/dedupe'
 import { getPayloadClient } from '@/lib/payload-client'
+import { readSimpleScore } from '@/lib/simple-score'
 
 // Kuist dubbele ploegen (per reeks) en dubbele clubs op die "dezelfde maar net anders
 // geschreven" zijn. De ploeg/club met de meeste wedstrijden/ploegen blijft behouden; de rest
-// wordt erin samengevoegd (wedstrijden + spelers verhuizen) en verwijderd. Federatie/admin.
+// wordt erin samengevoegd (wedstrijden + spelers verhuizen) en verwijderd. Daarna worden dubbele
+// wedstrijden van hetzelfde duel samengevoegd (lib/dedupe.ts → dubbeleWedstrijden): anders telde
+// een importkopie naast de kalenderwedstrijd mee in de rangschikking. Federatie/admin.
 // Standaard PREVIEW; met { commit: true } wordt het uitgevoerd.
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
@@ -90,7 +93,51 @@ export async function POST(req: Request) {
       for (const d of dups) clubDupMap.set(d.id, keep.id)
     }
 
-    const committed = { teamsMerged: 0, clubsMerged: 0, matchesMoved: 0, playersMoved: 0 }
+    // Dubbele wedstrijden van hetzelfde duel, zoals ze er NA het samenvoegen van de ploegen uitzien.
+    const naSamenvoegen = (id: number | null) => (id != null ? (dupMap.get(id) ?? id) : null)
+    const competitie = matchesRes.docs.filter((m) => !(m as { analyseOnly?: boolean }).analyseOnly && !(m as { isDemo?: boolean }).isDemo)
+    const wedstrijdIds = competitie.map((m) => (m as { id: number }).id)
+    const eigen = new Set<number>()
+    if (wedstrijdIds.length) {
+      const worpen = await payload
+        .find({ collection: 'throws', where: { match: { in: wedstrijdIds } }, depth: 0, pagination: false, select: { match: true }, overrideAccess: true })
+        .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+      for (const t of worpen.docs) {
+        const mid = rel((t as { match?: unknown }).match)
+        if (mid != null) eigen.add(mid)
+      }
+      const bladen = await payload
+        .find({ collection: 'matchsheets', where: { match: { in: wedstrijdIds } }, depth: 0, limit: 15000, overrideAccess: true })
+        .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+      for (const b of bladen.docs) {
+        if (String((b as { status?: unknown }).status ?? 'concept') === 'concept') continue
+        const mid = rel((b as { match?: unknown }).match)
+        if (mid != null) eigen.add(mid)
+      }
+    }
+    const scoreVan = new Map<number, unknown>()
+    const voorDedupe: WedstrijdVoorDedupe[] = []
+    for (const m of competitie) {
+      const id = (m as { id: number }).id
+      const home = naSamenvoegen(rel((m as { homeTeam?: unknown }).homeTeam))
+      const away = naSamenvoegen(rel((m as { awayTeam?: unknown }).awayTeam))
+      if (home == null || away == null) continue
+      const simpleScore = (m as { simpleScore?: unknown }).simpleScore
+      scoreVan.set(id, simpleScore)
+      voorDedupe.push({
+        id,
+        reeks: String((m as { reeks?: unknown }).reeks ?? ''),
+        home,
+        away,
+        date: String((m as { date?: unknown }).date ?? ''),
+        status: String((m as { status?: unknown }).status ?? ''),
+        eigen: eigen.has(id),
+        uitslag: readSimpleScore({ simpleScore }).goals.length > 0,
+      })
+    }
+    const wedstrijdMerges = dubbeleWedstrijden(voorDedupe)
+
+    const committed = { teamsMerged: 0, clubsMerged: 0, matchesMoved: 0, playersMoved: 0, matchesMerged: 0, matchesNotRemoved: 0 }
     if (commit) {
       // Wedstrijden verhuizen naar de behouden ploeg.
       for (const m of matchesRes.docs) {
@@ -128,6 +175,19 @@ export async function POST(req: Request) {
         await payload.delete({ collection: 'clubs', id: dupClubId, overrideAccess: true }).catch(() => {})
         committed.clubsMerged++
       }
+      // Dubbele wedstrijden: eventueel de uitslag van de kopie overnemen, dan de kopie weghalen.
+      for (const sv of wedstrijdMerges) {
+        if (sv.uitslagVan != null) {
+          await payload
+            .update({ collection: 'matches', id: sv.keep, data: { status: 'finished', simpleScore: scoreVan.get(sv.uitslagVan) as Record<string, unknown>, autoImported: true }, overrideAccess: true })
+            .catch(() => {})
+        }
+        for (const weg of sv.weg) {
+          const ok = await payload.delete({ collection: 'matches', id: weg, overrideAccess: true }).then(() => true).catch(() => false)
+          if (ok) committed.matchesMerged++
+          else committed.matchesNotRemoved++
+        }
+      }
     }
 
     return Response.json({
@@ -139,6 +199,9 @@ export async function POST(req: Request) {
       clubsToMerge: clubDupMap.size,
       teamMerges: teamMerges.slice(0, 60),
       clubMerges: clubMerges.slice(0, 60),
+      matchGroups: wedstrijdMerges.length,
+      matchesToMerge: wedstrijdMerges.reduce((n, sv) => n + sv.weg.length, 0),
+      matchMerges: wedstrijdMerges.slice(0, 60),
       committed,
     })
   } catch (err) {

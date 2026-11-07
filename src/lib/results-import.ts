@@ -122,6 +122,10 @@ export function cleanTeamName(raw: string): string {
   return s
     .split(' ')
     .map((w) => {
+      // "Buffalo s Sijsele", "t Botterken Baasrode": een losse s of t is een weggevallen
+      // apostrof ('s / 't), geen woord — die blijft klein. Vroeger werd dat "Buffalo S Sijsele",
+      // een naam die niet meer op de bestaande ploeg leek.
+      if (w === 's' || w === 't') return w
       const letters = w.replace(/[^A-Za-zÀ-ÿ]/g, '')
       if (letters && letters === letters.toUpperCase()) return w // acroniem/hoofdletters → behouden
       return w

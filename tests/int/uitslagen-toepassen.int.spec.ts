@@ -188,6 +188,34 @@ describe('uitslagen van de federatie toepassen', () => {
     expect(ploegen.totalDocs).toBe(0)
   })
 
+  it("koppelt 'Buffalo s Sijsele' aan onze 'Buffalo's Sijsele', ook naast een dubbele ploeg", async () => {
+    // Zo liep het mis in U12 B: de federatie schrijft geen apostrof, wij wel, en een eerdere import
+    // had er een tweede ploeg "Buffalo S Sijsele" bij gemaakt. De uitslag moet op de wedstrijd van
+    // de kalender (met de oorspronkelijke ploeg) terechtkomen.
+    const stamp = Date.now() + Math.floor(Math.random() * 1000)
+    const club = await payload.create({ collection: 'clubs', data: { name: `Buffalo s Sijsele ${stamp}` }, overrideAccess: true })
+    const mk = (naam: string) =>
+      payload.create({ collection: 'teams', data: { name: naam, reeks: 'LH', category: 'senioren', club: club.id }, overrideAccess: true })
+    const sijsele = await mk(`Buffalo's Sijsele ${stamp}`)
+    const tegen = await mk(`Tegenploeg ${stamp}`)
+    await mk(`Buffalo S Sijsele ${stamp}`) // de dubbele (nieuwere) ploeg
+    const m = await payload.create({
+      collection: 'matches',
+      data: { reeks: 'LH', homeTeam: sijsele.id, awayTeam: tegen.id, date: '2026-03-14T10:00:00', status: 'scheduled', goalAreaDepth: 10 },
+      overrideAccess: true,
+    })
+    const rapport = await pasUitslagenToe(
+      payload,
+      [uitslag({ home: `Buffalo s Sijsele ${stamp}`, away: `Tegenploeg ${stamp}`, homeScore: 4, awayScore: 11, date: '2026-03-14' })],
+      { commit: true },
+    )
+    expect(rapport.onbekend).toHaveLength(0)
+    expect(rapport.bijgewerkt).toBe(1)
+    const na = await payload.findByID({ collection: 'matches', id: m.id, depth: 0 })
+    expect(na.status).toBe('finished')
+    expect(readSimpleScore(na).goals.filter((g) => g.side === 'away').length).toBe(11)
+  })
+
   it('slaat een niet-gespeelde wedstrijd (0–0) over', async () => {
     const o = await maakOmgeving()
     await o.maakMatch()
