@@ -1471,7 +1471,9 @@ body.kb-scherm .site-foot { display: none; }
 .match-meta-bit::before { content: "·"; margin: 0 8px; color: var(--line); }
 /* De reeks staat op een eigen regel: het eerste bit erna begint de regel, zonder puntje ervoor. */
 .match-meta-reeks + .match-meta-bit::before { content: none; }
-.match-meta-cal { color: var(--accent); font-weight: 700; text-decoration: none; }
+.match-meta-cal { color: var(--accent); font-weight: 700; text-decoration: none; font-size: 1rem; line-height: 1; }
+/* Het weerchipje staat los van de puntjes-reeks: een kleine tussenruimte volstaat. */
+.match-meta .mw-chip { margin-left: 10px; }
 .match-meta-cal:hover { text-decoration: underline; }
 /* Locatie → Google Maps: zelfde chip als de agenda-/videolink hierboven, geen apart uiterlijk —
    gewoon één extra tekstlink in de meta-regel, niet bulky, opent navigatie in een nieuw tabblad. */
@@ -1535,6 +1537,40 @@ body.kb-scherm .site-foot { display: none; }
 
 /* Wat een bezoeker mist zonder account — enkel op de wedstrijdpagina, waar de goesting het
    grootst is. Bewust één blok met concrete dingen i.p.v. een banner die overal meeloopt. */
+/* Inklapbaar blok op de wedstrijdpagina (planning: aftrap verschuiven, verplaatsing). Staat
+   onder de wedstrijd en is standaard dicht; de panelen erin houden hun eigen opmaak. */
+.match-fold {
+  margin: 14px 0;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, #fff 8%), var(--panel));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.match-fold-kop {
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--txt);
+}
+.match-fold-kop::-webkit-details-marker { display: none; }
+.match-fold-kop::after {
+  content: '›';
+  margin-left: auto;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--accent);
+  transition: transform 0.18s ease;
+}
+.match-fold[open] > .match-fold-kop::after { transform: rotate(90deg); }
+.match-fold-sub { font-size: 0.8rem; font-weight: 600; color: var(--dim); }
+.match-fold > :not(summary) { margin: 0 12px 12px; }
+
 .match-meedoen {
   margin: 18px 0;
   padding: 14px 16px;

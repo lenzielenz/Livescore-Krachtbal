@@ -134,15 +134,9 @@ export function PronostiekWidget({
     )
   }
   // Niet (meer) ingevuld en de match is al bezig — voorspellen kan enkel nog vóór de aftrap
-  // (anders zou je de uitslag al kunnen kennen terwijl je "voorspelt").
-  if (status === 'live') {
-    return (
-      <div className="pn-line">
-        <span className="pn-line-ic">⏱</span>
-        <span>De wedstrijd is bezig — voorspellen kan niet meer.</span>
-      </div>
-    )
-  }
+  // (anders zou je de uitslag al kunnen kennen terwijl je "voorspelt"). Dan tonen we niets: een
+  // regel "kan niet meer" onder een live scorebord is enkel ruis.
+  if (status === 'live') return null
   if (status === 'scheduled' && !pronostiekOpen) {
     return (
       <div className="pn-line">
@@ -171,18 +165,22 @@ export function PronostiekWidget({
     )
   }
 
-  // Actief → het enige paneel dat blijft staan, subtiel opvallend met een zachte accentgloed.
+  // Actief → het formulier staat meteen open onder het scorebord (dichtgeklapt vergaten mensen
+  // het), maar compact: kleine stappers en één regel uitleg, zodat de wedstrijd bovenaan blijft.
   // Eén vaste <section> (geen inline-component): zo blijft het invoerveld gemount en behoudt het de
   // focus/het toetsenbord tussen toetsaanslagen door.
   return (
-    <section className="pn pn-active">
+    <section className="pn pn-active pn-compact">
       <h3 className="pn-h">
         <span className="pn-dot" aria-hidden />
         🔮 Pronostiek
         {typeof remaining === 'number' && (
-          <span className="pn-left">nog {remaining}{max ? `/${max}` : ''} dit weekend</span>
+          <span className="pn-left" title="Pronostieken die je dit weekend nog kan doorgeven">
+            nog {remaining}{max ? `/${max}` : ''}
+          </span>
         )}
       </h3>
+      <p className="pn-sub">Vul je eindstand in vóór de aftrap.</p>
       {/* Tap-eerst: twee kolommen met grote − / + knoppen rond het cijfer — niemand hoeft te
           typen of iets te lezen om dit te snappen. Het cijfer blijft wél een invoerveld voor wie
           liever tikt. */}
@@ -206,7 +204,7 @@ export function PronostiekWidget({
         </div>
       )}
       <p className="pn-hint">
-        Je kan dit maar één keer doorgeven — daarna staat het vast. Niemand ziet je tip.
+        Eén keer doorgeven. Niemand ziet je tip.
       </p>
       {err && <p className="pn-err">{err}</p>}
     </section>

@@ -174,6 +174,11 @@
 .sb-react-btn:active { transform: scale(0.86); }
 /* Niet ingelogd: de tellers blijven leesbaar, maar reageren kan niet (login-hint eronder). */
 .sb-reactions.locked .sb-react-btn { cursor: default; }
+/* Smalle gsm: de zes reacties (incl. de raket) op één rij i.p.v. de raket alleen op een tweede. */
+@media (max-width: 420px) {
+  .sb-reactions { gap: 8px 4px; padding: 0; }
+  .sb-react-btn { padding: 6px 8px; font-size: 1.22rem; }
+}
 .sb-react-login {
   margin: 8px 0 0;
   text-align: center;

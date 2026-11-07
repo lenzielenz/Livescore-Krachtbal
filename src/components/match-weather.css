@@ -262,3 +262,48 @@
   padding-top: 10px;
   border-top: 1px solid var(--line);
 }
+
+/* ── Chip in de kopregel van de wedstrijd ───────────────────────────────────────────────────────
+   Klein knopje naast datum en agenda-icoon. De details klappen open als paneel over de volle
+   breedte eronder (.match-meta is een wikkelende flexrij; flex-basis 100% zet het op een eigen
+   regel), zodat het weer geen los blok meer is tussen pronostiek en planning. */
+.mw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--mw-chip, var(--accent)) 40%, var(--line));
+  background: color-mix(in srgb, var(--mw-chip, var(--accent)) 12%, transparent);
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.mw-chip.wet { --mw-chip: #4cc9f0; }
+.mw-chip.maybe { --mw-chip: #ffd166; }
+.mw-chip.windy { --mw-chip: #a0d8c0; }
+.mw-chip.cold { --mw-chip: #7cc4ff; }
+.mw-chip.hot { --mw-chip: #ff9e5e; }
+.mw-chip.great { --mw-chip: #06d6a0; }
+.mw-chip-extra { font-weight: 700; color: var(--dim-strong, #cad2dc); }
+.mw-chip-chev { font-size: 0.7rem; color: var(--dim); }
+.mw.mw-uit { flex: 1 1 100%; margin: 8px 0 2px; }
+.mw-uit .mw-detail { margin-top: 8px; padding-top: 8px; }
+.mw-uit-kop { display: flex; align-items: center; gap: 8px; font-size: 0.86rem; color: var(--txt); }
+/* In het uitgeklapte paneel blijft de plaats ook op gsm staan (de balk verbergt haar daar). */
+.mw-uit-kop .mw-sum-place { display: inline; margin-left: auto; max-width: 55%; }
+.mw-uit-sluit {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+}
+.mw-uit-kop .mw-sum-place + .mw-uit-sluit { margin-left: 4px; }
+.mw-uit-kop b + .mw-uit-sluit { margin-left: auto; }
