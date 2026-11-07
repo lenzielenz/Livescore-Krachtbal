@@ -32,12 +32,14 @@ const VOLGEN: { href: string; label: string }[] = [
 ]
 
 // Leesvoer en uitleg. Elk item een eigen icoon (geen twee keer 📰) zodat ze uit elkaar te
-// houden zijn in één oogopslag. Kantinescherm/Ideeënbus/Zo werkt het staan hier bewust niet meer
-// — die verhuisden naar de "Mijn Krachtbal"-pagina zelf (/hub) i.p.v. de menubalk.
+// houden zijn in één oogopslag. Ideeënbus/Zo werkt het staan op de "Mijn Krachtbal"-pagina (/hub).
+// Het kantinescherm staat hier wél: elke supporter mag een scherm met zijn ploegen samenstellen
+// en op een tv zetten (de pagina zelf werkt voor iedereen, ook zonder account).
 const ONTDEKKEN: { href: string; label: string }[] = [
   { href: '/recap', label: '🗞️ Weekoverzicht' },
   { href: '/nieuws', label: '📣 Nieuws' },
   { href: '/erelijst', label: '🥇 Erelijst' },
+  { href: '/kantine', label: '📺 Kantinescherm' },
   { href: '/virtueel', label: '🥽 Virtueel krachtbal' },
 ]
 
@@ -190,8 +192,8 @@ function SiteHeaderInner({ active = null }: { active?: NavSection }) {
                   </div>
                   {/* "Aan de slag" (profiel-instappunten) enkel voor wie de bijhorende rol heeft —
                       een supporter (of uitgelogde bezoeker) krijgt deze tools niet te zien. */}
-                  {/* Kantine- en veldscherm horen bij de club: ze staan in "Mijn club", niet hier. Een
-                      speler of supporter is met zijn wedstrijden bezig. */}
+                  {/* Het veldscherm hoort bij de club (in "Mijn club"); het kantinescherm staat bij
+                      Ontdekken, voor iedereen. */}
                   {loggedIn && visibleProfiles.length > 0 && (
                     <div className="sh-more-group">
                       <div className="sh-more-grouphead">Aan de slag</div>

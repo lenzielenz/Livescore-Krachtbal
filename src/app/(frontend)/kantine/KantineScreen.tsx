@@ -451,6 +451,9 @@ export function KantineScreen({
           <span className="kt-aftel-affiche">
             {volgende.m.home.name} – {volgende.m.away.name}
           </span>
+          {/* Welke ploeg van de club speelt: de reeks erbij (bv. "U14 Jongens A"), anders weet je
+              in de kantine niet of het de heren, de dames of de jeugd is. */}
+          {volgende.m.reeks && <span className="kt-aftel-reeks">{volgende.m.reeks}</span>}
         </div>
       )}
       {laadScherm ? (
