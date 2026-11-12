@@ -32,12 +32,38 @@ nergens rechten.
    medische keuring, doktersattest (PDF of foto).
 2. De club vinkt aan wie klaar is en dient in. Achter elke naam staat de stand: ✅ mag spelen,
    ⏳ bij de federatie, ✎ nog aan te vullen, ✗ afgekeurd met de reden.
-3. Federatie, `/beheer/leden`: de wachtrij bovenaan met attest, vergunningsnummer, goedkeuren (ook
-   alles tegelijk) of afkeuren met een reden.
+3. Federatie, `/beheer/leden` → *Registraties & kaarten*: de wachtrij met attest, vergunningsnummer,
+   goedkeuren (ook alles tegelijk) of afkeuren met een reden. Ook op het bord.
 
-Regels (`src/lib/registratie.ts`): een keuring is één jaar geldig; terwijl de federatie beslist
+Regels (`src/lib/registratie.ts`): een keuring is 365 dagen geldig; terwijl de federatie beslist
 ligt het lid vast; na goedkeuring wijzigt enkel de federatie naam, geboortedatum en geslacht. Het
-attest zien enkel de federatie en de staf van de eigen club.
+attest zien enkel de federatie, de staf van de eigen club en het lid (of de ouder).
+
+### Het ledenregister (federatie)
+
+`/beheer/leden` is gebouwd voor duizenden leden bij honderden clubs: niets laadt "alles" in de browser.
+- **Tellingen** bovenaan: leden, mag spelen, wacht, aan te vullen, afgekeurd, keuring verloopt (≤ 30 dagen),
+  verlopen, geen keuringsdatum. Een klik opent die leden in het register.
+- **Per club**: wie het meeste werk heeft bovenaan; elk getal opent die leden; *Herinneren* stuurt de staf
+  van de club de lijst van wat niet in orde is (met de datum van de vorige herinnering).
+- **Ledenregister**: zoeken (naam, vergunningsnummer, e-mail), filteren op club, toestand, keuring,
+  categorie en geslacht, sorteren, bladeren per 50 en exporteren als CSV (Excel). Elk filter staat in de
+  URL: terug-knop en een gedeelde link werken.
+- **Dossier per lid** (`/beheer/leden/[id]`): gegevens, registratie en vergunning, keuring met het attest,
+  medische kaart, ongevallen, uitleningen, sancties, en de acties van de federatie (goed-/afkeuren,
+  vergunning, attest, doktersverbod). Een keuring die de club na de goedkeuring vernieuwde, staat
+  gemarkeerd om het nieuwe attest na te kijken.
+
+**Verlopen keuring.** In de instellingen kiest de federatie: *waarschuwen* (standaard, de speler mag nog
+spelen, de opstelling toont het) of *blokkeren*. De pagina toont hoeveel spelers blokkeren zou raken. Zonder
+keuringsdatum (oudere leden) blokkeert niets; die staan apart in het register. Elke ochtend krijgt de staf
+van elke club één lijst per week met (bijna) verlopen keuringen, en het lid of de ouder één melding per
+keuring. Op `/club/leden` filtert de club op *keuring (bijna) verlopen*.
+
+Gemeten op Postgres met 5000 leden in 200 clubs: alle tellingen ±0,3 s, een registerpagina of filter
+10–30 ms, een export van alle leden ±0,3 s. Code: `src/lib/leden-register.ts` (de regels, ook als
+databankfilter; `tests/int/leden-register.int.spec.ts` bewaakt dat beide hetzelfde zeggen) en
+`src/lib/leden-register-server.ts`.
 
 ## 4. Inschrijving, kalender en scheidsrechters — federatie
 
