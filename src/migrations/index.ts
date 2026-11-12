@@ -151,6 +151,7 @@ import * as migration_20261104_090000_dossiers from './20261104_090000_dossiers'
 import * as migration_20261112_090000_forfait_voorbehoud from './20261112_090000_forfait_voorbehoud'
 import * as migration_20261112_120000_rapport_uitlening from './20261112_120000_rapport_uitlening'
 import * as migration_20261112_180000_keuring_verlopen from './20261112_180000_keuring_verlopen'
+import * as migration_20261112_200000_oauth_identiteiten from './20261112_200000_oauth_identiteiten'
 
 export const migrations = [
   {
@@ -912,5 +913,10 @@ export const migrations = [
     up: migration_20261112_180000_keuring_verlopen.up,
     down: migration_20261112_180000_keuring_verlopen.down,
     name: '20261112_180000_keuring_verlopen',
+  },
+  {
+    up: migration_20261112_200000_oauth_identiteiten.up,
+    down: migration_20261112_200000_oauth_identiteiten.down,
+    name: '20261112_200000_oauth_identiteiten',
   },
 ];

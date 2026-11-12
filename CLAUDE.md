@@ -151,6 +151,8 @@ Optioneel, app draait zonder. Zie `.env.example`:
   (`docs/CHROMECAST.md`).
 - **Media** — clublogo's op een Railway-Volume (`MEDIA_DIR` / `RAILWAY_VOLUME_MOUNT_PATH`).
 - **ffmpeg-static** — webm→mp4 voor replay-clips (`serverExternalPackages`).
+- **Inloggen met Google / Microsoft / Apple** — `GOOGLE_*`, `MICROSOFT_*`, `APPLE_*`; elke knop verschijnt pas
+  met zijn sleutels (`src/lib/oauth.ts`, `docs/INLOGGEN.md`).
 
 ## Doe NIET
 

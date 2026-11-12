@@ -145,3 +145,18 @@
   color: #06d6a0;
   font-size: 0.95rem;
 }
+
+/* Doorgaan met Google / Microsoft / Apple (OAuthKnoppen.tsx). Volgens de merkrichtlijnen: Google wit,
+   Microsoft wit met het vierkante logo, Apple zwart. Zelfde hoogte en radius als de velden. */
+.login-oauth { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 2px; }
+.login-oauth-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid #dadce0;
+  background: #fff; color: #1f1f1f; font-weight: 600; font-size: 0.95rem; text-decoration: none;
+}
+.login-oauth-btn:hover { filter: brightness(0.96); }
+.login-oauth-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.login-oauth-microsoft { border-color: #8c8c8c; color: #5e5e5e; }
+.login-oauth-apple { background: #000; border-color: #000; color: #fff; }
+.login-of { display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 0.8rem; margin: 10px 0 2px; }
+.login-of::before, .login-of::after { content: ''; flex: 1; height: 1px; background: var(--line); }

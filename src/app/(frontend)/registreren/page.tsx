@@ -2,7 +2,12 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { competitionWhere } from '@/lib/analyse-access'
 import { dedupeKey } from '@/lib/dedupe'
 import { getPayloadClient } from '@/lib/payload-client'
+import { Suspense } from 'react'
+
+import { actieveDiensten } from '@/lib/oauth'
+import { OAuthKnoppen } from '../inloggen/OAuthKnoppen'
 import { RegisterForm } from './RegisterForm'
+import '../inloggen/inloggen.css'
 import '../wedstrijdblad.css'
 
 export const dynamic = 'force-dynamic'
@@ -40,6 +45,11 @@ export default async function RegistrerenPage() {
           meteen de juiste info als je inlogt. Ben je clubmedewerker, scheidsrechter of van de federatie?
           Registreer je gerust ook — een beheerder kent je daarna de juiste rol toe.
         </p>
+        <div style={{ maxWidth: 420 }}>
+          <Suspense fallback={null}>
+            <OAuthKnoppen diensten={actieveDiensten()} />
+          </Suspense>
+        </div>
         <RegisterForm clubs={clubs} />
       </div>
     </>
