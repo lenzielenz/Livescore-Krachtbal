@@ -43,7 +43,7 @@ describe('ledenPerClub', () => {
   it('keuring verloopt binnen 30 dagen, niet al verlopen of nog ver weg', () => {
     expect(keuringVerlooptBinnenkort(dagenGeleden(340), nu)).toBe(true)
     expect(keuringVerlooptBinnenkort(dagenGeleden(300), nu)).toBe(false)
-    expect(keuringVerlooptBinnenkort(dagenGeleden(400), nu)).toBe(false)
+    expect(keuringVerlooptBinnenkort(dagenGeleden(400), nu)).toBe(true) // al verlopen: ook vernieuwen
     expect(keuringVerlooptBinnenkort('', nu)).toBe(false)
   })
 })
@@ -53,7 +53,7 @@ describe('herinneringVoor', () => {
     const club = ledenPerClub([lid(2, 1, 'ok', { keuringOp: dagenGeleden(355) }), lid(4, 1, 'todo', { reden: 'ontbreekt: keuringsdatum' }), lid(6, 1, 'fout', { reden: 'attest onleesbaar' })], nu).clubs[0]
     const h = herinneringVoor(club, nu)!
     expect(h.titel).toBe('Herinnering van de federatie: 3 leden niet in orde')
-    expect(h.tekst).toBe('KBC Sint-Michiels: 1 lid nog aan te vullen of in te dienen, 1 lid afgekeurd, 1 keuring verloopt binnenkort. Wie niet in orde is, kan niet opgesteld worden.')
+    expect(h.tekst).toBe('KBC Sint-Michiels: 1 lid nog aan te vullen of in te dienen, 1 lid afgekeurd, 1 keuring (bijna) verlopen. Wie niet in orde is, kan niet opgesteld worden.')
     expect(h.url).toBe('/club/leden')
     expect(h.regels).toEqual(['Lid 2 — medische keuring verloopt over 10 dagen', 'Lid 4 — ontbreekt: keuringsdatum', 'Lid 6 — afgekeurd: attest onleesbaar'])
     expect(herinneringTekst(h).split('\n')).toHaveLength(4)

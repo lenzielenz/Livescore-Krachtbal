@@ -94,3 +94,4 @@
   .fw-rij { grid-template-columns: auto minmax(0, 1fr) auto; padding: 10px 14px; }
   .cl-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+.cl-keuring { color: #f6c544; }

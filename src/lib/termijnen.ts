@@ -2,7 +2,9 @@ import type { Payload } from 'payload'
 
 import { accountsVanSpeler, clubStaf, federatieAccounts, meldEenmalig } from './meldingen'
 import { boeteVoorstellen } from './boetes'
-import { dateStrBE, formatDateBE } from './datetime'
+import { brusselsParts, dateStrBE, formatDateBE, shiftDateStr } from './datetime'
+import { KEURING_WAARSCHUW_DAGEN, keuringDagen, keuringWhere } from './leden-register'
+import { ploegenEnClubs } from './leden-register-server'
 import { ONGEVAL_TERMIJN_DAGEN } from './federatie-aanvragen'
 import { aanleidingenVanBlad, scheidsrechterAccounts } from './sr-rapport'
 import { isWerkdag } from './voorbehoud'
@@ -17,7 +19,9 @@ import { isWerkdag } from './voorbehoud'
 //   · ongeval (item 41): vanaf dag 6 van de 8 zonder documenten → de speler (of ouder) en de club;
 //   · scheidsrechtersrapport (item 27): blad met voorbehoud/uitsluiting/forfait ter plaatse, ingediend
 //     en na 1 werkdag nog geen rapport → de scheidsrechter; na 3 werkdagen → ook de federatie;
-//   · uitlening (item 45): 3 dagen na het opstellen nog niet getekend door de ontvangende club → die club.
+//   · uitlening (item 45): 3 dagen na het opstellen nog niet getekend door de ontvangende club → die club;
+//   · medische keuring: verloopt binnen 30 dagen of is verlopen → één lijst per club per week, en het lid
+//     (of de ouder) één keer per keuring.
 
 const DAG = 86_400_000
 
@@ -40,10 +44,10 @@ export function werkdagenTussen(van: Date, tot: Date): number {
   return n
 }
 
-export type TermijnRonde = { boetes: number; voorbehoud: number; ongeval: number; rapport: number; uitlening: number }
+export type TermijnRonde = { boetes: number; voorbehoud: number; ongeval: number; rapport: number; uitlening: number; keuring: number }
 
 export async function dagelijkseTermijnen(payload: Payload, nu: Date = new Date()): Promise<TermijnRonde> {
-  const uit: TermijnRonde = { boetes: 0, voorbehoud: 0, ongeval: 0, rapport: 0, uitlening: 0 }
+  const uit: TermijnRonde = { boetes: 0, voorbehoud: 0, ongeval: 0, rapport: 0, uitlening: 0, keuring: 0 }
   const vandaag = dateStrBE(nu)
 
   uit.boetes = await boeteVoorstellen(payload, 120, nu.getTime()).catch(() => 0)
@@ -137,5 +141,56 @@ export async function dagelijkseTermijnen(payload: Payload, nu: Date = new Date(
     if (n) uit.uitlening++
   }
 
+  uit.keuring = await keuringHerinneringen(payload, nu)
   return uit
+}
+
+/** Maandag van de week (Belgische kalender), als sleutel voor de wekelijkse clublijst. */
+export function weekVan(nu: Date): string {
+  return shiftDateStr(dateStrBE(nu), -brusselsParts(nu).weekdayMon0)
+}
+
+async function keuringHerinneringen(payload: Payload, nu: Date): Promise<number> {
+  const res = await payload.find({
+    collection: 'players',
+    where: { and: [{ analyseOnly: { not_equals: true } }, { or: [keuringWhere('verloopt', nu), keuringWhere('verlopen', nu)] }] },
+    depth: 0,
+    limit: 100_000,
+    pagination: false,
+    select: { name: true, team: true, medischeKeuringOp: true, soortLid: true, actief: true },
+    overrideAccess: true,
+  })
+  if (!res.docs.length) return 0
+  const pc = await ploegenEnClubs(payload)
+  const perClub = new Map<number, string[]>()
+  let n = 0
+  for (const p of res.docs) {
+    const d = keuringDagen(p, nu)
+    if (d == null) continue
+    const club = pc.clubVanPloeg.get(relId(p.team) ?? -1)
+    const regel = `${String(p.name ?? '')} — ${d < 0 ? `verlopen sinds ${formatDateBE(new Date(nu.getTime() + d * DAG).toISOString())}` : `verloopt ${d === 0 ? 'vandaag' : `over ${d} dagen`}`}`
+    if (club != null) perClub.set(club, [...(perClub.get(club) ?? []), regel])
+    // Het lid (of de ouder): één keer per keuring, zolang ze nog niet verlopen is of net verlopen is.
+    if (d >= -KEURING_WAARSCHUW_DAGEN) {
+      const aan = await accountsVanSpeler(payload, Number(p.id))
+      const k = await meldEenmalig(payload, aan, {
+        sleutel: `herinnering:keuring-lid:${p.id}:${String(p.medischeKeuringOp).slice(0, 10)}`,
+        titel: d < 0 ? '🩺 Je medische keuring is verlopen' : '🩺 Je medische keuring verloopt binnenkort',
+        tekst: `${String(p.name ?? '')}: ${d < 0 ? 'de keuring is verlopen' : `nog ${d} dagen geldig`}. Laat je opnieuw keuren en geef het nieuwe attest aan je club (of laad het zelf op).`,
+        url: '/profiel',
+      })
+      if (k) n++
+    }
+  }
+  const week = weekVan(nu)
+  for (const [club, regels] of perClub) {
+    const k = await meldEenmalig(payload, await clubStaf(payload, club), {
+      sleutel: `herinnering:keuring-club:${club}:${week}`,
+      titel: `🩺 ${regels.length} medische keuring${regels.length === 1 ? '' : 'en'} (bijna) verlopen`,
+      tekst: [...regels.slice(0, 40), ...(regels.length > 40 ? [`… en nog ${regels.length - 40}`] : [])].join('\n'),
+      url: '/club/leden',
+    })
+    if (k) n++
+  }
+  return n
 }

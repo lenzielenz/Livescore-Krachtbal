@@ -8,6 +8,7 @@ import { toast } from '@/components/Toaster'
 import { KaartAanvragen } from '../../profiel/KaartAanvragen'
 import { ledenCsv } from '@/lib/club-overzicht'
 import { dateStrBE } from '@/lib/datetime'
+import { keuringDagen, keuringStand } from '@/lib/leden-register'
 import {
   clubMagBewerken,
   ontbreektVoorIndienen,
@@ -252,6 +253,16 @@ function LidFormulier({
   )
 }
 
+// Medische keuring (365 dagen): verloopt binnen 30 dagen of verlopen (lib/leden-register.ts).
+const keuringLet = (l: ClubLid) => {
+  const k = keuringStand({ soortLid: l.soortLid, actief: l.actief, medischeKeuringOp: l.medischeKeuringOp || null })
+  return k === 'verloopt' || k === 'verlopen'
+}
+const keuringTekst = (l: ClubLid) => {
+  const d = keuringDagen({ medischeKeuringOp: l.medischeKeuringOp || null }) ?? 0
+  return d < 0 ? `Medische keuring verlopen (${-d} d) — nieuwe keuring en attest nodig` : `Medische keuring verloopt over ${d} dagen`
+}
+
 export function ClubLeden({
   teams,
   leden,
@@ -265,7 +276,7 @@ export function ClubLeden({
 }) {
   const router = useRouter()
   const [zoek, setZoek] = useState('')
-  const [filter, setFilter] = useState<'alle' | 'todo' | 'wacht' | 'ok'>('alle')
+  const [filter, setFilter] = useState<'alle' | 'todo' | 'wacht' | 'ok' | 'keuring'>('alle')
   const [gekozen, setGekozen] = useState<Set<number>>(new Set())
   const [bewerk, setBewerk] = useState<number | 'nieuw' | null>(null)
   const [bezig, setBezig] = useState(false)
@@ -283,6 +294,7 @@ export function ClubLeden({
       if (filter === 'todo' && ic.toon !== 'todo' && ic.toon !== 'fout') continue
       if (filter === 'wacht' && ic.toon !== 'wacht') continue
       if (filter === 'ok' && ic.toon !== 'ok') continue
+      if (filter === 'keuring' && !keuringLet(l)) continue
       if (q && !norm(l.naam).includes(q)) continue
       const arr = map.get(l.teamId) ?? []
       arr.push(l)
@@ -294,8 +306,9 @@ export function ClubLeden({
   }, [leden, teams, zoek, filter])
 
   const tel = useMemo(() => {
-    const c = { ok: 0, wacht: 0, todo: 0 }
+    const c = { ok: 0, wacht: 0, todo: 0, keuring: 0 }
     for (const l of leden) {
+      if (keuringLet(l)) c.keuring += 1
       const t = registratieIcoon(input(l), undefined, emailVanaf).toon
       if (t === 'ok') c.ok += 1
       else if (t === 'wacht') c.wacht += 1
@@ -393,6 +406,11 @@ export function ClubLeden({
         >
           <strong>✎ {tel.todo}</strong> te doen
         </button>
+        {tel.keuring > 0 && (
+          <button type="button" className={`cl-teller ${filter === 'keuring' ? 'on' : ''}`} onClick={() => setFilter(filter === 'keuring' ? 'alle' : 'keuring')}>
+            <strong>🩺 {tel.keuring}</strong> keuring (bijna) verlopen
+          </button>
+        )}
       </div>
 
       <div className="cl-toolbar">
@@ -467,6 +485,7 @@ export function ClubLeden({
                             ? ` — ${l.afkeurReden}`
                             : ''}
                         </span>
+                        {keuringLet(l) && <span className="cl-sub cl-keuring">🩺 {keuringTekst(l)}</span>}
                         {l.knipjes && <span className="cl-sub">{l.knipjes}</span>}
                       </span>
                       {l.attestUrl && (

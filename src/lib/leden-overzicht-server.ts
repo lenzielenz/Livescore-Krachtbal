@@ -15,9 +15,22 @@ const relId = (v: unknown): number | null => {
 }
 const dag = (v: unknown) => (v ? String(v).slice(0, 10) : '')
 
-export async function alleLeden(payload: Payload): Promise<OverzichtLid[]> {
+/** De competitieleden met hun toestand; met `clubId` enkel die van één club (via haar ploegen). */
+export async function alleLeden(payload: Payload, clubId?: number): Promise<OverzichtLid[]> {
+  const ploegen =
+    clubId != null
+      ? (await payload.find({ collection: 'teams', where: { club: { equals: clubId } }, depth: 0, limit: 500, pagination: false, select: { name: true }, overrideAccess: true })).docs.map((t) => Number(t.id))
+      : null
+  if (ploegen && !ploegen.length) return []
   const [res, vanaf] = await Promise.all([
-    payload.find({ collection: 'players', where: competitionWhere(), depth: 2, limit: 5000, pagination: false, overrideAccess: true }),
+    payload.find({
+      collection: 'players',
+      where: ploegen ? { and: [competitionWhere(), { team: { in: ploegen } }] } : competitionWhere(),
+      depth: 2,
+      limit: 100_000,
+      pagination: false,
+      overrideAccess: true,
+    }),
     emailVanaf(payload),
   ])
   return res.docs.map((p) => {
@@ -86,7 +99,8 @@ export async function herinneringVersturen(
   payload: Payload,
   clubId: number,
 ): Promise<{ club: ClubLedenRij | null; herinnering: Herinnering | null; aan: Ontvanger[] }> {
-  const { clubs } = ledenPerClub(await alleLeden(payload))
+  // Enkel de leden van deze club: bij duizenden leden is dat het verschil tussen één ploeg en alles.
+  const { clubs } = ledenPerClub(await alleLeden(payload, clubId))
   const club = clubs.find((c) => c.clubId === clubId) ?? null
   const herinnering = club ? herinneringVoor(club) : null
   if (!club || !herinnering) return { club, herinnering: null, aan: [] }

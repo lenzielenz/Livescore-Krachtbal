@@ -253,6 +253,8 @@ export async function buildRoster(
         actief: p.actief as boolean,
         soortLid: (p as { soortLid?: string | null }).soortLid,
         knipjesGeblokkeerd: isKnipjesBlocked(knipjesPerPlayer.get(p.id as number) ?? 0, drempel),
+        medischeKeuringOp: (p as { medischeKeuringOp?: string | null }).medischeKeuringOp ?? null,
+        keuringBeleid: (settings as { keuringVerlopen?: 'waarschuwen' | 'blokkeren' } | null)?.keuringVerlopen ?? 'waarschuwen',
       },
       team.category,
       seasonStartYear,

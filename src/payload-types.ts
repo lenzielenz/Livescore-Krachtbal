@@ -4788,6 +4788,10 @@ export interface Setting {
    */
   emailVerplichtVanaf?: number | null;
   /**
+   * Een keuring geldt 365 dagen. Het ledenregister toont hoeveel spelers blokkeren zou raken.
+   */
+  keuringVerlopen?: ('waarschuwen' | 'blokkeren') | null;
+  /**
    * Bij dit aantal of meer openstaande knipjes kan een speler niet geselecteerd worden.
    */
   knipjesDrempel: number;
@@ -4847,6 +4851,7 @@ export interface SettingsSelect<T extends boolean = true> {
   kantineMatchIds?: T;
   veldMatchId?: T;
   emailVerplichtVanaf?: T;
+  keuringVerlopen?: T;
   knipjesDrempel?: T;
   scheidsrechterKostenBetaler?: T;
   forfaitKostenBetaler?: T;
