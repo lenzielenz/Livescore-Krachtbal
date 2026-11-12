@@ -1,5 +1,6 @@
 import { isFederationLevel } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
+import { dateStrBE } from '@/lib/datetime'
 import { hasFunctionGrant } from '@/lib/function-grants'
 import { filterUitParams } from '@/lib/leden-register'
 import { ledenZoeken, registerCsv, type Sortering } from '@/lib/leden-register-server'
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
     return new Response(registerCsv(r.rijen), {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="ledenregister-${new Date().toISOString().slice(0, 10)}.csv"`,
+        'Content-Disposition': `attachment; filename="ledenregister-${dateStrBE()}.csv"`,
       },
     })
   }
