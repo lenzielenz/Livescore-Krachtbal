@@ -8,8 +8,21 @@
 // borden op een blad (afgeknipt) en te wéinig rijen gevuld (halfleeg scherm met minuscule borden).
 // Als los stukje logica is ze te testen zonder browser.
 
-/** Onder deze hoogte is een bord van op afstand niet meer te lezen — dan liever bladeren. */
-export const MIN_BORD_H = 168
+/**
+ * Onder deze hoogte is een bord van op afstand niet meer te lezen — dan liever bladeren.
+ *
+ * Was 168: op een gewone tv (met de aftelling bovenaan en de uitslagenbalk onderaan) bleef er
+ * zo maar plaats voor één rij van drie borden met reusachtige logo's. Met 130 passen er twee
+ * rijen, zes borden per blad, en de logo's schalen mee met de bordhoogte (KantineScreen).
+ */
+export const MIN_BORD_H = 130
+/**
+ * Meer rijen dan dit op één blad oogt op een liggende tv niet meer in balans: drie rijen van drie
+ * borden worden smalle stroken met de logo's tegen de rand. Twee rijen (zes borden) en dan
+ * bladeren leest rustiger. Geldt enkel voor brede rasters; op een smal scherm (één of twee
+ * kolommen) zou het te veel bladeren betekenen.
+ */
+export const MAX_RIJEN_BREED = 2
 /** Tussenruimte tussen de borden; moet gelijk lopen met de `gap` van `.kt-grid-screen`. */
 export const BLAD_GAT = 14
 
@@ -51,7 +64,8 @@ export function bladIndeling(opts: { aantal: number; cols: number; vensterH: num
   // vol scherm gedeeld door vier toebedeeld en blijft de rest van de tv zwart — en omdat een tegel
   // `overflow: hidden` heeft, worden de logo's en de ploegnamen er dan ook nog eens afgeknipt.
   // Twee live wedstrijden op een tv is het gewone geval; die horen het scherm te vullen.
-  const rijenPerBlad = Math.min(rijenPast, rijenNodig)
+  const maxRijen = cols >= 3 ? MAX_RIJEN_BREED : Infinity
+  const rijenPerBlad = Math.min(rijenPast, rijenNodig, maxRijen)
   const perBlad = Math.max(1, cols * rijenPerBlad)
   const bladen = Math.max(1, Math.ceil(aantal / perBlad))
   // `rijenPerBlad` rijen plus hun tussenruimtes vullen het venster precies.
