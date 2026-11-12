@@ -1,11 +1,13 @@
 // Wie ziet wat in de navigatie (SiteHeader). Eén plek, zodat de regels per rol kloppen en getest
 // zijn. De navigatie toont enkel ingangen; de pagina's en routes controleren zelf nog eens.
 //
-//   supporter / speler   wedstrijden volgen en meespelen — niets van de club (geen schermen,
-//                        geen training): een speler is met zijn wedstrijd bezig
+//   iedereen             het kantinescherm (Meer → Ontdekken en Mijn Krachtbal): een eigen
+//                        tv-scherm met je ploegen, ook als supporter
+//   supporter / speler   wedstrijden volgen en meespelen — verder niets van de club (geen
+//                        veldscherm, geen training): een speler is met zijn wedstrijd bezig
 //   coach / trainer /    "Mijn club" (opstelling van zijn ploegen) en training
 //   jeugdverantwoordelijke
-//   clubstaf             "Mijn club" (alles van de club, ook kantine- en veldscherm) en training
+//   clubstaf             "Mijn club" (alles van de club, ook het veldscherm) en training
 //   scheidsrechter       het scheidsrechtersportaal
 //   federatie / admin    alles
 

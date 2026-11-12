@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { BLAD_GAT, MIN_BORD_H, bladIndeling } from '@/lib/kantine-bladeren'
+import { BLAD_GAT, MAX_RIJEN_BREED, MIN_BORD_H, bladIndeling } from '@/lib/kantine-bladeren'
 
 // Hoogte die het venster van een kantine-tv ongeveer overhoudt, na de kop en de balken.
 const TV_1080 = 880
@@ -25,11 +25,21 @@ describe('bladIndeling', () => {
   })
 
   it('bladert zodra er meer rijen nodig zijn dan er passen', () => {
-    // Dertien wedstrijden op een klein scherm: drie rijen van drie per blad, dus twee bladen.
-    const r = bladIndeling({ aantal: 13, cols: 3, vensterH: TV_KLEIN })
+    // Dertien wedstrijden op een smal scherm met twee kolommen: elke rij die past, dan bladeren.
+    const r = bladIndeling({ aantal: 13, cols: 2, vensterH: TV_KLEIN })
     expect(r.rijenPerBlad).toBe(3)
-    expect(r.perBlad).toBe(9)
+    expect(r.perBlad).toBe(6)
+    expect(r.bladen).toBe(3)
+  })
+
+  it('toont op een brede tv hoogstens twee rijen — zes borden per blad', () => {
+    // Acht wedstrijden op een 1080p-tv: drie rijen zouden passen, maar ogen als smalle stroken.
+    const r = bladIndeling({ aantal: 8, cols: 3, vensterH: TV_1080 })
+    expect(MAX_RIJEN_BREED).toBe(2)
+    expect(r.rijenPerBlad).toBe(2)
+    expect(r.perBlad).toBe(6)
     expect(r.bladen).toBe(2)
+    expect(r.rijH * 2 + BLAD_GAT).toBeCloseTo(TV_1080)
   })
 
   it('houdt elke rij boven de leesbare minimumhoogte', () => {

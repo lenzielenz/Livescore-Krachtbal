@@ -369,8 +369,11 @@ export function KantineScreen({
   // Het lettertype volgt wat er op ÉÉN blad staat, niet het totaal van de dag.
   const bladLayout = layoutFor(Math.min(visible.length, perBlad))
   const fontSize = cols < bladLayout.cols ? Math.round(bladLayout.fontSize * 1.12) : bladLayout.fontSize
-  // Zonder clubnamen in de tegel is er plaats voor grotere logo's.
-  const logoSize = `calc(${bladLayout.logoSize} * 1.2)`
+  // Zonder clubnamen in de tegel is er plaats voor grotere logo's — maar nooit groter dan het bord
+  // zelf: hoogstens ~27% van de bordbreedte (cqw, het bord is een container) en ~52% van de
+  // rijhoogte. Met enkel vmin vielen de logo's op een tv net buiten het vak.
+  const logoBasis = `calc(${bladLayout.logoSize} * 1.2)`
+  const logoSize = rijH > 0 ? `min(${logoBasis}, 27cqw, ${Math.round(rijH * 0.52)}px)` : `min(${logoBasis}, 27cqw)`
 
   // Aftellen naar de eerstvolgende wedstrijd zolang er niets live is — anders staat er een scherm
   // met geplande wedstrijden zonder dat iemand weet hoelang het nog duurt.
@@ -451,6 +454,9 @@ export function KantineScreen({
           <span className="kt-aftel-affiche">
             {volgende.m.home.name} – {volgende.m.away.name}
           </span>
+          {/* Welke ploeg van de club speelt: de reeks erbij (bv. "U14 Jongens A"), anders weet je
+              in de kantine niet of het de heren, de dames of de jeugd is. */}
+          {volgende.m.reeks && <span className="kt-aftel-reeks">{volgende.m.reeks}</span>}
         </div>
       )}
       {laadScherm ? (

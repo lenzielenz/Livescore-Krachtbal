@@ -1069,6 +1069,18 @@
   font-weight: 700;
   color: var(--dim-strong, #cad2dc);
 }
+/* De reeks van die volgende wedstrijd, als een chip in de accentkleur onder de affiche. */
+.kt-aftel-reeks {
+  margin-top: 2px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: clamp(0.78rem, 1.8vmin, 1.1rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
 /* De cast-knop rechtsboven op het kantinescherm, tegenover de "Aanpassen"-link. */
 .kt-screen-cast {
   position: fixed;
@@ -1346,6 +1358,11 @@
 }
 /* Komende wedstrijd (middelste strook): enkel reeks, uur en de twee logo's. Zonder namen mogen de
    logo's groter en staat het uur in het midden als blikvanger. */
+/* Het bord is een container: de logo's schalen mee met de bordbreedte (cqw in KantineScreen),
+   zodat ze nooit buiten het vak vallen. */
+.kt-komend {
+  container-type: inline-size;
+}
 .kt-komend .kt-tile-head {
   justify-content: center;
 }
@@ -1358,7 +1375,8 @@
 .kt-komend-body {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  /* minmax(0, …): een groot logo mag de kolom nooit breder duwen dan het bord. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   justify-items: center;
   gap: 0.6em;
@@ -1368,7 +1386,7 @@
   text-decoration: none;
 }
 .kt-komend-uur {
-  font-size: 2.1em;
+  font-size: clamp(1.4em, 9cqw, 2.1em);
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   line-height: 1;
