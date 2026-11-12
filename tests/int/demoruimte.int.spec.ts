@@ -1,9 +1,28 @@
 // @vitest-environment node
 
 import { getPayload, type Payload } from 'payload'
-import { describe, it, beforeAll, expect } from 'vitest'
+import { afterAll, describe, it, beforeAll, expect, vi } from 'vitest'
 
 process.env.PLATFORM_OMGEVING = 'demo'
+// Klaarzetten weigert (terecht) een databank die er niet als demo uitziet — en de gedeelde
+// testdatabank zit na de andere suites vol accounts en spelers. Deze suite krijgt daarom haar eigen,
+// verse SQLite-bestand, zodat ze niet afhangt van de volgorde waarin de suites lopen. In vi.hoisted:
+// Vitest tilt de imports hieronder boven de rest van het bestand, en payload.config leest DATABASE_URL
+// al bij het importeren.
+const { gedeeldeDb, eigenDb } = await vi.hoisted(async () => {
+  const { rmSync } = await import('node:fs')
+  const gedeeld = process.env.DATABASE_URL
+  const eigen = !/^postgres/.test(gedeeld ?? '')
+  if (eigen) {
+    for (const ext of ['', '-shm', '-wal', '-journal']) rmSync(`./demoruimte-int.db${ext}`, { force: true })
+    process.env.DATABASE_URL = 'file:./demoruimte-int.db'
+  }
+  return { gedeeldeDb: gedeeld, eigenDb: eigen }
+})
+// Payload bewaart één instantie per proces (global._payload). Liep er in dit proces al een suite, dan
+// staat die instantie op de gedeelde databank: weg ermee, zodat getPayload — ook die van de routes —
+// een verse neemt op de databank hierboven.
+const payloadCache = () => (globalThis as { _payload?: Map<string, unknown> })._payload
 
 import config from '@/payload.config'
 import { POST as alsRoute } from '@/app/api/demoruimte/als/route'
@@ -16,8 +35,16 @@ let payload: Payload
 
 describe('demoruimte', () => {
   beforeAll(async () => {
+    if (eigenDb) payloadCache()?.delete('default')
     payload = await getPayload({ config: await config })
   }, 120_000)
+
+  afterAll(() => {
+    if (!eigenDb) return
+    // De volgende suites in dit proces krijgen weer een instantie op de gedeelde databank.
+    payloadCache()?.delete('default')
+    process.env.DATABASE_URL = gedeeldeDb
+  })
 
   it('zet een volledige demowereld klaar, ook een tweede keer', async () => {
     const v = await demoKlaarzetten(payload)

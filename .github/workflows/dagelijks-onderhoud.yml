@@ -1,6 +1,7 @@
 name: Dagelijks onderhoud
 
-# Roept /api/cron/recap elke dag aan: sluit de vertrouwenslaag af voor wedstrijden waarvan het
+# Roept /api/cron/recap elke dag aan: boetevoorstellen en herinneringen bij termijnen van het
+# reglement (lib/termijnen.ts), sluit de vertrouwenslaag af voor wedstrijden waarvan het
 # bevestigingsvenster dicht is, en stuurt op maandag de wekelijkse recap-pushmelding. Zie
 # src/app/api/cron/recap/route.ts. Geen login nodig: enkel CRON_SECRET (dezelfde als bij de
 # uitslagen-sync).
@@ -20,7 +21,7 @@ concurrency:
 
 jobs:
   onderhoud:
-    name: Vertrouwenslaag afsluiten + weekrecap
+    name: Termijnen, vertrouwenslaag en weekrecap
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

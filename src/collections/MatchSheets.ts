@@ -10,6 +10,7 @@ import {
 } from '../lib/matchsheet-workflow'
 import { SYSTEEM_STATUS } from '../lib/blad-status'
 import { BLAD_HEROPENEN } from '../lib/klacht'
+import { VOORBEHOUD_ONDERWERPEN } from '../lib/voorbehoud-onderwerpen'
 
 // Eén opstellingsregel (per speler op het blad).
 const lineupFields: Field[] = [
@@ -311,6 +312,27 @@ export const MatchSheets: CollectionConfig = {
               defaultValue: 'geen',
             },
             {
+              // Een forfait dat een club vooraf meldt (RCVK item 34): wanneer, door wie en waarom. Het
+              // moment bepaalt welke boete het systeem voorstelt. Leeg = vastgesteld door de scheidsrechter.
+              type: 'row',
+              fields: [
+                { name: 'gemeldOp', label: 'Gemeld op', type: 'date', admin: { readOnly: true, date: { pickerAppearance: 'dayAndTime' } } },
+                { name: 'gemeldDoor', label: 'Gemeld door', type: 'relationship', relationTo: 'users', admin: { readOnly: true } },
+                {
+                  name: 'moment',
+                  label: 'Moment van melding',
+                  type: 'select',
+                  options: [
+                    { label: 'Tijdig (vóór vrijdag 12u)', value: 'vooraf' },
+                    { label: 'Laat (na vrijdag 12u)', value: 'laat' },
+                    { label: 'Ter plaatse vastgesteld', value: 'ter_plaatse' },
+                  ],
+                  admin: { readOnly: true },
+                },
+              ],
+            },
+            { name: 'reden', label: 'Reden van het forfait', type: 'text' },
+            {
               name: 'vanToepassing',
               label: 'Forfait-onkostenblad van toepassing',
               type: 'checkbox',
@@ -390,18 +412,29 @@ export const MatchSheets: CollectionConfig = {
             { name: 'reden', label: 'Reden', type: 'text' },
             { name: 'score', label: 'Score op dat moment', type: 'text' },
             { name: 'speeltijd', label: 'Speeltijd', type: 'text' },
+            { name: 'side', label: 'Ploeg', type: 'select', options: [{ label: 'Thuis', value: 'thuis' }, { label: 'Bezoekers', value: 'uit' }] },
           ],
         },
         {
+          // Voorbehoud (RCVK item 25): door de kapitein (U12–U16: de coach) gevraagd, door de scheidsrechter
+          // genoteerd met kort relaas, score en speeltijd. Na het indienen moet de club het binnen 5
+          // werkdagen bekrachtigen (lib/voorbehoud.ts): elk voorbehoud wordt dan een dossier bij de federatie.
           name: 'voorbehoud',
           label: 'Voorbehoud',
           type: 'array',
           fields: [
-            { name: 'naam', label: 'Naam', type: 'text' },
+            { name: 'naam', label: 'Naam (kapitein/coach die het vroeg)', type: 'text' },
             { name: 'reden', label: 'Reden', type: 'text' },
             { name: 'score', label: 'Score op dat moment', type: 'text' },
+            { name: 'speeltijd', label: 'Speeltijd', type: 'text' },
+            { name: 'side', label: 'Ploeg', type: 'select', options: [{ label: 'Thuis', value: 'thuis' }, { label: 'Bezoekers', value: 'uit' }] },
+            // RCVK item 25.3: waarover het gaat bepaalt welk comité het onderzoekt (lib/voorbehoud.ts).
+            { name: 'onderwerp', label: 'Onderwerp', type: 'select', options: VOORBEHOUD_ONDERWERPEN.map((o) => ({ label: o.label, value: o.value })) },
           ],
         },
+        // RCVK item 27: "zie scheidsrechtersrapport" op het blad. Bij een voorbehoud of uitsluiting staat dat
+        // er altijd (lib/sr-rapport.ts); dit vinkje is voor een andere onregelmatigheid.
+        { name: 'rapportVolgt', label: 'Zie scheidsrechtersrapport', type: 'checkbox', defaultValue: false },
         { name: 'opmerkingen', label: 'Opmerkingen / kwetsuren', type: 'textarea' },
       ],
     },

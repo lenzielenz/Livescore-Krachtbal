@@ -15,7 +15,40 @@ import { mailMatchSheet } from './mail'
 import { generateMatchSheetPdf, type MatchSheetPdfData, type PdfLineupRow } from './pdf'
 import { formatDateTimeBE } from '../datetime'
 import { SYSTEEM_STATUS } from '../blad-status'
-import { clubStaf, federatieAccounts, meld } from '../meldingen'
+import { accountsVanSpeler, clubStaf, federatieAccounts, meld } from '../meldingen'
+import { aanleidingenVanBlad } from '../sr-rapport'
+import { voorbehoudenOpenen } from '../voorbehoud'
+
+const idVan = (v: unknown): number | null => {
+  const id = v && typeof v === 'object' ? (v as { id?: unknown }).id : v
+  return id == null || !Number.isFinite(Number(id)) ? null : Number(id)
+}
+
+/**
+ * Wie het ingediende blad krijgt buiten de clubstaf en de federatie: de accounts van de scheidsrechters
+ * (toegewezen, backup, wie effectief floot), van beide kapiteins (en hun ouders) en van de coaches en
+ * trainers van beide ploegen.
+ */
+async function bladOntvangers(payload: Payload, sheet: Record<string, unknown>, match: Record<string, unknown> | null): Promise<number[]> {
+  const officials = [sheet.assignedReferee, sheet.backupReferee, sheet.geflotenDoor].map(idVan).filter((x): x is number => x != null)
+  const refs = officials.length
+    ? (await payload.find({ collection: 'users', where: { official: { in: officials } }, depth: 0, limit: 10, overrideAccess: true })).docs.map((u) => Number(u.id))
+    : []
+  const kapiteins = (await Promise.all([match?.homeCaptain, match?.awayCaptain].map(idVan).filter((x): x is number => x != null).map((p) => accountsVanSpeler(payload, p)))).flat()
+  const ploegen = [match?.homeTeam, match?.awayTeam].map(idVan).filter((x): x is number => x != null)
+  const coaches = ploegen.length
+    ? (
+        await payload.find({
+          collection: 'users',
+          where: { and: [{ functieTeams: { in: ploegen } }, { or: [{ clubFuncties: { contains: 'coach' } }, { clubFuncties: { contains: 'trainer' } }] }] },
+          depth: 0,
+          limit: 50,
+          overrideAccess: true,
+        })
+      ).docs.map((u) => Number(u.id))
+    : []
+  return [...refs, ...kapiteins, ...coaches]
+}
 
 export type SubmitResult = {
   ok: boolean
@@ -113,6 +146,7 @@ export async function buildMatchSheetPdfData(
     keuring: KEURING_ITEMS.map((k) => ({ label: k.label, waarde: keuring[k.name] ?? 'ok' })),
     uitsluitingen: ((sheet?.uitsluitingen ?? []) as { naam?: string; reden?: string }[]).map((u) => `${u.naam ?? '—'} — ${u.reden ?? ''}`),
     voorbehoud: ((sheet?.voorbehoud ?? []) as { naam?: string; reden?: string }[]).map((v) => `${v.naam ?? '—'} — ${v.reden ?? ''}`),
+    zieRapport: sheet ? aanleidingenVanBlad(sheet as unknown as Parameters<typeof aanleidingenVanBlad>[0]).length > 0 : false,
     opmerkingen: (sheet?.opmerkingen as string) ?? undefined,
     handtekeningen: [
       { label: 'Kapitein thuis', sig: { ...sigVoorPdf(sheet?.kapiteinThuis), ...nvt(ff === 'thuis' || ff === 'dubbel') } },
@@ -264,16 +298,24 @@ export async function submitMatchSheet(
     const c = (team as { club?: unknown } | null)?.club
     return c && typeof c === 'object' ? Number((c as { id?: unknown }).id) : c == null ? null : Number(c)
   }
+  // Op papier kreeg de bezoekende kapitein een exemplaar, hield de thuisploeg er een en nam de
+  // scheidsrechter het blad voor de federatie mee (RCVK item 23). Digitaal krijgt iedereen die
+  // tekende of verantwoordelijk is het meteen: de staf van beide clubs, de federatie, de
+  // scheidsrechter(s), beide kapiteins (en hun ouders bij de jeugd) en de coaches van beide ploegen.
   const ontvangers = [
     ...(await clubStaf(payload, clubIdVan(match?.homeTeam))),
     ...(await clubStaf(payload, clubIdVan(match?.awayTeam))),
     ...(await federatieAccounts(payload)),
+    ...(await bladOntvangers(payload, sheet as unknown as Record<string, unknown>, match as unknown as Record<string, unknown> | null)),
   ]
   await meld(payload, ontvangers, {
     titel: `📄 Wedstrijdblad ingediend: ${pdfData.homeTeam} ${pdfData.score?.home ?? ''}–${pdfData.score?.away ?? ''} ${pdfData.awayTeam}`.replace(/ –/, ' –'),
     tekst: 'Afgetekend door beide kapiteins en de scheidsrechter. Het blad en de PDF staan bij de wedstrijdbladen.',
     url: `/aftekenen/${matchId}`,
   }).catch(() => 0)
+
+  // Elk voorbehoud op het blad wordt een dossier dat de club binnen 5 werkdagen bekrachtigt (item 25).
+  await voorbehoudenOpenen(payload, Number(matchId)).catch(() => 0)
 
   return {
     ok: true,

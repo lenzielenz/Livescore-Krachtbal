@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 
 import { betrokkenen } from '@/lib/aftrap'
 import { formatDateTimeBE } from '@/lib/datetime'
+import { forfaitVervalt } from '@/lib/forfait'
 import { relId } from '@/lib/federatie-api'
 import { meld } from '@/lib/meldingen'
 import { sendPushToClubs } from '@/lib/push'
@@ -30,7 +31,11 @@ export async function verplaatsWedstrijd(
 ): Promise<Verplaatsing> {
   const matchId = Number(match.id)
   if (Number.isNaN(datum.getTime())) return { ok: false, reden: 'ongeldige datum' }
-  if (match.status !== 'scheduled') return { ok: false, reden: match.status === 'live' ? 'is bezig' : 'is al gespeeld' }
+  if (match.status === 'scheduled' && new Date(String(match.date)).getTime() === datum.getTime()) return { ok: true, verplaatst: false }
+  // Een vooraf gemeld forfait vervalt bij een verplaatsing (RCVK item 34): de wedstrijd is dan weer gepland.
+  if (match.status !== 'scheduled' && !(match.status === 'finished' && (await forfaitVervalt(payload, matchId, 'de wedstrijd werd verplaatst')))) {
+    return { ok: false, reden: match.status === 'live' ? 'is bezig' : 'is al gespeeld' }
+  }
   if (new Date(String(match.date)).getTime() === datum.getTime()) return { ok: true, verplaatst: false }
   await payload.update({ collection: 'matches', id: matchId, data: { date: datum.toISOString(), afgelast: false }, overrideAccess: true })
   const thuis = ploeg(match.homeTeam)

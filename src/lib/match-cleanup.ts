@@ -28,6 +28,8 @@ export const MATCH_VERPLICHTE_COLLECTIONS = [
   'afgelastingen',
   'aftrap-wijzigingen',
   'verplaatsingsaanvragen',
+  'klachten',
+  'sr-rapporten',
 ] as const satisfies readonly CollectionSlug[]
 
 // Wat hier bewust NIET in staat: `accidents`. Dat is als enige nullable — een

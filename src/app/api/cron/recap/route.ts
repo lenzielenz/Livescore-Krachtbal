@@ -4,6 +4,7 @@ import { brusselsParts } from '@/lib/datetime'
 import { getPayloadClient } from '@/lib/payload-client'
 import { pushConfigured, sendPushToAll } from '@/lib/push'
 import { settleFinishedMatches } from '@/lib/score-trust-store'
+import { dagelijkseTermijnen } from '@/lib/termijnen'
 import { buildWeeklyRecapData } from '@/lib/weekly-recap-data'
 
 export const dynamic = 'force-dynamic'
@@ -12,7 +13,9 @@ export const dynamic = 'force-dynamic'
 //
 //   1. de vertrouwenslaag afsluiten: wedstrijden waarvan het bevestigingsvenster dicht is, boeken
 //      hun oordeel op de trust-historiek van de aantekenaar (score-trust.ts);
-//   2. op MAANDAG de recap van de voorbije speelweek pushen — het wekelijkse ritueel.
+//   2. de termijnen van het reglement: boetevoorstellen en herinneringen (voorbehoud, ongeval,
+//      scheidsrechtersrapport, uitlening — lib/termijnen.ts);
+//   3. op MAANDAG de recap van de voorbije speelweek pushen — het wekelijkse ritueel.
 //
 // Beveiliging: er gebeurt hier werk namens iedereen, dus enkel met het gedeelde geheim uit
 // CRON_SECRET (header `Authorization: Bearer …` of `?key=`). Zonder ingesteld geheim doet het
@@ -46,21 +49,25 @@ async function run(req: Request) {
   // 1. Afgelopen wedstrijden afsluiten (buiten het bevestigingsvenster).
   const settled = await settleFinishedMatches(payload).catch(() => 0)
 
-  // 2. De recap — enkel op maandag versturen, tenzij expliciet geforceerd.
+  // 2. Termijnen: boetes voorstellen en herinneren wie aan zet is (dry = niets versturen).
+  const termijnen = dry ? null : await dagelijkseTermijnen(payload).catch((e) => ({ fout: (e as Error).message }))
+
+  // 3. De recap — enkel op maandag versturen, tenzij expliciet geforceerd.
   const now = new Date()
   const isRecapDay = brusselsParts(now).weekdayMon0 === RECAP_WEEKDAY
   if (!isRecapDay && !force) {
-    return NextResponse.json({ ok: true, settled, recap: 'overgeslagen (niet maandag)' })
+    return NextResponse.json({ ok: true, settled, termijnen, recap: 'overgeslagen (niet maandag)' })
   }
 
   const recap = await buildWeeklyRecapData(payload, { now })
   if (recap.matches === 0) {
-    return NextResponse.json({ ok: true, settled, recap: 'geen wedstrijden — niets verstuurd' })
+    return NextResponse.json({ ok: true, settled, termijnen, recap: 'geen wedstrijden — niets verstuurd' })
   }
   if (dry || !pushConfigured()) {
     return NextResponse.json({
       ok: true,
       settled,
+      termijnen,
       recap: dry ? 'proefdraai' : 'push niet geconfigureerd',
       headline: recap.headline,
       push: recap.push,
@@ -74,7 +81,7 @@ async function run(req: Request) {
     url: '/recap',
     tag: 'weekly-recap', // één recap-melding tegelijk, geen stapel
   })
-  return NextResponse.json({ ok: true, settled, matches: recap.matches, ...sent })
+  return NextResponse.json({ ok: true, settled, termijnen, matches: recap.matches, ...sent })
 }
 
 // Zowel GET als POST: schedulers (Railway cron, uptime-pingers) doen doorgaans een GET.

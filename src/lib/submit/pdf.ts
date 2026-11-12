@@ -53,6 +53,8 @@ export type MatchSheetPdfData = {
   keuring: { label: string; waarde: string }[]
   uitsluitingen: string[]
   voorbehoud: string[]
+  /** RCVK item 27: "zie scheidsrechtersrapport" (bij voorbehoud, uitsluiting, forfait ter plaatse of op aanduiding). */
+  zieRapport?: boolean
   opmerkingen?: string
   handtekeningen: { label: string; sig: PdfSignature }[]
 }
@@ -425,6 +427,7 @@ export async function generateMatchSheetPdf(data: MatchSheetPdfData): Promise<Ui
     section('Voorbehoud', 14)
     data.voorbehoud.forEach((v) => line(v, { size: 9 }))
   }
+  if (data.zieRapport) line('Zie scheidsrechtersrapport (RCVK item 27).', { size: 9, b: true })
   if (data.opmerkingen) {
     section('Opmerkingen en kwetsuren', 14)
     for (const regel of data.opmerkingen.split(/\r?\n/)) {

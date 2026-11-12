@@ -45,7 +45,14 @@ export async function klachtIndienen(payload: Payload, user: unknown, matchId: n
   if (r.length < KLACHT_MIN_TEKENS) throw new Error(`Beschrijf de klacht in minstens ${KLACHT_MIN_TEKENS} tekens: wat klopt er niet op het blad?`)
   const w = await wedstrijdInfo(payload, matchId)
   const club = Number(userClubId(user))
-  const open = await payload.find({ collection: 'klachten', where: { and: [{ match: { equals: matchId } }, { club: { equals: club } }, { status: { equals: 'open' } }] }, limit: 1, depth: 0, overrideAccess: true })
+  // Een bekrachtigd voorbehoud is ook "open", maar is geen klacht: daarnaast mag de club nog klagen.
+  const open = await payload.find({
+    collection: 'klachten',
+    where: { and: [{ match: { equals: matchId } }, { club: { equals: club } }, { status: { equals: 'open' } }, { soort: { not_equals: 'voorbehoud' } }] },
+    limit: 1,
+    depth: 0,
+    overrideAccess: true,
+  })
   const weigering = klachtWeigering(user, { bladStatus: String(w.sheet?.status ?? ''), homeClub: w.homeClub, awayClub: w.awayClub, openKlachtVanClub: open.docs.length > 0 })
   if (weigering) throw new Error(weigering)
   const klacht = await payload.create({

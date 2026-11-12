@@ -86,7 +86,9 @@ describe('federatietools', () => {
     const van = zaterdagVan(dag)
     const naar = shiftDateStr(van, 14)
     const g = weekendGrenzen(van)
-    const inWeekend = (await payload.find({ collection: 'matches', where: { and: [{ reeks: { equals: REEKS } }, { date: { greater_than_equal: g.start } }, { date: { less_than: g.einde } }] }, limit: 50 })).docs
+    // De route verplaatst élke geplande competitiewedstrijd van dat weekend, niet enkel die van deze
+    // reeks: andere suites kunnen in dezelfde databank wedstrijden in dat weekend hebben staan.
+    const inWeekend = (await payload.find({ collection: 'matches', where: { and: [{ analyseOnly: { not_equals: true } }, { isDemo: { not_equals: true } }, { date: { greater_than_equal: g.start } }, { date: { less_than: g.einde } }] }, limit: 500 })).docs
     const gepland = inWeekend.filter((x) => x.status === 'scheduled')
     const r = (await (await weekendRoute(req('federatie', { van, naar }))).json()) as { verplaatst: number; dagen: number; overgeslagen: unknown[]; error?: string }
     expect(r.error).toBeUndefined()

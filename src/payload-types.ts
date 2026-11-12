@@ -81,6 +81,9 @@ export interface Config {
     inschrijvingen: Inschrijvingen;
     verplaatsingsaanvragen: Verplaatsingsaanvragen;
     klachten: Klachten;
+    'sr-rapporten': SrRapporten;
+    'rapport-bijlagen': RapportBijlagen;
+    uitleningen: Uitleningen;
     dossiers: Dossier;
     'medische-kaart-aanvragen': MedischeKaartAanvragen;
     meldingen: Meldingen;
@@ -150,6 +153,9 @@ export interface Config {
     inschrijvingen: InschrijvingenSelect<false> | InschrijvingenSelect<true>;
     verplaatsingsaanvragen: VerplaatsingsaanvragenSelect<false> | VerplaatsingsaanvragenSelect<true>;
     klachten: KlachtenSelect<false> | KlachtenSelect<true>;
+    'sr-rapporten': SrRapportenSelect<false> | SrRapportenSelect<true>;
+    'rapport-bijlagen': RapportBijlagenSelect<false> | RapportBijlagenSelect<true>;
+    uitleningen: UitleningenSelect<false> | UitleningenSelect<true>;
     dossiers: DossiersSelect<false> | DossiersSelect<true>;
     'medische-kaart-aanvragen': MedischeKaartAanvragenSelect<false> | MedischeKaartAanvragenSelect<true>;
     meldingen: MeldingenSelect<false> | MeldingenSelect<true>;
@@ -1274,11 +1280,19 @@ export interface BoeteSoorten {
   /**
    * Het systeem maakt een VOORSTEL; de federatie beslist altijd zelf of het opgelegd wordt.
    */
-  trigger?: ('geen' | 'forfait' | 'blad_te_laat' | 'te_laat') | null;
+  trigger?: ('geen' | 'forfait' | 'blad_te_laat' | 'te_laat' | 'voorbehoud' | 'verplaatsing') | null;
   /**
    * Voor "blad niet tijdig ingediend": zoveel dagen na de wedstrijd. Voor "aftrap later": vanaf hoeveel minuten (leeg = elke vertraging).
    */
   termijnDagen?: number | null;
+  /**
+   * Maak per moment een aparte boetesoort (bv. tijdig €25, laat €50, ter plaatse €75): elk forfait krijgt dan precies één voorstel.
+   */
+  forfaitMoment?: ('alle' | 'vooraf' | 'laat' | 'ter_plaatse') | null;
+  /**
+   * Bv. een verplaatsing kost €20 bij de senioren en €10 bij de jeugd: twee soorten, elk met hun doelgroep.
+   */
+  doelgroep?: ('alle' | 'senioren' | 'jeugd') | null;
   actief?: boolean | null;
   updatedAt: string;
   createdAt: string;
@@ -1426,14 +1440,92 @@ export interface Verplaatsingsaanvragen {
 export interface Klachten {
   id: number;
   match: number | Match;
+  soort?: ('klacht' | 'voorbehoud') | null;
   club: number | Club;
   ingediendDoor?: (number | null) | User;
   reden: string;
-  status?: ('open' | 'heropend' | 'afgewezen') | null;
+  status?: ('open' | 'heropend' | 'afgewezen' | 'te_bekrachtigen' | 'afgezien' | 'vervallen') | null;
+  bekrachtigTegen?: string | null;
+  relaas?: string | null;
+  sleutel?: string | null;
+  comite?: ('sport' | 'scheidsrechters') | null;
   beslissing?: string | null;
   behandeldDoor?: (number | null) | User;
   behandeldOp?: string | null;
   pdfVoorHeropenen?: (number | null) | Media;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sr-rapporten".
+ */
+export interface SrRapporten {
+  id: number;
+  match: number | Match;
+  scheidsrechter: number | User;
+  aanleidingen?: ('voorbehoud' | 'uitsluiting' | 'niet_gespeeld' | 'incident' | 'ander')[] | null;
+  relaas: string;
+  bijlagen?: (number | RapportBijlagen)[] | null;
+  ondertekendNaam: string;
+  ondertekendOp: string;
+  status?: ('ingediend' | 'afgehandeld') | null;
+  besluit?: string | null;
+  behandeldDoor?: (number | null) | User;
+  behandeldOp?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "rapport-bijlagen".
+ */
+export interface RapportBijlagen {
+  id: number;
+  match?: (number | null) | Match;
+  geuploadDoor?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "uitleningen".
+ */
+export interface Uitleningen {
+  id: number;
+  speler: number | Player;
+  vanClub: number | Club;
+  naarClub: number | Club;
+  naarPloeg: number | Team;
+  seizoen: string;
+  spelerNaam: string;
+  adres: string;
+  geboortedatum?: string | null;
+  categorie?: string | null;
+  competitie?: string | null;
+  status?: ('wacht_ontvanger' | 'wacht_federatie' | 'bevestigd' | 'geweigerd' | 'ingetrokken') | null;
+  tekenVan?: {
+    door?: (number | null) | User;
+    naam?: string | null;
+    op?: string | null;
+  };
+  tekenNaar?: {
+    door?: (number | null) | User;
+    naam?: string | null;
+    op?: string | null;
+  };
+  behandeldDoor?: (number | null) | User;
+  behandeldOp?: string | null;
+  toelichting?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1454,6 +1546,8 @@ export interface Dossier {
     | 'kaart'
     | 'afgelasting'
     | 'inschrijving'
+    | 'rapport'
+    | 'uitlening'
     | 'taak';
   /**
    * Het id in de collection van die soort. Leeg voor een vrije taak.
@@ -1511,6 +1605,7 @@ export interface Meldingen {
   tekst?: string | null;
   url?: string | null;
   gelezen?: boolean | null;
+  sleutel?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1632,6 +1727,10 @@ export interface Matchsheet {
   refereeKm?: number | null;
   forfait?: {
     uitslag?: ('geen' | 'thuis' | 'uit' | 'dubbel') | null;
+    gemeldOp?: string | null;
+    gemeldDoor?: (number | null) | User;
+    moment?: ('vooraf' | 'laat' | 'ter_plaatse') | null;
+    reden?: string | null;
     /**
      * Enkel invullen bij FF wanneer de scheidsrechter betaald/verplaatst is.
      */
@@ -1667,6 +1766,7 @@ export interface Matchsheet {
         reden?: string | null;
         score?: string | null;
         speeltijd?: string | null;
+        side?: ('thuis' | 'uit') | null;
         id?: string | null;
       }[]
     | null;
@@ -1675,9 +1775,28 @@ export interface Matchsheet {
         naam?: string | null;
         reden?: string | null;
         score?: string | null;
+        speeltijd?: string | null;
+        side?: ('thuis' | 'uit') | null;
+        onderwerp?:
+          | (
+              | 'inrichting'
+              | 'speelduur_tijdopnemer'
+              | 'officials'
+              | 'leeftijd'
+              | 'aantekenblad'
+              | 'identiteit'
+              | 'doelpunt'
+              | 'sr_afwezig'
+              | 'sr_te_laat'
+              | 'spelregels'
+              | 'speelduur_scheidsrechter'
+              | 'ander'
+            )
+          | null;
         id?: string | null;
       }[]
     | null;
+  rapportVolgt?: boolean | null;
   opmerkingen?: string | null;
   kapiteinThuis?: {
     akkoord?: boolean | null;
@@ -2874,6 +2993,18 @@ export interface PayloadLockedDocument {
         value: number | Klachten;
       } | null)
     | ({
+        relationTo: 'sr-rapporten';
+        value: number | SrRapporten;
+      } | null)
+    | ({
+        relationTo: 'rapport-bijlagen';
+        value: number | RapportBijlagen;
+      } | null)
+    | ({
+        relationTo: 'uitleningen';
+        value: number | Uitleningen;
+      } | null)
+    | ({
         relationTo: 'dossiers';
         value: number | Dossier;
       } | null)
@@ -3301,6 +3432,8 @@ export interface BoeteSoortenSelect<T extends boolean = true> {
   bedrag?: T;
   trigger?: T;
   termijnDagen?: T;
+  forfaitMoment?: T;
+  doelgroep?: T;
   actief?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -3406,14 +3539,93 @@ export interface VerplaatsingsaanvragenSelect<T extends boolean = true> {
  */
 export interface KlachtenSelect<T extends boolean = true> {
   match?: T;
+  soort?: T;
   club?: T;
   ingediendDoor?: T;
   reden?: T;
   status?: T;
+  bekrachtigTegen?: T;
+  relaas?: T;
+  sleutel?: T;
+  comite?: T;
   beslissing?: T;
   behandeldDoor?: T;
   behandeldOp?: T;
   pdfVoorHeropenen?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sr-rapporten_select".
+ */
+export interface SrRapportenSelect<T extends boolean = true> {
+  match?: T;
+  scheidsrechter?: T;
+  aanleidingen?: T;
+  relaas?: T;
+  bijlagen?: T;
+  ondertekendNaam?: T;
+  ondertekendOp?: T;
+  status?: T;
+  besluit?: T;
+  behandeldDoor?: T;
+  behandeldOp?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "rapport-bijlagen_select".
+ */
+export interface RapportBijlagenSelect<T extends boolean = true> {
+  match?: T;
+  geuploadDoor?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "uitleningen_select".
+ */
+export interface UitleningenSelect<T extends boolean = true> {
+  speler?: T;
+  vanClub?: T;
+  naarClub?: T;
+  naarPloeg?: T;
+  seizoen?: T;
+  spelerNaam?: T;
+  adres?: T;
+  geboortedatum?: T;
+  categorie?: T;
+  competitie?: T;
+  status?: T;
+  tekenVan?:
+    | T
+    | {
+        door?: T;
+        naam?: T;
+        op?: T;
+      };
+  tekenNaar?:
+    | T
+    | {
+        door?: T;
+        naam?: T;
+        op?: T;
+      };
+  behandeldDoor?: T;
+  behandeldOp?: T;
+  toelichting?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -3468,6 +3680,7 @@ export interface MeldingenSelect<T extends boolean = true> {
   tekst?: T;
   url?: T;
   gelezen?: T;
+  sleutel?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -3610,6 +3823,10 @@ export interface MatchsheetsSelect<T extends boolean = true> {
     | T
     | {
         uitslag?: T;
+        gemeldOp?: T;
+        gemeldDoor?: T;
+        moment?: T;
+        reden?: T;
         vanToepassing?: T;
         gemeldThuis?: T;
         gemeldUit?: T;
@@ -3639,6 +3856,7 @@ export interface MatchsheetsSelect<T extends boolean = true> {
         reden?: T;
         score?: T;
         speeltijd?: T;
+        side?: T;
         id?: T;
       };
   voorbehoud?:
@@ -3647,8 +3865,12 @@ export interface MatchsheetsSelect<T extends boolean = true> {
         naam?: T;
         reden?: T;
         score?: T;
+        speeltijd?: T;
+        side?: T;
+        onderwerp?: T;
         id?: T;
       };
+  rapportVolgt?: T;
   opmerkingen?: T;
   kapiteinThuis?:
     | T

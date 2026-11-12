@@ -41,6 +41,8 @@ import { MatchActivitySummary } from './MatchActivitySummary'
 import { PronostiekWidget } from './PronostiekWidget'
 import { AftrapVerschuiven } from '@/components/AftrapVerschuiven'
 import { Verplaatsing } from '@/components/Verplaatsing'
+import { ForfaitMelden } from '@/components/ForfaitMelden'
+import { forfaitGrens } from '@/lib/forfait'
 import { verplaatsingen } from '@/lib/verplaatsing'
 import { userClubId } from '@/lib/access'
 import { aftrapGeschiedenis, aftrapRechten, volgendeOpTerrein } from '@/lib/aftrap'
@@ -172,6 +174,17 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         : 'tegenpartij'
       : verplaatsingRol
   const aftrapVolgende = aftrapRecht.meeschuiven && matchDoc ? await volgendeOpTerrein(payload, matchDoc as never) : []
+  // Forfait melden (RCVK item 34, lib/forfait.ts): de staf van een club voor haar eigen ploeg, de federatie voor beide.
+  const ploegNaam = (t: unknown) => (t && typeof t === 'object' ? String((t as { name?: unknown }).name ?? '') : '')
+  const forfaitKanten =
+    verplaatsingRol == null || !matchDoc
+      ? []
+      : ([
+          { kant: 'thuis' as const, naam: ploegNaam(matchDoc.homeTeam), club: clubsVanMatch[0] },
+          { kant: 'uit' as const, naam: ploegNaam(matchDoc.awayTeam), club: clubsVanMatch[1] },
+        ]
+          .filter((k) => verplaatsingRol === 'federatie' || k.club === mijnClub)
+          .map(({ kant, naam }) => ({ kant, naam })))
   // Wie de wedstrijd mag rechtzetten (tijdstip + ploegnaam/club): de federatie, en nooit op een
   // analysewedstrijd — die is privé en wordt onder /analyse/beheer beheerd.
   const magBeheren =
@@ -661,6 +674,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             🗓️ Planning
             <span className="match-fold-sub">aftrap verschuiven of verplaatsing aanvragen</span>
           </summary>
+        {forfaitKanten.length > 0 && matchDoc?.date && (
+          <ForfaitMelden matchId={matchId} kanten={forfaitKanten} grens={forfaitGrens(new Date(String(matchDoc.date))).toISOString()} />
+        )}
         {verplaatsingRolEcht && (
           <Verplaatsing
             matchId={matchId}

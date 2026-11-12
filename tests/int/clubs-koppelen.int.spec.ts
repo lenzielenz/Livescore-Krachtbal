@@ -14,6 +14,7 @@ vi.mock('@/lib/api-auth', async (origineel) => ({
 
 import config from '@/payload.config'
 import { POST as koppelen } from '@/app/api/clubs/koppelen/route'
+import { CLUB_VERWIJZINGEN } from '@/lib/clubs-koppelen'
 import type { Reeks } from '@/lib/reeksen'
 
 // Ploegen aan hun echte club koppelen, door de echte route en de echte database.
@@ -101,4 +102,17 @@ describe('ploegen aan hun club koppelen', () => {
     const j = (await res.json()) as { plan: { verhuizingen: { ploegId: number }[] }; verhuisd: number }
     expect(j.plan.verhuizingen.filter((v) => [ids.ploegA1, ids.ploegB2, ids.ploegB].includes(v.ploegId))).toEqual([])
   }, 60_000)
+
+  it('verhuist élke collectie die verplicht naar een club verwijst — anders kan de lege club niet weg', () => {
+    type Veld = { name?: string; type?: string; relationTo?: unknown; required?: boolean; hasMany?: boolean }
+    const verplicht = payload.config.collections.flatMap((c) =>
+      (c.flattenedFields as Veld[])
+        .filter((v) => v.type === 'relationship' && v.relationTo === 'clubs' && v.required === true && !v.hasMany)
+        .map((v) => `${c.slug}.${v.name}`),
+    )
+    expect(verplicht.length).toBeGreaterThan(0)
+    // teams.club verhuist in stap 2 van de route zelf (de ploegen zijn net wat er gekoppeld wordt).
+    const gedekt = new Set(['teams.club', ...CLUB_VERWIJZINGEN.map((x) => `${x.collection}.${x.veld}`)])
+    expect(verplicht.filter((x) => !gedekt.has(x)), 'deze verplichte club-verwijzingen verhuizen niet mee').toEqual([])
+  })
 })

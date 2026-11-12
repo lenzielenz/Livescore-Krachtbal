@@ -13,6 +13,21 @@ export const BOETE_TRIGGERS = [
   { label: 'Forfait (afwezige ploeg)', value: 'forfait' },
   { label: 'Wedstrijdblad niet tijdig ingediend', value: 'blad_te_laat' },
   { label: 'Aftrap later door de club (file, ziekte)', value: 'te_laat' },
+  { label: 'Voorbehoud niet bekrachtigd binnen 5 werkdagen (RCVK item 25)', value: 'voorbehoud' },
+  { label: 'Verplaatsing van een wedstrijd — administratieve kost (RCVK item 33)', value: 'verplaatsing' },
+] as const
+
+/** Wanneer een forfait gemeld werd (RCVK item 34: "het tijdstip van melding bepaalt de hoogte van de boete"). */
+export const FORFAIT_MOMENTEN = [
+  { label: 'Tijdig gemeld (vóór vrijdag 12u van het speelweekend)', value: 'vooraf' },
+  { label: 'Laat gemeld (na vrijdag 12u)', value: 'laat' },
+  { label: 'Niet gemeld — vastgesteld ter plaatse', value: 'ter_plaatse' },
+] as const
+
+export const BOETE_DOELGROEPEN = [
+  { label: 'Alle ploegen', value: 'alle' },
+  { label: 'Enkel senioren', value: 'senioren' },
+  { label: 'Enkel jeugd', value: 'jeugd' },
 ] as const
 
 export const BOETE_STATUSSEN = [
@@ -52,6 +67,25 @@ export const BoeteSoorten: CollectionConfig = {
       type: 'number',
       min: 0,
       admin: { description: 'Voor "blad niet tijdig ingediend": zoveel dagen na de wedstrijd. Voor "aftrap later": vanaf hoeveel minuten (leeg = elke vertraging).' },
+    },
+    {
+      name: 'forfaitMoment',
+      label: 'Geldt voor forfaits die',
+      type: 'select',
+      options: [{ label: 'Altijd (ongeacht wanneer gemeld)', value: 'alle' }, ...FORFAIT_MOMENTEN],
+      defaultValue: 'alle',
+      admin: {
+        condition: (data) => data?.trigger === 'forfait',
+        description: 'Maak per moment een aparte boetesoort (bv. tijdig €25, laat €50, ter plaatse €75): elk forfait krijgt dan precies één voorstel.',
+      },
+    },
+    {
+      name: 'doelgroep',
+      label: 'Geldt voor',
+      type: 'select',
+      options: [...BOETE_DOELGROEPEN],
+      defaultValue: 'alle',
+      admin: { description: 'Bv. een verplaatsing kost €20 bij de senioren en €10 bij de jeugd: twee soorten, elk met hun doelgroep.' },
     },
     { name: 'actief', label: 'Actief', type: 'checkbox', defaultValue: true },
   ],

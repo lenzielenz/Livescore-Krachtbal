@@ -18,6 +18,8 @@ export const DOSSIER_BRONNEN = [
   { label: 'Medische kaart', value: 'kaart' },
   { label: 'Afgelasting', value: 'afgelasting' },
   { label: 'Inschrijving van een club', value: 'inschrijving' },
+  { label: 'Scheidsrechtersrapport', value: 'rapport' },
+  { label: 'Uitlening van een jeugdspeler', value: 'uitlening' },
   { label: 'Vrije taak', value: 'taak' },
 ] as const
 

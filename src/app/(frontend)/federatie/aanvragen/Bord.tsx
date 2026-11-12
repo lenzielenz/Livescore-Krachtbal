@@ -19,6 +19,7 @@ import {
   WACHT_OP_LABEL,
   actiesVoor,
   deadlineStand,
+  deadlineVan,
   filterAanvragen,
   kolomVan,
   ouderdom,
@@ -250,7 +251,7 @@ export function Bord({ begin, behandelaars, ik, focus, beginBron }: Props) {
 
 function Kaart({ a, ik, open, onSleep, slepend }: { a: Aanvraag; ik: Behandelaar; open: () => void; onSleep: (aan: boolean) => void; slepend: boolean }) {
   const meta = BRON_META[a.bron]
-  const dl = deadlineStand(a.dossier?.deadline)
+  const dl = deadlineStand(deadlineVan(a))
   const wacht = wachtOpVan(a)
   const beh = a.dossier?.behandelaar
   const nNotities = a.dossier?.notities.length ?? 0
@@ -419,7 +420,12 @@ function Detail({
           ) : (
             <div className="bd-knoppen">
               {acties.map((x) =>
-                x.href ? (
+                x.href?.startsWith('/api/') ? (
+                  // Een document (PDF): in een nieuw tabblad, het bord blijft open.
+                  <a key={x.id} href={x.href} target="_blank" rel="noopener noreferrer" className="fs-knop">
+                    📄 {x.label}
+                  </a>
+                ) : x.href ? (
                   <Link key={x.id} href={x.href} className="fs-knop fs-knop-primair">
                     {x.label} →
                   </Link>

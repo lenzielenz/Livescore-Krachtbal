@@ -1,7 +1,7 @@
 import { hasRole, isFederationLevel } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { authUser } from '@/lib/api-auth'
-import { planClubKoppeling, type Club, type Ploeg } from '@/lib/clubs-koppelen'
+import { CLUB_VERWIJZINGEN, planClubKoppeling, type Club, type Ploeg } from '@/lib/clubs-koppelen'
 import { getPayloadClient } from '@/lib/payload-client'
 
 // Ploegen aan hun echte club koppelen (federatie/admin). Standaard VOORBEELD; commit=true voert uit.
@@ -20,26 +20,7 @@ import { getPayloadClient } from '@/lib/payload-client'
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 
-/** Alle collecties met een verwijzing naar clubs, met het veld waarin die zit. */
-const VERWIJZINGEN: {
-  collection: 'players' | 'trainingen' | 'oefeningen' | 'sessiesjablonen' | 'news' | 'users' | 'tournaments' | 'boetes' | 'inschrijvingen' | 'accidents' | 'verplaatsingsaanvragen'
-  veld: string
-}[] = [
-  { collection: 'players', veld: 'club' },
-  { collection: 'trainingen', veld: 'club' },
-  { collection: 'oefeningen', veld: 'club' },
-  { collection: 'sessiesjablonen', veld: 'club' },
-  { collection: 'news', veld: 'club' },
-  { collection: 'users', veld: 'club' },
-  { collection: 'tournaments', veld: 'hostClub' },
-  // Boetes en inschrijvingen zijn verplicht aan een club gekoppeld: zonder verhuizen blokkeren ze
-  // het opruimen van de lege club (en een boete hoort bij de vereniging, niet bij het logo).
-  { collection: 'boetes', veld: 'club' },
-  { collection: 'inschrijvingen', veld: 'club' },
-  { collection: 'accidents', veld: 'club' },
-  { collection: 'verplaatsingsaanvragen', veld: 'aanvrager' },
-  { collection: 'verplaatsingsaanvragen', veld: 'tegenpartij' },
-]
+const VERWIJZINGEN = CLUB_VERWIJZINGEN
 
 export async function POST(req: Request) {
   let commit = false

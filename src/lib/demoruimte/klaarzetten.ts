@@ -7,7 +7,7 @@ import { aftrapVerschuiven } from '../aftrap'
 import type { AuthedUser } from '../api-auth'
 import { blessureMelden } from '../blessure'
 import { boeteBehandelen, boeteManueel, boeteVoorstellen } from '../boetes'
-import { dateStrBE, shiftDateStr, zaterdagVan } from '../datetime'
+import { brusselsMidnightUtc, dateStrBE, shiftDateStr, zaterdagVan } from '../datetime'
 import { inschrijvingOpslaan } from '../inschrijving'
 import { planKalender } from '../kalender-planner'
 import { kaartAanvragen } from '../medische-kaart'
@@ -422,8 +422,10 @@ export async function demoKlaarzetten(payload: Payload, opties: { forceer?: bool
     await aftrapVerschuiven(payload, gebruiker['coach-baasrode'], hoofd, { nieuw: new Date(nu + 25 * 60_000).toISOString(), reden: 'file', toelichting: 'Ongeval op de E17 bij Temse' })
     stap('Hoofdwedstrijd Sint-Michiels – Baasrode: selecties klaar, aftrap 15 min later (file)')
 
-    // 2. Dameswedstrijd later vandaag: de coach moet nog selecteren.
-    await maakWedstrijd('SM-D', 'BA-D', 'RDA', nu + 3 * 3600_000, 'Ilse Claes')
+    // 2. Dameswedstrijd later vandaag: de coach moet nog selecteren. Normaal 3 uur later, maar nooit na
+    // middernacht: wie 's avonds een demo geeft (een clubavond), moet ze ook vandaag zien staan.
+    const totMiddernacht = brusselsMidnightUtc(shiftDateStr(dateStrBE(new Date(nu)), 1)).getTime() - nu
+    await maakWedstrijd('SM-D', 'BA-D', 'RDA', nu + Math.max(45 * 60_000, Math.min(3 * 3600_000, totMiddernacht - 15 * 60_000)), 'Ilse Claes')
     stap('Dames Sint-Michiels – Baasrode: selectie nog te maken')
 
     // 3. Jeugdwedstrijd die live loopt (tweede helft), aangetekend door de tafel van Sint-Michiels.
@@ -586,12 +588,15 @@ export async function demoKlaarzetten(payload: Payload, opties: { forceer?: bool
 /** De sleutelwedstrijden van het draaiboek, terug te vinden zonder ze op te slaan. */
 export async function demoWedstrijden(payload: Payload) {
   const ploeg = async (naam: string) => (await payload.find({ collection: 'teams', where: { name: { equals: naam } }, limit: 1, depth: 0, overrideAccess: true })).docs[0]?.id
-  const vandaag = dateStrBE(new Date())
+  // De wedstrijden van 'vandaag' liggen rond het klaarzetten (van 2,5 uur ervoor tot 3 uur erna): zoek
+  // de dichtste binnen een halve dag, niet op kalenderdatum — rond middernacht valt die anders verkeerd.
+  const nu = Date.now()
   const zoek = async (thuis: string, uit: string) => {
     const [h, a] = [await ploeg(thuis), await ploeg(uit)]
     if (h == null || a == null) return null
-    const res = await payload.find({ collection: 'matches', where: { and: [{ homeTeam: { equals: h } }, { awayTeam: { equals: a } }] }, sort: '-date', limit: 5, depth: 0, overrideAccess: true })
-    const m = res.docs.find((d) => dateStrBE(new Date(String(d.date))) === vandaag) ?? null
+    const res = await payload.find({ collection: 'matches', where: { and: [{ homeTeam: { equals: h } }, { awayTeam: { equals: a } }] }, sort: '-date', limit: 10, depth: 0, overrideAccess: true })
+    const afstand = (d: { date?: unknown }) => Math.abs(new Date(String(d.date)).getTime() - nu)
+    const m = res.docs.filter((d) => afstand(d) < 12 * 3600_000).sort((x, y) => afstand(x) - afstand(y))[0] ?? null
     return m ? Number(m.id) : null
   }
   return {

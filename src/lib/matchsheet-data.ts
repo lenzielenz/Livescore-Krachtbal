@@ -10,6 +10,7 @@ import { reeksRang } from './reeksen'
 import { computeReadiness, type Readiness } from './match-readiness'
 import { isKnipjesBlocked, openKnipjes } from './sanctions'
 import { isSupportersMode } from './score-mode'
+import { uitgeleendAanPloeg } from './uitlening'
 
 export type Side = 'home' | 'away'
 
@@ -152,6 +153,8 @@ export type RosterEntry = {
   suggested: boolean
   /** Speler uit een lagere ploeg van de club (speelt hier hoger): naam van zijn eigen ploeg. */
   geleendVan?: string
+  /** Jeugdspeler van een andere club, uitgeleend aan deze ploeg (RCVK item 45): naam van zijn club. */
+  uitgeleendVan?: string
   /** Vastspelen: hoe vaak hij al hoger speelde in deze ploeg, en het maximum (lib/competitieregels.ts). */
   knipjes?: { keer: number; max: number; vastIn: string | null }
 }
@@ -197,8 +200,17 @@ export async function buildRoster(
     [team.id, { naam: team.name, reeks: team.reeks ?? null }],
     ...lagerePloegen.map((t) => [Number(t.id), { naam: String(t.name ?? ''), reeks: (t.reeks as string | null) ?? null }] as const),
   ])
+  // Jeugdspelers van andere clubs die dit seizoen bevestigd aan deze ploeg uitgeleend zijn (lib/uitlening.ts).
+  const uitgeleend = await uitgeleendAanPloeg(payload, team.id).catch(() => new Map<number, string>())
   const [roster, suggestedIds, settings, vast] = await Promise.all([
-    payload.find({ collection: 'players', where: { team: { in: [...ploegNaam.keys()] } }, limit: 500, depth: 0 }),
+    payload.find({
+      collection: 'players',
+      where: uitgeleend.size
+        ? { or: [{ team: { in: [...ploegNaam.keys()] } }, { id: { in: [...uitgeleend.keys()] } }] }
+        : { team: { in: [...ploegNaam.keys()] } },
+      limit: 500,
+      depth: 0,
+    }),
     lastKnownLineup(payload, team.id, matchId),
     payload.findGlobal({ slug: 'settings', depth: 0 }).catch(() => null),
     clubId != null
@@ -261,7 +273,11 @@ export async function buildRoster(
       vergunningsstatus: (p.vergunningsstatus as string) ?? 'geen',
       selectability,
       suggested: suggested.has(p.id as number),
-      ...(eigenTeam !== team.id ? { geleendVan: ploegNaam.get(eigenTeam)?.naam ?? '' } : {}),
+      ...(uitgeleend.has(p.id as number) && !ploegNaam.has(eigenTeam)
+        ? { uitgeleendVan: uitgeleend.get(p.id as number) ?? '' }
+        : eigenTeam !== team.id
+          ? { geleendVan: ploegNaam.get(eigenTeam)?.naam ?? '' }
+          : {}),
       ...(status ? { knipjes: { keer: hogerHier?.keer ?? 0, max: status.max, vastIn: status.vastIn?.reeks ?? null } } : {}),
     }
   })
@@ -278,8 +294,8 @@ export async function buildRoster(
     const fb = favSet.has(b.id) ? 0 : 1
     if (fa !== fb) return fa - fb
     // Eigen spelers vóór spelers uit lagere ploegen.
-    const ga = a.geleendVan != null ? 1 : 0
-    const gb = b.geleendVan != null ? 1 : 0
+    const ga = a.geleendVan != null || a.uitgeleendVan != null ? 1 : 0
+    const gb = b.geleendVan != null || b.uitgeleendVan != null ? 1 : 0
     if (ga !== gb) return ga - gb
     const ua = usage.get(a.id) ?? 0
     const ub = usage.get(b.id) ?? 0

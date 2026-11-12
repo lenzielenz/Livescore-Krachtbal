@@ -40,6 +40,12 @@ export const Teams: CollectionConfig = {
     // Verwijder de spelers van deze ploeg eerst (anders blokkeert de NOT NULL-FK op players.team).
     beforeDelete: [
       async ({ req, id }) => {
+        // Een uitleenovereenkomst (RCVK item 45) is een ondertekend document: de ploeg kan niet weg zolang
+        // er een naar haar verwijst (anders botst de databank op de NOT NULL-sleutel, zonder uitleg).
+        const uitl = await req.payload.count({ collection: 'uitleningen', where: { naarPloeg: { equals: id } }, overrideAccess: true }).catch(() => ({ totalDocs: 0 }))
+        if (uitl.totalDocs > 0) {
+          throw new Error(`Deze ploeg staat in ${uitl.totalDocs} uitleenovereenkomst(en) van jeugdspelers. Die blijven bewaard; de ploeg kan daarom niet verwijderd worden.`)
+        }
         await req.payload.delete({ collection: 'players', where: { team: { equals: id } }, overrideAccess: true })
       },
     ],

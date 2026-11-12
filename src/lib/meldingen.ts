@@ -5,7 +5,7 @@ import { sendPushToUsers } from './push'
 // Meldingen aan personen: een rij in de meldingenbox (🔔, /meldingen) én een push als die aan staat.
 // Gebruikt voor de medische kaart, de registratie en andere "de andere partij moet het weten".
 
-export type Melding = { titel: string; tekst?: string; url?: string }
+export type Melding = { titel: string; tekst?: string; url?: string; sleutel?: string }
 
 const relId = (v: unknown): number | null => {
   const id = v && typeof v === 'object' ? (v as { id?: unknown }).id : v
@@ -15,10 +15,20 @@ const relId = (v: unknown): number | null => {
 export async function meld(payload: Payload, userIds: (number | null | undefined)[], m: Melding): Promise<number> {
   const ids = [...new Set(userIds.filter((u): u is number => u != null))]
   for (const user of ids) {
-    await payload.create({ collection: 'meldingen', data: { user, titel: m.titel, tekst: m.tekst, url: m.url, gelezen: false }, overrideAccess: true })
+    await payload.create({ collection: 'meldingen', data: { user, titel: m.titel, tekst: m.tekst, url: m.url, gelezen: false, sleutel: m.sleutel }, overrideAccess: true })
   }
   if (ids.length) void sendPushToUsers(payload, ids, { title: m.titel, body: m.tekst ?? '', url: m.url }).catch(() => null)
   return ids.length
+}
+
+/**
+ * Eén keer melden: bestaat er al een melding met deze sleutel (voor wie dan ook), dan gebeurt er niets.
+ * Voor herinneringen die een dagelijkse taak verstuurt (lib/termijnen.ts). Geeft het aantal ontvangers.
+ */
+export async function meldEenmalig(payload: Payload, userIds: (number | null | undefined)[], m: Melding & { sleutel: string }): Promise<number> {
+  const al = await payload.count({ collection: 'meldingen', where: { sleutel: { equals: m.sleutel } }, overrideAccess: true })
+  if (al.totalDocs > 0) return 0
+  return meld(payload, userIds, m)
 }
 
 /** De accounts die de club beheren (club-beheerder en club-medewerker). */

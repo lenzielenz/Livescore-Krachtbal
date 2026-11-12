@@ -34,6 +34,8 @@ const BLOKKEERT: Blokkade[] = [
     }),
     wat: 'wedstrijdblad', meervoud: 'wedstrijdbladen',
   },
+  // Een ondertekende overeenkomst (RCVK item 45) is een document van de federatie: ook die verdwijnt niet stil.
+  { collection: 'uitleningen', where: (id: number | string) => ({ speler: { equals: id } }), wat: 'uitleenovereenkomst', meervoud: 'uitleenovereenkomsten' },
 ]
 
 /** Wat enkel van deze speler is en met hem mee verdwijnt. */
@@ -50,7 +52,7 @@ export function telWoord(aantal: number, enkelvoud: string, meervoud: string): s
 /** De zin die de gebruiker te zien krijgt als de speler niet weg kan. */
 export function weigerBericht(naam: string, delen: string[]): string {
   return `${naam || 'Deze speler'} staat in ${delen.join(' en ')}. `
-    + 'Die horen bij het verslag van een gespeelde wedstrijd en mogen niet mee verdwijnen — '
+    + 'Die horen bij het verslag van een gespeelde wedstrijd (of zijn ondertekende documenten) en mogen niet mee verdwijnen — '
     + 'anders verandert achteraf de uitslag. Zet de speler op non-actief, of verwijder eerst die '
     + 'wedstrijden.'
 }

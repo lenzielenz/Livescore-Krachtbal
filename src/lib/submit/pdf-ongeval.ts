@@ -23,7 +23,7 @@ const safe = (t: string) =>
     .replace(/[^\x20-\x7E\xA1-\xFF]/g, '')
 
 /** Gemeenschappelijke opmaak: A4, tekst met omloop, invulregels. */
-async function nieuwFormulier() {
+export async function nieuwFormulier() {
   const doc = await PDFDocument.create()
   const font = await doc.embedFont(StandardFonts.Helvetica)
   const bold = await doc.embedFont(StandardFonts.HelveticaBold)

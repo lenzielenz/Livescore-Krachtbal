@@ -3,7 +3,9 @@ import type { Payload } from 'payload'
 import { hasRole, isFederationLevel, userClubId } from './access'
 import { betrokkenen } from './aftrap'
 import type { AuthedUser } from './api-auth'
+import { verplaatsingsKost } from './boetes'
 import { formatDateTimeBE } from './datetime'
+import { forfaitVervalt } from './forfait'
 import { clubStaf, federatieAccounts, meld, relId } from './meldingen'
 
 // Verplaatsingsaanvraag (collections/Verplaatsingsaanvragen.ts):
@@ -103,9 +105,14 @@ export async function verplaatsingBeantwoorden(
     await meld(payload, staf, { titel: `❌ Verplaatsing afgewezen: ${titel(m)}`, tekst: opm ?? 'De wedstrijd blijft op de geplande datum.', url: `/match/${m.id}` })
     return { ok: true }
   }
-  if (m.status !== 'scheduled') return { ok: false, status: 409, error: 'De wedstrijd is niet meer gepland.' }
+  // Een vooraf gemeld forfait vervalt bij een verplaatsing (RCVK item 34): de wedstrijd staat dan weer gepland.
+  if (m.status !== 'scheduled' && !(await forfaitVervalt(payload, Number(m.id), 'de wedstrijd werd verplaatst'))) {
+    return { ok: false, status: 409, error: 'De wedstrijd is niet meer gepland.' }
+  }
   await payload.update({ collection: 'matches', id: m.id, data: { date: String(a.voorgesteld), afgelast: false }, overrideAccess: true })
   await payload.update({ collection: 'verplaatsingsaanvragen', id, data: { status: 'goedgekeurd', federatieOpmerking: opm, behandeldOp: nu }, overrideAccess: true })
+  // Administratieve kosten voor de aanvragende club (RCVK item 33), als voorstel op het bord.
+  await verplaatsingsKost(payload, id).catch(() => 0)
   await meld(payload, (await betrokkenen(payload, m)).filter((u) => u !== Number(user.id)), {
     titel: `🔁 Verplaatst: ${titel(m)}`,
     tekst: `Nieuw tijdstip: ${formatDateTimeBE(String(a.voorgesteld))} (was ${formatDateTimeBE(String(m.date))}). Scheidsrechter: kan je dan niet, laat het de federatie meteen weten.`,
