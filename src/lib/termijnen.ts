@@ -151,14 +151,12 @@ export function weekVan(nu: Date): string {
 }
 
 async function keuringHerinneringen(payload: Payload, nu: Date): Promise<number> {
-  const res = await payload.find({
+  const res = await payload.db.find<{ id: number; name?: string | null; team?: unknown; medischeKeuringOp?: string | null; soortLid?: string | null; actief?: boolean | null }>({
     collection: 'players',
     where: { and: [{ analyseOnly: { not_equals: true } }, { or: [keuringWhere('verloopt', nu), keuringWhere('verlopen', nu)] }] },
-    depth: 0,
-    limit: 100_000,
+    limit: 0,
     pagination: false,
     select: { name: true, team: true, medischeKeuringOp: true, soortLid: true, actief: true },
-    overrideAccess: true,
   })
   if (!res.docs.length) return 0
   const pc = await ploegenEnClubs(payload)

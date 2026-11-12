@@ -5,6 +5,7 @@ import {
   keuringDagen,
   keuringStand,
   type KeuringStand,
+  type LidVelden,
   type LedenFilter,
   ledenWhere,
   legeTelling,
@@ -21,6 +22,11 @@ import { huidigSeizoen } from './uitlening'
 //   · tellingen per club: één lichte query over alle leden (enkel de statusvelden), één voor de
 //     ploegen, één voor de clubs, één voor de clubstaf, één voor de laatste herinneringen — vijf in
 //     totaal, ongeacht het aantal clubs (vroeger twee per club).
+//
+// De grote lijsten (alle leden, alle ploegen, alle clubstaf) gaan via payload.db.find: rechtstreeks de
+// databanklaag, zonder hooks en veldverwerking per document. Voor tellingen is dat niet nodig, en het
+// scheelt veel — gemeten op 5000 leden in een server-gerenderde pagina: 22 s via payload.find, 0,14 s zo.
+// Toegang controleert de aanroeper (federatie); hier wordt niets teruggegeven dat een lid zelf leest.
 
 const relId = (v: unknown): number | null => {
   const id = v && typeof v === 'object' ? (v as { id?: unknown }).id : v
@@ -40,7 +46,7 @@ const STATUS_VELDEN = {
 
 /** De ploegen per club: ploeg → club, en club → ploegen. Eén query. */
 export async function ploegenEnClubs(payload: Payload): Promise<{ clubVanPloeg: Map<number, number>; ploegNaam: Map<number, string>; ploegenVanClub: Map<number, number[]> }> {
-  const res = await payload.find({ collection: 'teams', depth: 0, limit: 5000, pagination: false, select: { name: true, club: true }, overrideAccess: true })
+  const res = await payload.db.find<{ id: number; name?: string | null; club?: unknown }>({ collection: 'teams', limit: 0, pagination: false, select: { name: true, club: true } })
   const clubVanPloeg = new Map<number, number>()
   const ploegNaam = new Map<number, string>()
   const ploegenVanClub = new Map<number, number[]>()
@@ -139,17 +145,15 @@ export type ClubTelling = Telling & { clubId: number; clubNaam: string; staf: { 
 /** De tellingen per club en in totaal, plus wie de herinnering krijgt en wanneer de laatste ging. */
 export async function ledenTellingen(payload: Payload, nu: Date = new Date()): Promise<{ clubs: ClubTelling[]; totaal: Telling }> {
   const [spelers, pc, clubsRes, stafRes] = await Promise.all([
-    payload.find({ collection: 'players', where: { analyseOnly: { not_equals: true } }, depth: 0, limit: 100_000, pagination: false, select: STATUS_VELDEN, overrideAccess: true }),
+    payload.db.find<LidVelden & { team?: unknown }>({ collection: 'players', where: { analyseOnly: { not_equals: true } }, limit: 0, pagination: false, select: STATUS_VELDEN }),
     ploegenEnClubs(payload),
     payload.find({ collection: 'clubs', where: { analyseOnly: { not_equals: true } }, depth: 0, limit: 5000, pagination: false, select: { name: true }, overrideAccess: true }),
-    payload.find({
+    payload.db.find<{ id: number; name?: string | null; email?: string | null; roles?: unknown; club?: unknown }>({
       collection: 'users',
       where: { or: [{ roles: { contains: 'club-beheerder' } }, { roles: { contains: 'club-medewerker' } }] },
-      depth: 0,
-      limit: 20_000,
+      limit: 0,
       pagination: false,
       select: { name: true, email: true, roles: true, club: true },
-      overrideAccess: true,
     }),
   ])
   const totaal = legeTelling()
