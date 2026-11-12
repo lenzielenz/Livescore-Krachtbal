@@ -221,8 +221,12 @@ describe('clubs zoeken', () => {
     expect(kort.clubs).toEqual([])
     expect(kort.hint).toBeTruthy()
 
-    // 'e' zit in zowat elke clubnaam; het antwoord blijft begrensd en zegt dat er meer zijn.
-    const veel = (await (await zoeken('er')).json()) as { clubs: unknown[]; meer: boolean }
+    // Meer treffers dan de grens: het antwoord blijft begrensd en zegt dat er meer zijn. De clubs maken we
+    // zelf aan, zodat de test niet afhangt van wat er toevallig al in de databank staat.
+    for (let i = 0; i < 22; i++) {
+      await payload.create({ collection: 'clubs', data: { name: `Zoekveel ${STAMP} ${i}` }, overrideAccess: true })
+    }
+    const veel = (await (await zoeken(`Zoekveel ${STAMP}`)).json()) as { clubs: unknown[]; meer: boolean }
     expect(veel.clubs.length).toBeLessThanOrEqual(20)
     expect(veel.meer).toBe(true)
   }, 60_000)

@@ -4,7 +4,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { brusselsDayBoundsUtc, dateStrBE, formatDateBE, formatTimeBE } from '@/lib/datetime'
-import { BRON_META, KOLOMMEN, deadlineStand, kolomVan, sorteerKolom, tellingen } from '@/lib/aanvragen-bord'
+import { BRON_META, KOLOMMEN, deadlineStand, deadlineVan, kolomVan, sorteerKolom, tellingen } from '@/lib/aanvragen-bord'
 import { aanvragenLijst } from '@/lib/federatie-aanvragen'
 import { type Taak, federatieTaken } from '@/lib/federatie-dashboard'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -166,7 +166,7 @@ export default async function FederatiePage() {
               {mijn.length > 0 ? (
                 <ul className="fd-mijn">
                   {mijn.map((a) => {
-                    const dl = deadlineStand(a.dossier?.deadline, nu.getTime())
+                    const dl = deadlineStand(deadlineVan(a), nu.getTime())
                     return (
                       <li key={a.sleutel}>
                         <Link href={`/federatie/aanvragen?dossier=${encodeURIComponent(a.sleutel)}`}>

@@ -204,3 +204,27 @@ Afwijkingen / aannames:
 - **Vastspelen** telt enkel binnen dezelfde club en dezelfde categorie; hoger spelen in een andere
   categorie volgt de leeftijdsregels (`lib/age-categories.ts`).
 - Het **aantal keer** staat niet in de code: de federatie vult het in uit het reglement.
+
+---
+
+## 7. Competitieregels uit RCVK deel II — wie wat koppelt
+
+Peildatum: november 2026. Bron: RCVK geldig vanaf 01/07/2025, deel II (items 16–49). Getest van begin tot
+eind in `tests/int/federatie-keten.int.spec.ts` (één seizoen door de echte routes). De termijnen lopen elke
+ochtend via `/api/cron/recap` (`lib/termijnen.ts`): boetevoorstellen en één herinnering per termijn.
+
+| Item | Regel | Wat het platform doet | Status |
+|---|---|---|---|
+| 22, 23 | Officials op het blad; exemplaar voor federatie, bezoekers en thuisploeg | Officials verplicht per reeks vóór indienen. Na indienen: PDF bewaard bij het blad, melding met link naar staf van beide clubs, federatie, scheidsrechter(s), beide kapiteins (+ ouders) en de coaches | ✅ |
+| 24 | Aanvangsuur, vertraging, akkoord van de andere ploeg | Aftrap verschuiven met reden en logboek (`lib/aftrap.ts`), boetevoorstel "aftrap later" | ✅ (akkoord "ondertekend door beide ploegen" niet apart) |
+| 25 | Voorbehoud: kapitein/coach vraagt, SR noteert met score; bekrachtigen binnen 5 werkdagen, anders €75 | SR noteert voorbehoud (ploeg, wie, relaas, stand, speeltijd); na indienen een dossier per voorbehoud; club bekrachtigt (relaas) of ziet af; na de termijn vervalt het met een boetevoorstel | ✅ — zaterdag, zondag en de tien wettelijke feestdagen tellen niet (`lib/feestdagen.ts`); herinnering op de laatste dag |
+| 25.3 | Sportcomité of scheidsrechterscomité behandelt | De SR kiest het onderwerp bij het noteren (de elf uit het reglement, + *iets anders*); het comité volgt daaruit en staat op het dossier en het bord | ✅ — één bord voor beide comités; bij *iets anders* beslist de federatie |
+| 27 | Scheidsrechtersrapport bij onregelmatigheden; "zie scheidsrechtersrapport" op het blad | Verplicht (afgeleid uit het blad) bij voorbehoud, uitsluiting of forfait ter plaatse, en op aanduiding van de SR. De SR maakt het op `/scheidsrechter/[id]` (aanleiding, relaas, bijlagen) en tekent met zijn naam; daarna onwijzigbaar. Het blad vermeldt *zie scheidsrechtersrapport*. Naar het comité op het bord (PDF, afhandelen met besluit); enkel het comité en de SR lezen het. Herinnering aan de SR na 1 werkdag, aan de federatie na 3 | ✅ — het reglement geeft geen termijn: de herinneringen zijn een eigen keuze |
+| 29.1 | 5× hoger gespeeld = vast | Bouwsteen *Vastspelen* (§6) | ✅ (aantal in te vullen door de federatie) |
+| 33 | Verplaatsing: enkel bij overmacht, NSC beslist; €20 senioren / €10 jeugd | Aanvraag → tegenpartij → federatie op het bord; bij goedkeuring een boetevoorstel volgens doelgroep | ✅ |
+| 34 | Forfait melden; tijdstip bepaalt de boete; vervalt bij afgelasting/verplaatsing | Club meldt op de wedstrijdpagina; iedereen verwittigd; moment tijdig/laat/ter plaatse → één boetevoorstel; vervalt (met voorstel) bij verplaatsing | ✅ — grens vrijdag 12u (midweek: 24 u vóór aftrap) |
+| 37 | Na de handtekeningen niets meer wijzigen | Blad onwijzigbaar na indienen; voorbehoud/uitsluiting vast na de handtekening van de SR; heropenen enkel door de federatie na een klacht | ✅ |
+| 38 | Uitstel, onbespeelbaar terrein | Afgelasting met foto's, federatie herplant | ✅ |
+| 41 | Ongevalsformulieren binnen 8 dagen | Termijn op het bord zolang de documenten ontbreken | ✅ — herinnering aan speler en club op dag 6 |
+| 43 | Scheidsrechter ≥ U18, gelegenheidsscheidsrechter met akkoord | Toewijzen, backup, wie effectief floot; meldingen bij (her)toewijzing | 🟡 akkoord gelegenheids-SR niet apart |
+| 45 | Uitlenen jeugdspelers voor één competitie; overeenkomst ondertekend door beide clubs, naar de federatie | Uitlenende club stelt op (naam, adres, geboortedatum/leeftijd, categorie, ploeg en competitie) en tekent; ontvangende club tekent; federatie bevestigt op het bord. Pas dan op de selectielijst van die ploeg (dat seizoen); de speler blijft lid van zijn club. PDF voor beide clubs, de speler/ouders en de federatie. Herinnering na 3 dagen zonder handtekening | ✅ — jeugd = t/m U18, naar een jeugdploeg van een andere club |

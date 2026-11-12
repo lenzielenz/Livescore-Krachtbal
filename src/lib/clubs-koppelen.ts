@@ -1,4 +1,40 @@
+import type { CollectionSlug } from 'payload'
+
 import { clubVanPloeg, naamSleutel } from './season-import'
+
+/**
+ * Alle collecties met een (enkelvoudige) verwijzing naar een club, met het veld waarin die zit. Bij het
+ * koppelen verhuist alles wat naar een lege club wijst mee naar de echte, vóór die lege club verdwijnt.
+ * Een collectie die VERPLICHT naar een club verwijst en hier ontbreekt, blokkeert dat verwijderen (de
+ * databank weigert): tests/int/clubs-koppelen.int.spec.ts bewaakt dat de lijst volledig is.
+ */
+export const CLUB_VERWIJZINGEN: { collection: CollectionSlug; veld: string }[] = [
+  { collection: 'players', veld: 'club' },
+  { collection: 'trainingen', veld: 'club' },
+  { collection: 'oefeningen', veld: 'club' },
+  { collection: 'sessiesjablonen', veld: 'club' },
+  { collection: 'news', veld: 'club' },
+  { collection: 'users', veld: 'club' },
+  { collection: 'tournaments', veld: 'hostClub' },
+  // Boetes, klachten en inschrijvingen zijn verplicht aan een club gekoppeld: zonder verhuizen blokkeren
+  // ze het opruimen van de lege club (en een boete hoort bij de vereniging, niet bij het logo).
+  { collection: 'boetes', veld: 'club' },
+  { collection: 'klachten', veld: 'club' },
+  { collection: 'inschrijvingen', veld: 'club' },
+  { collection: 'accidents', veld: 'club' },
+  { collection: 'verplaatsingsaanvragen', veld: 'aanvrager' },
+  { collection: 'verplaatsingsaanvragen', veld: 'tegenpartij' },
+  { collection: 'field-screens', veld: 'club' },
+  { collection: 'function-grants', veld: 'club' },
+  { collection: 'medische-attesten', veld: 'club' },
+  { collection: 'medische-kaart-aanvragen', veld: 'club' },
+  { collection: 'ongeval-documenten', veld: 'club' },
+  { collection: 'graffiti-tags', veld: 'club' },
+  { collection: 'photobooth-fotos', veld: 'club' },
+  { collection: 'virtuele-sporen', veld: 'club' },
+  { collection: 'uitleningen', veld: 'vanClub' },
+  { collection: 'uitleningen', veld: 'naarClub' },
+]
 
 // Ploegen aan hun echte club koppelen.
 //

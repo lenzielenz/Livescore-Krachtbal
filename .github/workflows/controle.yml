@@ -49,3 +49,32 @@ jobs:
 
       - name: Productiebuild controleren
         run: pnpm build
+
+  # De integratietests praten met een echte (SQLite-)databank via de echte routes: de wedstrijddag,
+  # boetes, klachten, de federatieketen van eerste lid tot boete (tests/int/federatie-keten.int.spec.ts).
+  # Ze liepen vroeger nergens automatisch, waardoor er stil zes konden breken. Een aparte job, zodat
+  # ze naast de build lopen en de PR-controle niet dubbel zo lang maakt.
+  integratie:
+    name: Integratietests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PAYLOAD_SECRET: github-controle-geen-productiegeheim-123456789
+      DATABASE_URL: file:./krachtbal-int.db
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - name: Code ophalen
+        uses: actions/checkout@v4
+      - name: pnpm installeren
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.0
+      - name: Node.js installeren
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.14.0
+          cache: pnpm
+      - name: Dependencies installeren
+        run: pnpm install --frozen-lockfile
+      - name: Integratietests uitvoeren
+        run: pnpm test:int

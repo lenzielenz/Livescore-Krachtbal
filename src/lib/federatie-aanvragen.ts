@@ -10,11 +10,15 @@ import { klachtBehandelen } from './klacht'
 import { kaartBehandelen } from './medische-kaart'
 import { ongevalBeoordelen } from './ongeval-dossier'
 import { registratiesBeoordelen } from './registratie-server'
+import { AANLEIDING_LABEL, type Aanleiding, rapportAfhandelen } from './sr-rapport'
+import { UITLEEN_STATUS_LABEL, type UitleenStatus, uitleningBehandelen } from './uitlening'
 import { verplaatsingBeantwoorden } from './verplaatsing'
+import { COMITE_LABEL, type Comite } from './voorbehoud-onderwerpen'
 import type { AuthedUser } from './api-auth'
 
 // Alles wat bij de federatie binnenkomt, op één lijst: verplaatsingsaanvragen, registraties, klachten,
-// boetes, ongevallen, medische kaarten, afgelastingen, inschrijvingen — plus de vrije taken. Elke
+// boetes, ongevallen, medische kaarten, afgelastingen, inschrijvingen, scheidsrechtersrapporten,
+// uitleningen — plus de vrije taken. Elke
 // bron blijft in haar eigen collection met haar eigen status; hier lezen we enkel en vertalen we naar
 // één vorm (lib/aanvragen-bord.ts). Afhandelen gebeurt via dezelfde functies als de losse werkschermen:
 // het bord is een tweede ingang, geen tweede logica.
@@ -33,15 +37,22 @@ const wedstrijdLabel = (m: unknown): string => {
 }
 const datum = (v: unknown): string => (v ? formatDateTimeBE(String(v)) : '')
 
+/** RCVK item 41: de ongevalsformulieren horen binnen de acht dagen na het ongeval bij de federatie. */
+export const ONGEVAL_TERMIJN_DAGEN = 8
+const ongevalTermijn = (a: Record<string, unknown>): string | null => {
+  const op = new Date(String(a.ongevalDatum ?? a.createdAt ?? ''))
+  return Number.isFinite(op.getTime()) ? new Date(op.getTime() + ONGEVAL_TERMIJN_DAGEN * DAG).toISOString() : null
+}
+
 export async function aanvragenLijst(payload: Payload, nu: Date = new Date(), dagenKlaar = 14): Promise<Aanvraag[]> {
   const grens = new Date(nu.getTime() - dagenKlaar * DAG).toISOString()
   const zoek = <T extends Parameters<Payload['find']>[0]['collection']>(collection: T, where: Record<string, unknown>, depth: number, sort: string) =>
     payload.find({ collection, where: where as never, depth, sort, limit: 300, pagination: false, overrideAccess: true }).catch(() => ({ docs: [] as never[] }))
 
-  const [verpl, reg, kl, bo, ong, kaart, afg, insch, taken, dossiers] = await Promise.all([
+  const [verpl, reg, kl, bo, ong, kaart, afg, insch, rap, uitl, taken, dossiers] = await Promise.all([
     zoek('verplaatsingsaanvragen', { or: [{ status: { in: ['wacht_tegenpartij', 'wacht_federatie'] } }, { and: [{ status: { in: ['goedgekeurd', 'afgewezen'] } }, { behandeldOp: { greater_than_equal: grens } }] }] }, 2, 'createdAt'),
     zoek('players', { or: [{ registratieStatus: { equals: 'ingediend' } }, { and: [{ registratieStatus: { in: ['goedgekeurd', 'afgekeurd'] } }, { ingediendOp: { greater_than_equal: grens } }] }] }, 1, 'ingediendOp'),
-    zoek('klachten', { or: [{ status: { equals: 'open' } }, { behandeldOp: { greater_than_equal: grens } }] }, 2, 'createdAt'),
+    zoek('klachten', { or: [{ status: { in: ['open', 'te_bekrachtigen'] } }, { behandeldOp: { greater_than_equal: grens } }, { and: [{ status: { in: ['afgezien', 'vervallen'] } }, { updatedAt: { greater_than_equal: grens } }] }] }, 2, 'createdAt'),
     // Een opgelegde boete ligt bij de club (betalen of betwisten) en hoort niet meer open op het bord; ze
     // blijft wel 14 dagen bij "Afgehandeld" staan, zodat je ziet waar ze heen ging na "Opleggen".
     zoek('boetes', { or: [{ status: { in: ['voorstel', 'betaling_gemeld', 'betwist'] } }, { and: [{ status: { in: ['betaald', 'vernietigd'] } }, { updatedAt: { greater_than_equal: grens } }] }, { and: [{ status: { equals: 'opgelegd' } }, { opgelegdOp: { greater_than_equal: grens } }] }] }, 1, 'createdAt'),
@@ -49,6 +60,8 @@ export async function aanvragenLijst(payload: Payload, nu: Date = new Date(), da
     zoek('medische-kaart-aanvragen', { or: [{ status: { equals: 'aangevraagd' } }, { behandeldOp: { greater_than_equal: grens } }] }, 1, 'createdAt'),
     zoek('afgelastingen', { or: [{ status: { equals: 'gemeld' } }, { behandeldOp: { greater_than_equal: grens } }] }, 2, 'createdAt'),
     zoek('inschrijvingen', { or: [{ status: { equals: 'ingediend' } }, { and: [{ status: { equals: 'verwerkt' } }, { updatedAt: { greater_than_equal: grens } }] }] }, 1, 'ingediendOp'),
+    zoek('sr-rapporten', { or: [{ status: { equals: 'ingediend' } }, { behandeldOp: { greater_than_equal: grens } }] }, 2, 'createdAt'),
+    zoek('uitleningen', { or: [{ status: { in: ['wacht_ontvanger', 'wacht_federatie'] } }, { behandeldOp: { greater_than_equal: grens } }] }, 1, 'createdAt'),
     takenAlsAanvragen(payload, dagenKlaar, nu),
     dossiersPerSleutel(payload),
   ])
@@ -99,19 +112,31 @@ export async function aanvragenLijst(payload: Payload, nu: Date = new Date(), da
 
   for (const k of kl.docs as Record<string, unknown>[]) {
     const st = String(k.status)
-    const open = st === 'open'
+    // Een voorbehoud (RCVK item 25) staat eerst open bij de club: bekrachtigen binnen 5 werkdagen.
+    const voorbehoud = k.soort === 'voorbehoud'
+    const open = st === 'open' || st === 'te_bekrachtigen'
     voeg({
       bron: 'klacht',
       bronId: Number(k.id),
-      titel: wedstrijdLabel(k.match),
-      detail: `${naam(k.club) || 'Club'}: ${String(k.reden ?? '')}`,
+      titel: `${voorbehoud ? 'Voorbehoud: ' : ''}${wedstrijdLabel(k.match)}`,
+      // RCVK item 25.3: welk comité het voorbehoud onderzoekt.
+      detail: `${k.comite ? `[${COMITE_LABEL[k.comite as Comite]}] ` : ''}${naam(k.club) || 'Club'}: ${String(k.relaas || k.reden || '')}`,
       club: naam(k.club) || null,
       sinds: String(k.createdAt),
-      status: { open: 'Open', heropend: 'Blad heropend', afgewezen: 'Afgewezen' }[st] ?? st,
+      status:
+        {
+          open: voorbehoud ? 'Bekrachtigd — te beslissen' : 'Open',
+          heropend: 'Blad heropend',
+          afgewezen: 'Afgewezen',
+          te_bekrachtigen: 'Wacht op bekrachtiging door de club',
+          afgezien: 'Club zag af',
+          vervallen: 'Niet bekrachtigd — vervallen',
+        }[st] ?? st,
       statusCode: st,
       open,
-      afgeslotenOp: open ? null : (k.behandeldOp as string | null) ?? null,
-      wachtOpAuto: null,
+      afgeslotenOp: open ? null : String(k.behandeldOp ?? k.updatedAt),
+      wachtOpAuto: st === 'te_bekrachtigen' ? 'club' : null,
+      deadlineAuto: st === 'te_bekrachtigen' ? ((k.bekrachtigTegen as string | null) ?? null) : null,
       href: '/beheer/klachten',
     })
   }
@@ -151,6 +176,8 @@ export async function aanvragenLijst(payload: Payload, nu: Date = new Date(), da
       open,
       afgeslotenOp: open ? null : (a.afgehandeldOp as string | null) ?? null,
       wachtOpAuto: st === 'gemeld' ? 'speler' : null,
+      // RCVK item 41: alle ongevalsformulieren binnen de acht dagen na het ongeval bij de federatie.
+      deadlineAuto: st === 'gemeld' ? ongevalTermijn(a) : null,
       href: '/ongevallen',
     })
   }
@@ -210,6 +237,46 @@ export async function aanvragenLijst(payload: Payload, nu: Date = new Date(), da
       afgeslotenOp: open ? null : String(i.updatedAt),
       wachtOpAuto: null,
       href: '/beheer/inschrijvingen',
+    })
+  }
+
+  for (const r of rap.docs as Record<string, unknown>[]) {
+    const st = String(r.status)
+    const open = st === 'ingediend'
+    const scheids = r.scheidsrechter && typeof r.scheidsrechter === 'object' ? (r.scheidsrechter as { name?: unknown; email?: unknown }) : null
+    const redenen = (Array.isArray(r.aanleidingen) ? r.aanleidingen : []).map((a) => AANLEIDING_LABEL[a as Aanleiding] ?? String(a)).join(', ')
+    voeg({
+      bron: 'rapport',
+      bronId: Number(r.id),
+      titel: wedstrijdLabel(r.match),
+      detail: `${redenen} — ${String(r.ondertekendNaam ?? scheids?.name ?? 'scheidsrechter')}: ${String(r.relaas ?? '').slice(0, 160)}`,
+      club: null,
+      sinds: String(r.createdAt),
+      status: { ingediend: 'Bij het comité', afgehandeld: 'Afgehandeld' }[st] ?? st,
+      statusCode: st,
+      open,
+      afgeslotenOp: open ? null : (r.behandeldOp as string | null) ?? null,
+      wachtOpAuto: null,
+      href: relId(r.match) != null ? `/match/${relId(r.match)}` : '/federatie/aanvragen',
+    })
+  }
+
+  for (const u of uitl.docs as Record<string, unknown>[]) {
+    const st = String(u.status)
+    const open = st === 'wacht_ontvanger' || st === 'wacht_federatie'
+    voeg({
+      bron: 'uitlening',
+      bronId: Number(u.id),
+      titel: `${String(u.spelerNaam ?? 'Speler')} → ${naam(u.naarPloeg) || naam(u.naarClub) || '?'}`,
+      detail: `${naam(u.vanClub) || 'Club'} leent uit aan ${naam(u.naarClub) || '?'} — ${String(u.categorie ?? '')} ${String(u.competitie ?? u.seizoen ?? '')}`.replace(/\s+/g, ' '),
+      club: naam(u.vanClub) || null,
+      sinds: String((u.tekenNaar as { op?: unknown } | null)?.op ?? u.createdAt),
+      status: UITLEEN_STATUS_LABEL[st as UitleenStatus] ?? st,
+      statusCode: st,
+      open,
+      afgeslotenOp: open ? null : (u.behandeldOp as string | null) ?? String(u.updatedAt),
+      wachtOpAuto: st === 'wacht_ontvanger' ? 'club' : null,
+      href: '/federatie/aanvragen',
     })
   }
 
@@ -273,6 +340,18 @@ export async function aanvraagActie(payload: Payload, me: AuthedUser, sleutel: s
       case 'inschrijving': {
         if (!bekend('ingediend')) return fout(400, 'Onbekende actie.')
         const r = await inschrijvingVerwerken(payload, s.id)
+        return r.ok ? { ok: true } : fout(r.status, r.error)
+      }
+      case 'rapport': {
+        if (!bekend('ingediend')) return fout(400, 'Onbekende actie.')
+        const r = await rapportAfhandelen(payload, me, s.id, t)
+        return r.ok ? { ok: true } : fout(r.status, r.error)
+      }
+      case 'uitlening': {
+        const doc = await payload.findByID({ collection: 'uitleningen', id: s.id, depth: 0, overrideAccess: true }).catch(() => null)
+        if (!doc) return fout(404, 'Overeenkomst niet gevonden.')
+        if (!bekend(String(doc.status))) return fout(409, doc.status === 'wacht_ontvanger' ? 'De ontvangende club moet eerst tekenen.' : 'Deze overeenkomst is al behandeld.')
+        const r = await uitleningBehandelen(payload, me, s.id, actie as 'bevestigen' | 'weigeren', t)
         return r.ok ? { ok: true } : fout(r.status, r.error)
       }
       case 'taak': {

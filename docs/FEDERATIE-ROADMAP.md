@@ -32,6 +32,25 @@ binnenkomt op één plek, oppakken, doorgeven aan een collega, op wacht zetten, 
 | 9 | **Evaluatie van scheidsrechters** | Kort verslag van club of waarnemer na een wedstrijd; gemiddelde per scheidsrechter. | klein |
 | 10 | **Archief per seizoen** | Seizoen afsluiten: klassementen, bladen en boetes bevriezen, nieuw seizoen openen met de inschrijvingsronde. | middel |
 
+## Gedaan in november 2026 (de keten)
+
+- **Forfait melden door de club** (item 34), met boete volgens het moment (tijdig / laat / ter plaatse) en
+  vervallen bij een verplaatsing — naar het voorbeeld van de KBVB, waar clubs digitaal forfait verklaren en
+  alle partijen automatisch verwittigd worden.
+- **Voorbehoud en uitsluiting op het blad** (items 25, 27), met bekrachtigen binnen 5 werkdagen of afzien, en
+  het voorstel van 75 euro als niemand reageert.
+- **Administratieve kost bij een verplaatsing** (item 33), per doelgroep (senioren / jeugd).
+- **Het ondertekende blad naar iedereen** (item 23): ook de scheidsrechter, de kapiteins en de coaches.
+- **Termijn van 8 dagen voor ongevallen** (item 41) op het bord.
+- **Integratietests in CI**, met een ketentest van eerste lid tot boete.
+- **Scheidsrechtersrapport** (item 27): verplicht na voorbehoud, uitsluiting of forfait ter plaatse; ondertekend,
+  met bijlagen, naar het comité op het bord; *zie scheidsrechtersrapport* op het blad.
+- **Uitlenen van jeugdspelers** (item 45): overeenkomst getekend door beide clubs, bevestigd door de federatie,
+  pas dan op de selectielijst; de PDF voor iedereen.
+- **Voorbehoud per comité** (item 25.3): het onderwerp bepaalt sportcomité of scheidsrechterscomité.
+- **Termijnen in werkdagen met de wettelijke feestdagen**, en **herinneringen** (voorbehoud, ongeval, rapport,
+  uitlening) elke ochtend, één keer per termijn; de boetevoorstellen lopen voortaan ook dagelijks.
+
 ## Wat bewust niet
 
 - Een eigen boekhouding: exporteren naar het pakket van de boekhouder is genoeg.

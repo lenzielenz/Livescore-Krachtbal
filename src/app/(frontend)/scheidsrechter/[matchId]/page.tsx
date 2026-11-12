@@ -20,10 +20,13 @@ import { vereisteOfficialsTekst, type Reeks } from '@/lib/reeksen'
 import { isSupportersMode } from '@/lib/score-mode'
 import { DeelnameBevestigen, type DeelnameKant } from './DeelnameBevestigen'
 import { Afgelasten } from './Afgelasten'
+import { RapportPaneel } from './RapportPaneel'
 import { RefereePanel } from './RefereePanel'
 import { SpelerControle, type ControleRij } from './SpelerControle'
+import { VoorbehoudPaneel, type BladRij } from './VoorbehoudPaneel'
 import '../../wedstrijdblad.css'
 import { formatDateTimeBE } from '@/lib/datetime'
+import { aanleidingenVanBlad, rapportenVanWedstrijd } from '@/lib/sr-rapport'
 
 export const dynamic = 'force-dynamic'
 
@@ -243,6 +246,33 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
             : null
         }
       />
+
+      {magControleren && (
+        <VoorbehoudPaneel
+          matchId={matchId}
+          ploegen={{ thuis: liveState?.teams.home.name ?? 'Thuis', uit: liveState?.teams.away.name ?? 'Uit' }}
+          spelers={{ thuis: deelnameKanten[0]!.spelers, uit: deelnameKanten[1]!.spelers }}
+          begin={{ voorbehoud: (sheet?.voorbehoud ?? []) as BladRij[], uitsluitingen: (sheet?.uitsluitingen ?? []) as BladRij[] }}
+          vergrendeld={
+            sheet?.status === 'ingediend'
+              ? 'Het blad is ingediend. Een voorbehoud volgt de club nu op bij de federatie.'
+              : (sheet?.scheidsrechter as { akkoord?: boolean } | undefined)?.akkoord
+                ? 'Je tekende af: daarna verandert er niets meer aan het blad (RCVK item 37).'
+                : null
+          }
+          stand={liveState ? `${liveState.score.home}-${liveState.score.away}` : ''}
+          rapportVolgtBegin={Boolean((sheet as { rapportVolgt?: boolean } | null)?.rapportVolgt)}
+        />
+      )}
+
+      {magControleren && (
+        <RapportPaneel
+          matchId={matchId}
+          verplicht={sheet ? aanleidingenVanBlad(sheet as unknown as Parameters<typeof aanleidingenVanBlad>[0]) : []}
+          rapporten={await rapportenVanWedstrijd(payload, Number(matchId)).catch(() => [])}
+          standaardNaam={String((user as { name?: unknown } | null)?.name ?? '')}
+        />
+      )}
 
       {liveState?.match.status === 'finished' && (isFederation || hasRole(user, 'scheidsrechter')) && (
         <DeelnameBevestigen matchId={matchId} kanten={deelnameKanten} vergrendeld={sheet?.status === 'ingediend'} />

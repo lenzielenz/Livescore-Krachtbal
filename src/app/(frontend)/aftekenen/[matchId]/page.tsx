@@ -92,13 +92,18 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
         status: String(k.status ?? 'open'),
         beslissing: k.beslissing ? String(k.beslissing) : null,
         op: String(k.createdAt),
+        voorbehoud: k.soort === 'voorbehoud',
+        bekrachtigTegen: k.bekrachtigTegen ? String(k.bekrachtigTegen) : null,
+        relaas: k.relaas ? String(k.relaas) : null,
+        // De club van die ploeg beantwoordt een voorbehoud (de federatie kan het ook in haar naam).
+        magBeantwoorden: isFederationLevel(user) || (hasRole(user, 'club-beheerder', 'club-medewerker') && relIdK(k.club) === Number(eigenClub)),
       }))
     : []
   const klachtReden = klachtWeigering(user, {
     bladStatus: String(sheet.status ?? ''),
     homeClub: homeClubId,
     awayClub: awayClubId,
-    openKlachtVanClub: klachtenRes.docs.some((k) => k.status === 'open' && relIdK(k.club) === Number(eigenClub)),
+    openKlachtVanClub: klachtenRes.docs.some((k) => k.status === 'open' && k.soort !== 'voorbehoud' && relIdK(k.club) === Number(eigenClub)),
   })
   const klachtMag = klachtReden == null
 

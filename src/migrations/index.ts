@@ -148,6 +148,8 @@ import * as migration_20261020_200000_aftrap_boetes from './20261020_200000_aftr
 import * as migration_20261020_220000_inschrijving_planning from './20261020_220000_inschrijving_planning'
 import * as migration_20261021_080000_klachten from './20261021_080000_klachten'
 import * as migration_20261104_090000_dossiers from './20261104_090000_dossiers'
+import * as migration_20261112_090000_forfait_voorbehoud from './20261112_090000_forfait_voorbehoud'
+import * as migration_20261112_120000_rapport_uitlening from './20261112_120000_rapport_uitlening'
 
 export const migrations = [
   {
@@ -894,5 +896,15 @@ export const migrations = [
     up: migration_20261104_090000_dossiers.up,
     down: migration_20261104_090000_dossiers.down,
     name: '20261104_090000_dossiers',
+  },
+  {
+    up: migration_20261112_090000_forfait_voorbehoud.up,
+    down: migration_20261112_090000_forfait_voorbehoud.down,
+    name: '20261112_090000_forfait_voorbehoud',
+  },
+  {
+    up: migration_20261112_120000_rapport_uitlening.up,
+    down: migration_20261112_120000_rapport_uitlening.down,
+    name: '20261112_120000_rapport_uitlening',
   },
 ];

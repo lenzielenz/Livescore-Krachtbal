@@ -27,5 +27,7 @@ export const Meldingen: CollectionConfig = {
     { name: 'tekst', type: 'text' },
     { name: 'url', type: 'text' },
     { name: 'gelezen', type: 'checkbox', defaultValue: false, index: true },
+    // Voor herinneringen (lib/termijnen.ts): dezelfde sleutel wordt maar één keer verstuurd.
+    { name: 'sleutel', type: 'text', index: true, admin: { readOnly: true } },
   ],
 }

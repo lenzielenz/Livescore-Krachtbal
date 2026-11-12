@@ -6,7 +6,18 @@
 // collection), nooit uit het dossier. Het dossier (lib/dossiers.ts) zegt enkel wie ermee bezig is,
 // op wie we wachten en tegen wanneer. Zo bestaat er maar één bron van waarheid per aanvraag.
 
-export type Bron = 'verplaatsing' | 'registratie' | 'klacht' | 'boete' | 'ongeval' | 'kaart' | 'afgelasting' | 'inschrijving' | 'taak'
+export type Bron =
+  | 'verplaatsing'
+  | 'registratie'
+  | 'klacht'
+  | 'boete'
+  | 'ongeval'
+  | 'kaart'
+  | 'afgelasting'
+  | 'inschrijving'
+  | 'rapport'
+  | 'uitlening'
+  | 'taak'
 export type WachtOp = 'club' | 'scheidsrechter' | 'speler' | 'extern'
 export type Kolom = 'nieuw' | 'bezig' | 'wacht' | 'klaar'
 
@@ -51,6 +62,8 @@ export type Aanvraag = {
   afgeslotenOp: string | null
   /** Wachten we volgens de aanvraag zelf al op iemand (bv. de tegenpartij)? Dan hoeft niemand dat aan te duiden. */
   wachtOpAuto: WachtOp | null
+  /** Een termijn die uit de aanvraag zelf volgt (bv. voorbehoud bekrachtigen binnen 5 werkdagen, ongeval binnen 8 dagen). */
+  deadlineAuto?: string | null
   href: string
   dossier: Dossier | null
 }
@@ -64,6 +77,8 @@ export const BRON_META: Record<Bron, { label: string; icoon: string; meervoud: s
   kaart: { label: 'Medische kaart', icoon: '🪪', meervoud: 'Medische kaarten' },
   afgelasting: { label: 'Afgelasting', icoon: '⛈️', meervoud: 'Afgelastingen' },
   inschrijving: { label: 'Inschrijving', icoon: '📝', meervoud: 'Inschrijvingen' },
+  rapport: { label: 'Scheidsrechtersrapport', icoon: '🧑‍⚖️', meervoud: 'Scheidsrechtersrapporten' },
+  uitlening: { label: 'Uitlening', icoon: '🤝', meervoud: 'Uitleningen' },
   taak: { label: 'Taak', icoon: '📌', meervoud: 'Taken' },
 }
 
@@ -123,6 +138,8 @@ export function actiesVoor(a: Pick<Aanvraag, 'bron' | 'statusCode' | 'open' | 'b
         { id: 'afkeuren', label: 'Afkeuren', stijl: 'gevaar', toelichting: 'verplicht' },
       ]
     case 'klacht':
+      // Een voorbehoud dat de club nog moet bekrachtigen, ligt niet bij de federatie: geen knoppen.
+      if (a.statusCode !== 'open') return []
       return [
         { id: 'heropenen', label: 'Blad heropenen', stijl: 'primair', toelichting: 'optioneel' },
         { id: 'afwijzen', label: 'Afwijzen', stijl: 'gevaar', toelichting: 'verplicht' },
@@ -159,6 +176,23 @@ export function actiesVoor(a: Pick<Aanvraag, 'bron' | 'statusCode' | 'open' | 'b
       ]
     case 'inschrijving':
       return [{ id: 'verwerken', label: 'Verwerken', stijl: 'primair' }]
+    case 'rapport':
+      // RCVK item 27: het comité leest het rapport (PDF, met de bijlagen) en handelt het af.
+      return a.statusCode === 'ingediend'
+        ? [
+            { id: 'lezen', label: 'Rapport lezen', stijl: 'gewoon', href: `/api/sr-rapport/${a.bronId}/pdf` },
+            { id: 'afhandelen', label: 'Afhandelen', stijl: 'primair', toelichting: 'optioneel' },
+          ]
+        : []
+    case 'uitlening':
+      // RCVK item 45: pas als beide clubs tekenden, ligt de overeenkomst bij de federatie.
+      return a.statusCode === 'wacht_federatie'
+        ? [
+            { id: 'lezen', label: 'Overeenkomst lezen', stijl: 'gewoon', href: `/api/uitlening/${a.bronId}/pdf` },
+            { id: 'bevestigen', label: 'Bevestigen', stijl: 'primair', toelichting: 'optioneel' },
+            { id: 'weigeren', label: 'Weigeren', stijl: 'gevaar', toelichting: 'verplicht' },
+          ]
+        : []
     case 'taak':
       return [{ id: 'afronden', label: 'Afronden', stijl: 'primair' }]
   }
@@ -192,20 +226,25 @@ export function filterAanvragen(lijst: Aanvraag[], f: Filter): Aanvraag[] {
 
 const ms = (iso: string | null | undefined) => (iso ? new Date(iso).getTime() : NaN)
 
+/** De deadline die telt: wat iemand van de federatie zette, anders de termijn uit de aanvraag zelf. */
+export function deadlineVan(a: Pick<Aanvraag, 'dossier' | 'deadlineAuto'>): string | null {
+  return a.dossier?.deadline ?? a.deadlineAuto ?? null
+}
+
 /** Open kolommen: dringendste eerst — deadline verstreken, dan dichtste deadline, dan wie het langst wacht.
  *  Afgehandeld: laatst afgehandeld eerst. */
 export function sorteerKolom(lijst: Aanvraag[], kolom: Kolom, nu: number = Date.now()): Aanvraag[] {
   if (kolom === 'klaar') return [...lijst].sort((a, b) => (ms(b.afgeslotenOp) || 0) - (ms(a.afgeslotenOp) || 0))
   const rang = (a: Aanvraag) => {
-    const d = ms(a.dossier?.deadline)
+    const d = ms(deadlineVan(a))
     if (Number.isFinite(d) && d < nu) return 0 // te laat
     return 1
   }
   return [...lijst].sort((a, b) => {
     const r = rang(a) - rang(b)
     if (r) return r
-    const da = ms(a.dossier?.deadline)
-    const db = ms(b.dossier?.deadline)
+    const da = ms(deadlineVan(a))
+    const db = ms(deadlineVan(b))
     if (Number.isFinite(da) || Number.isFinite(db)) {
       if (!Number.isFinite(da)) return 1
       if (!Number.isFinite(db)) return -1

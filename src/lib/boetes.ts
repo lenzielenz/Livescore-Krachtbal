@@ -15,7 +15,31 @@ import { berekenForfait, berekenKwitantie, formatEuro } from './vergoeding'
 // ziekte (lib/aftrap.ts). Eén sleutel per voorstel: nooit twee keer hetzelfde.
 
 export type Uitkomst = { ok: true; id?: number } | { ok: false; status: number; error: string }
-type Soort = { id: number; naam: string; bedrag: number; trigger?: string | null; termijnDagen?: number | null; artikel?: string | null }
+type Soort = {
+  id: number
+  naam: string
+  bedrag: number
+  trigger?: string | null
+  termijnDagen?: number | null
+  artikel?: string | null
+  forfaitMoment?: string | null
+  doelgroep?: string | null
+}
+
+/** Puur: geldt deze soort voor een ploeg van deze categorie? Jeugd = elke categorie behalve senioren. */
+export function pastDoelgroep(s: Pick<Soort, 'doelgroep'>, categorie: unknown): boolean {
+  const d = s.doelgroep ?? 'alle'
+  if (d === 'alle') return true
+  const senior = String(categorie ?? 'senioren') === 'senioren'
+  return d === 'senioren' ? senior : !senior
+}
+
+/** Puur: geldt deze forfaitsoort voor een forfait dat op dit moment gemeld werd (RCVK item 34)? */
+export function pastForfaitMoment(s: Pick<Soort, 'forfaitMoment'>, moment: unknown): boolean {
+  const m = s.forfaitMoment ?? 'alle'
+  return m === 'alle' || m === (moment ?? 'ter_plaatse')
+}
+const categorieVanTeam = (t: unknown) => (t && typeof t === 'object' ? (t as { category?: unknown }).category : null)
 
 const DAG = 86_400_000
 const teamNaam = (t: unknown) => (t && typeof t === 'object' ? String((t as { name?: unknown }).name ?? '?') : '?')
@@ -80,11 +104,15 @@ export async function boeteVoorstellen(payload: Payload, dagen = 120, nu = Date.
       const m = b.match as { id?: number; date?: string; homeTeam?: unknown; awayTeam?: unknown } | null
       if (!m || typeof m !== 'object' || !m.id || (m.date && m.date < sinds)) continue
       const u = (b.forfait as { uitslag?: string }).uitslag
+      // Het moment van melding bepaalt de soort (tijdig / laat / ter plaatse). Geen moment = vastgesteld
+      // door de scheidsrechter.
+      const moment = (b.forfait as { moment?: string | null }).moment ?? 'ter_plaatse'
       const afwezig = [u === 'thuis' || u === 'dubbel' ? m.homeTeam : null, u === 'uit' || u === 'dubbel' ? m.awayTeam : null].filter(Boolean)
       for (const t of afwezig) {
         const club = clubVanTeam(t)
         if (club == null) continue
         for (const s of ff) {
+          if (!pastForfaitMoment(s, moment) || !pastDoelgroep(s, categorieVanTeam(t))) continue
           if (await voorstel(payload, `forfait:${s.id}:${m.id}:${club}`, { club, soort: s, match: m.id, omschrijving: `${s.naam}: ${teamNaam(t)} — ${wedstrijdTitel(m)}` })) nieuw++
         }
       }
@@ -106,7 +134,7 @@ export async function boeteVoorstellen(payload: Payload, dagen = 120, nu = Date.
       const blad = (await payload.find({ collection: 'matchsheets', where: { match: { equals: m.id } }, depth: 0, limit: 1, overrideAccess: true })).docs[0]
       if (!blad || blad.status === 'ingediend') continue
       const club = clubVanTeam(m.homeTeam)
-      if (club == null) continue
+      if (club == null || !pastDoelgroep(s, categorieVanTeam(m.homeTeam))) continue
       if (await voorstel(payload, `blad:${s.id}:${m.id}`, { club, soort: s, match: Number(m.id), omschrijving: `${s.naam}: ${wedstrijdTitel(m)} (termijn ${termijn} d)` })) nieuw++
     }
   }
@@ -130,11 +158,60 @@ export async function boeteVoorstellen(payload: Payload, dagen = 120, nu = Date.
       if (!m || typeof m !== 'object' || !m.id || club == null) continue
       // Enkel als die club ook speelt (een scheidsrechter of de federatie die het meldt: niemand).
       if (club !== clubVanTeam(m.homeTeam) && club !== clubVanTeam(m.awayTeam)) continue
+      const eigenPloeg = club === clubVanTeam(m.homeTeam) ? m.homeTeam : m.awayTeam
       for (const s of tl) {
         if (s.termijnDagen != null && minuten < Number(s.termijnDagen)) continue
+        if (!pastDoelgroep(s, categorieVanTeam(eigenPloeg))) continue
         if (await voorstel(payload, `telaat:${s.id}:${m.id}:${club}`, { club, soort: s, match: m.id, omschrijving: `${s.naam}: ${minuten} min later (${String(w.reden)}) — ${wedstrijdTitel(m)}` })) nieuw++
       }
     }
+  }
+
+  // 4. Voorbehoud niet bekrachtigd binnen de 5 werkdagen (RCVK item 25): het voorbehoud vervalt — ook
+  //    zonder boetesoort — en de club krijgt het voorstel van de administratieve kosten.
+  const verlopen = await payload.find({
+    collection: 'klachten',
+    where: { and: [{ soort: { equals: 'voorbehoud' } }, { status: { equals: 'te_bekrachtigen' } }, { bekrachtigTegen: { less_than: new Date(nu).toISOString() } }] },
+    depth: 2,
+    limit: 200,
+    overrideAccess: true,
+  })
+  const vb = verlopen.docs.length ? await soorten(payload, 'voorbehoud') : []
+  for (const k of verlopen.docs) {
+    await payload.update({ collection: 'klachten', id: k.id, data: { status: 'vervallen' }, overrideAccess: true })
+    const club = relId(k.club)
+    const m = k.match as { id?: number; date?: string; homeTeam?: unknown; awayTeam?: unknown } | null
+    if (club == null || !m || typeof m !== 'object' || !m.id) continue
+    const ploeg = clubVanTeam(m.homeTeam) === club ? m.homeTeam : m.awayTeam
+    for (const s of vb) {
+      if (!pastDoelgroep(s, categorieVanTeam(ploeg))) continue
+      if (await voorstel(payload, `voorbehoud:${s.id}:${k.id}`, { club, soort: s, match: m.id, omschrijving: `${s.naam}: voorbehoud niet bekrachtigd — ${wedstrijdTitel(m)}` })) nieuw++
+    }
+    await meld(payload, await clubStaf(payload, club), {
+      titel: '⚖️ Voorbehoud vervallen',
+      tekst: `Het voorbehoud bij ${wedstrijdTitel(m)} werd niet binnen de 5 werkdagen bekrachtigd.${vb.length ? ' De federatie kan de administratieve kosten aanrekenen.' : ''}`,
+      url: `/aftekenen/${m.id}`,
+    }).catch(() => 0)
+  }
+  return nieuw
+}
+
+/**
+ * Een verplaatsing die de federatie goedkeurt, kost de aanvragende club administratieve kosten (RCVK
+ * item 33: €20 senioren, €10 jeugd — de bedragen staan in de boetelijst, aanleiding 'verplaatsing',
+ * per doelgroep). Een voorstel, zoals de andere: de federatie beslist. Geeft het aantal voorstellen.
+ */
+export async function verplaatsingsKost(payload: Payload, aanvraagId: number): Promise<number> {
+  const a = await payload.findByID({ collection: 'verplaatsingsaanvragen', id: aanvraagId, depth: 2, overrideAccess: true }).catch(() => null)
+  if (!a || a.status !== 'goedgekeurd') return 0
+  const club = relId(a.aanvrager)
+  const m = a.match as { id?: number; date?: string; homeTeam?: unknown; awayTeam?: unknown } | null
+  if (club == null || !m || typeof m !== 'object' || !m.id) return 0
+  const ploeg = clubVanTeam(m.homeTeam) === club ? m.homeTeam : m.awayTeam
+  let nieuw = 0
+  for (const s of await soorten(payload, 'verplaatsing')) {
+    if (!pastDoelgroep(s, categorieVanTeam(ploeg))) continue
+    if (await voorstel(payload, `verplaatsing:${s.id}:${aanvraagId}`, { club, soort: s, match: m.id, omschrijving: `${s.naam}: ${wedstrijdTitel(m)}` })) nieuw++
   }
   return nieuw
 }

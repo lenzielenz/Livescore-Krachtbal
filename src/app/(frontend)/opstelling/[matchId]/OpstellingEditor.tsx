@@ -15,6 +15,7 @@ type RosterEntry = {
   selectability: { level: 'ok' | 'warn' | 'block'; reasons: string[] }
   suggested: boolean
   geleendVan?: string
+  uitgeleendVan?: string
   knipjes?: { keer: number; max: number; vastIn: string | null }
 }
 
@@ -267,6 +268,7 @@ export function OpstellingEditor({
               <strong className="num">{p.shirtNumber}</strong>
               <span className="nm">
                 <span className="wb-nm-name">{p.name}</span>
+                {p.uitgeleendVan != null && <span className="wb-reason">🤝 uitgeleend door {p.uitgeleendVan || 'een andere club'} (RCVK item 45)</span>}
                 {p.geleendVan && (
                   <span className="wb-reason">
                     uit {p.geleendVan}

@@ -1,6 +1,24 @@
 import { hasRole, isFederationLevel } from '@/lib/access'
 import { authUser, isAssignedReferee } from '@/lib/api-auth'
+import { forfaitMelden } from '@/lib/forfait'
 import { getPayloadClient } from '@/lib/payload-client'
+
+// Forfait MELDEN vooraf door de club (RCVK item 34, lib/forfait.ts): POST { kant: 'thuis' | 'uit', reden }.
+// Enkel de staf/coach van die ploeg of de federatie. Iedereen wordt verwittigd; het boetevoorstel volgt.
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const matchId = Number((await params).id)
+  if (!Number.isInteger(matchId) || matchId <= 0) return Response.json({ error: 'Ongeldige wedstrijd.' }, { status: 400 })
+  const payload = await getPayloadClient()
+  const user = await authUser(payload, req)
+  if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
+  const body = (await req.json().catch(() => ({}))) as { kant?: unknown; reden?: unknown }
+  try {
+    const r = await forfaitMelden(payload, user, matchId, body)
+    return r.ok ? Response.json(r) : Response.json({ error: r.error }, { status: r.status })
+  } catch (err) {
+    return Response.json({ error: (err as Error).message }, { status: 400 })
+  }
+}
 import { generateForfaitPdf } from '@/lib/submit/pdf-vergoeding'
 import { buildForfaitData } from '@/lib/vergoeding-data'
 

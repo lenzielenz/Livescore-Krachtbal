@@ -71,7 +71,10 @@ weten als hij dan niet kan. Code: `src/lib/verplaatsing.ts`.
 - `/beheer/kalender`: snel één reeks: heen en terug, thuis en uit eerlijk verdeeld, vrije data,
   vast thuisuur per ploeg (ook "za 16:00" uit de reeksindeling). Eerst een voorstel, dan aanmaken.
 - `/beheer/scheidsrechters`: per speeldag toewijzen; conflicten (dubbel geboekt, fluiten bij de eigen
-  club) in het rood; "Vul automatisch" verdeelt eerlijk. Elke scheidsrechter krijgt een melding.
+  club) in het rood; "Vul automatisch" verdeelt eerlijk. Elke scheidsrechter krijgt een melding (🔔 en push),
+  en wie een wedstrijd kwijtraakt aan een collega ook — anders rijdt hij voor niets naar het terrein.
+  Een nieuwe scheidsrechter voeg je toe met **Snel doen → Scheidsrechter toevoegen** (met e-mailadres
+  meteen een login en een uitnodigingslink).
 - `/beheer/wedstrijden`: wedstrijden verplaatsen; beide clubs, de scheidsrechter en de spelers krijgen een melding.
 
 ## 5. Wedstrijddag
@@ -105,7 +108,78 @@ Elke stap bewaakt de volgende; het wedstrijdblad volgt de wedstrijd vanzelf
    (de toegewezen was er niet), dan staat zíjn naam op het blad en krijgt hij de vergoeding.
 6. **Wie speelde** — de scheidsrechter bevestigt het. Dat telt voor vastspelen en het referendum.
 7. **Indienen** — de scheidsrechter: kan pas als de wedstrijd afgelopen is, alle drie getekend hebben,
-   de officials volledig zijn en "wie speelde" bevestigd is. Daarna is het blad onwijzigbaar.
+   de officials volledig zijn en "wie speelde" bevestigd is. Daarna is het blad onwijzigbaar. Na de laatste
+   handtekening dient het systeem zelf in.
+8. **Iedereen krijgt het blad** (vroeger: de bezoekende kapitein een exemplaar, de thuisploeg een, de
+   scheidsrechter het blad voor de federatie — RCVK item 23). De PDF wordt bewaard bij het blad
+   (`matchsheets.pdf`, onwijzigbaar) en een melding met de link gaat naar: de staf van beide clubs, de
+   federatie, de scheidsrechter(s), beide kapiteins (en hun ouders bij de jeugd) en de coaches van beide
+   ploegen. Code: `src/lib/submit/index.ts` (`bladOntvangers`).
+
+### Voorbehoud en uitsluiting (RCVK items 25, 27)
+
+De kapitein (U12–U16: de coach) vraagt de scheidsrechter voorbehoud aan te tekenen. De scheidsrechter
+noteert het op `/scheidsrechter/[id]` (blok *Voorbehoud en uitsluiting*): voor welke ploeg, wie het vraagt,
+**waarover** (dat bepaalt het comité, item 25.3: inrichting, tijdopnemer, officials, leeftijd, aantekenblad of
+identiteit → *sportcomité*; doelpunt, scheidsrechter afwezig of te laat, spelregels, speelduur door de
+scheidsrechter → *scheidsrechterscomité*), een kort relaas, de stand en de speeltijd. Ook een **uitsluiting** komt hier (speler, reden, stand,
+speeltijd). Een verkeerde regel schrappen kan tot de scheidsrechter aftekent; daarna ligt alles vast.
+
+Na het indienen wordt **elk voorbehoud een dossier** bij de club van die ploeg, te bekrachtigen **binnen 5
+werkdagen** (zaterdag, zondag en de wettelijke feestdagen tellen niet; op de laatste dag komt een herinnering). De club krijgt een melding
+en antwoordt onder het blad (`/aftekenen/[id]`):
+- **Bekrachtigen** met een uitgebreid relaas → het dossier gaat naar de federatie (het bord), die beslist
+  zoals bij een klacht (blad heropenen of afwijzen, met toelichting).
+- **Afzien** → klaar, geen kosten.
+- **Niets doen** → na de termijn vervalt het voorbehoud en stelt het systeem de **75 euro administratieve
+  kosten** voor (boetelijst, aanleiding *Voorbehoud niet bekrachtigd*).
+
+Op het bord staat zo'n dossier bij *Wacht op anderen* (de club), met de termijn en het comité. Code: `src/lib/voorbehoud.ts`.
+
+### Scheidsrechtersrapport (RCVK item 27)
+
+Bij een voorbehoud, een uitsluiting of een wedstrijd die niet gespeeld kon worden (forfait ter plaatse) is
+een rapport **verplicht**; het platform leest dat van het blad. Voor een andere onregelmatigheid vinkt de
+scheidsrechter *zie scheidsrechtersrapport* aan (vóór zijn handtekening). Het blad en de PDF vermelden dan
+*Zie scheidsrechtersrapport*.
+
+De scheidsrechter maakt het rapport op `/scheidsrechter/[id]` (blok *Scheidsrechtersrapport*): waarover, het
+relaas, tot 5 bijlagen (foto of PDF) en zijn naam als handtekening. Daarna verandert het niet meer; een
+aanvulling is een nieuw rapport. Het gaat naar het **comité op het bord** (*Rapport lezen* opent de PDF,
+*Afhandelen* met een besluit; de scheidsrechter krijgt het besluit). Enkel het comité en de scheidsrechter
+lezen het rapport en de bijlagen. Is er een werkdag na het indienen nog geen rapport, dan krijgt de
+scheidsrechter een herinnering; na drie werkdagen ook de federatie. Code: `src/lib/sr-rapport.ts`.
+
+### Forfait (RCVK item 34)
+
+Een club meldt een forfait **vooraf** op de wedstrijdpagina (*Planning → Forfait melden*): welke ploeg, en
+waarom. Dat kan de staf of de coach van die ploeg, of de federatie. Meteen:
+- staat het forfait op het blad en de uitslag in de stand (de andere ploeg wint, `forfaitScore`);
+- horen het de tegenpartij, de scheidsrechter (*je hoeft niet te komen*), de spelers op de selectie en de federatie;
+- volgt het **boetevoorstel**, volgens het **moment**: vóór vrijdag 12u van het speelweekend is *tijdig*,
+  daarna *laat* (midweekwedstrijd: 24 uur vóór de aftrap). Stelt de scheidsrechter ter plaatse vast dat een
+  ploeg er niet is, dan is het moment *ter plaatse*. De federatie maakt per moment een boetesoort (bv. 25 /
+  50 / 75 euro); elk forfait krijgt precies één voorstel.
+
+"Een forfait vervalt [...] als de match verplaatst wordt": verplaatst de federatie de wedstrijd (los, een
+heel weekend of via een goedgekeurde aanvraag), dan vervalt een **vooraf gemeld** forfait — de wedstrijd
+staat weer gepland en het boetevoorstel wordt geschrapt. Code: `src/lib/forfait.ts`.
+
+### Uitlenen van een jeugdspeler (RCVK item 45)
+
+Een jeugdspeler (t/m U18) kan voor één competitie bij een jeugdploeg van een andere club spelen. Op
+`/club/uitleningen` (*Mijn club → Uitleningen jeugd*):
+1. De **uitlenende club** kiest de speler en de ploeg, vult het adres in en tekent met haar naam. Naam,
+   geboortedatum, leeftijd, categorie en de competitie (reeks + seizoen) komen in de overeenkomst.
+2. De **ontvangende club** krijgt een melding, leest de overeenkomst (PDF) en tekent.
+3. De **federatie** bevestigt of weigert (met reden) op het bord.
+
+Pas na de bevestiging staat de speler op de selectielijst van die ploeg, met *uitgeleend door …*. Hij blijft
+lid van zijn club; zijn ploeg verandert niet. Beide clubs, de speler (of zijn ouders) en de federatie
+krijgen de overeenkomst. Intrekken kan een club zolang de federatie niet bevestigde; daarna beëindigt enkel
+de federatie een uitlening. Wacht een overeenkomst drie dagen op de handtekening van de ontvangende club,
+dan krijgt die een herinnering. Een speler of ploeg met een overeenkomst kan niet verwijderd worden. Code:
+`src/lib/uitlening.ts`.
 
 ### Aftrap later of vroeger
 
@@ -148,20 +222,33 @@ Een doorgegeven blessure wordt meteen:
 De speler vindt op *Mijn profiel* de **vooraf ingevulde aangifte** en een **geneeskundig getuigschrift**
 voor de dokter. Hij laat ze invullen, laadt ze op en dient in. Een club kan dat voor haar speler doen
 (`/ongevallen`). De federatie ziet alle dossiers (`/ongevallen`, dashboard) en handelt af of stuurt terug
-met een opmerking; de cijfers staan in de statistieken (per maand, categorie en club).
+met een opmerking; de cijfers staan in de statistieken (per maand, categorie en club). De formulieren
+horen **binnen de acht dagen** na het ongeval bij de federatie (RCVK item 41); op dag 6 krijgen de speler (of
+ouder) en de club een herinnering. Op het bord staat die
+termijn bij het dossier zolang de speler de documenten nog moet bezorgen.
 Code: `src/lib/blessure.ts`, `src/lib/ongeval-dossier.ts`.
 
 ### Boetes en scheidsrechterskosten
 
 Het reglement in dit project bevat geen bedragen: de federatie zet de **boetelijst** op (beheerpaneel →
-Federatie → Boetelijst: omschrijving, artikel, bedrag, en of het systeem ze voorstelt bij een forfait,
-een wedstrijdblad dat na X dagen niet ingediend is, of een aftrap die een club zelf later zette wegens
-file of ziekte). Het systeem maakt **voorstellen**; de federatie legt op (bedrag aanpasbaar) of schrapt
+Federatie → Boetelijst: omschrijving, artikel, bedrag, en of het systeem ze voorstelt bij een forfait
+(per moment: tijdig, laat, ter plaatse), een wedstrijdblad dat na X dagen niet ingediend is, een aftrap
+die een club zelf later zette wegens file of ziekte, een voorbehoud dat niet bekrachtigd werd (item 25), of
+een goedgekeurde verplaatsing (administratieve kost, item 33)). Elke soort heeft een **doelgroep** (alle,
+senioren, jeugd): zo kost een verplaatsing 20 euro bij de senioren en 10 bij de jeugd. Het systeem maakt **voorstellen**; de federatie legt op (bedrag aanpasbaar) of schrapt
 op `/beheer/boetes`, of legt manueel een boete op. Pas een opgelegde boete ziet de club op
 `/club/boetes`: daar meldt ze *Betaald* of *betwist* met uitleg; de federatie bevestigt, handhaaft of
 vernietigt. In de instellingen kiest de federatie wie de **scheidsrechterskosten** draagt (federatie,
 thuisclub of gedeeld; bij forfait de ploeg die forfait gaf); de club ziet per wedstrijd wat ze verschuldigd
 is (€13 + km-vergoeding, zoals op de kwitantie). Code: `src/lib/boetes.ts`.
+
+### Termijnen en herinneringen
+
+Elke ochtend loopt `/api/cron/recap` (GitHub-workflow *Dagelijks onderhoud*, `lib/termijnen.ts`): het maakt de
+boetevoorstellen (ook als niemand `/beheer/boetes` opent) en stuurt **één** herinnering per termijn naar wie
+aan zet is: de club op de laatste dag om een voorbehoud te bekrachtigen, de speler en de club op dag 6 van
+de 8 voor een ongevalsaangifte, de scheidsrechter na 1 werkdag zonder rapport (en de federatie na 3), en de
+ontvangende club na 3 dagen zonder handtekening onder een uitlening.
 
 ## 6. Dashboard en werkplatform — federatie
 
@@ -190,7 +277,8 @@ sprongen naar club aanmaken, wedstrijd verplaatsen en leden keuren. Code: `compo
 niemand mee bezig), *In behandeling* (een collega werkt eraan), *Wacht op anderen* (de bal ligt bij een
 club, speler, scheidsrechter of extern) en *Afgehandeld* (laatste 14 dagen). Erop staan
 verplaatsingsaanvragen, registraties, klachten, boetes (voorstel, betwist, betaling gemeld),
-ongevalsdossiers, medische kaarten, afgelastingen, inschrijvingen — en **vrije taken** die de federatie
+ongevalsdossiers, medische kaarten, afgelastingen, inschrijvingen, scheidsrechtersrapporten, uitleningen
+van jeugdspelers — en **vrije taken** die de federatie
 zelf aanmaakt ("verzekeringspolis vernieuwen").
 
 - **Slepen** = oppakken (naar *In behandeling*: jij wordt behandelaar), doorgeven (de behandelaar

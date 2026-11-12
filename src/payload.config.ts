@@ -22,6 +22,8 @@ import { InschrijvingsRondes, Inschrijvingen } from './collections/Inschrijvinge
 import { Verplaatsingsaanvragen } from './collections/Verplaatsingsaanvragen'
 import { Dossiers } from './collections/Dossiers'
 import { Klachten } from './collections/Klachten'
+import { RapportBijlagen, SrRapporten } from './collections/SrRapporten'
+import { Uitleningen } from './collections/Uitleningen'
 import { MedischeKaartAanvragen } from './collections/MedischeKaartAanvragen'
 import { Meldingen } from './collections/Meldingen'
 import { Matches } from './collections/Matches'
@@ -144,6 +146,9 @@ export default buildConfig({
     Inschrijvingen,
     Verplaatsingsaanvragen,
     Klachten,
+    SrRapporten,
+    RapportBijlagen,
+    Uitleningen,
     Dossiers,
     MedischeKaartAanvragen,
     Meldingen,

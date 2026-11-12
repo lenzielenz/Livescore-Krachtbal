@@ -57,16 +57,17 @@ describe('boetes', () => {
   it('stelt voor bij forfait en een laattijdig blad — en nooit twee keer', async () => {
     expect(await boeteVoorstellen(payload)).toBeGreaterThanOrEqual(2)
     expect(await boeteVoorstellen(payload)).toBe(0)
-    const ff = await payload.find({ collection: 'boetes', where: { match: { equals: ids.m1 } }, overrideAccess: true })
+    // Enkel de eigen boetesoorten: andere suites in dezelfde databank kunnen ook actieve soorten hebben.
+    const ff = await payload.find({ collection: 'boetes', where: { and: [{ match: { equals: ids.m1 } }, { soort: { equals: ids.ff } }] }, overrideAccess: true })
     expect(ff.docs).toHaveLength(1)
     expect(Number((ff.docs[0].club as { id: number }).id ?? ff.docs[0].club)).toBe(ids.uit)
-    const laat = await payload.find({ collection: 'boetes', where: { match: { equals: ids.m2 } }, overrideAccess: true })
+    const laat = await payload.find({ collection: 'boetes', where: { and: [{ match: { equals: ids.m2 } }, { soort: { equals: ids.laat } }] }, overrideAccess: true })
     expect(laat.docs).toHaveLength(1)
     expect(laat.docs[0].status).toBe('voorstel')
   }, 60_000)
 
   it('de club ziet een voorstel niet; na opleggen wel, en kan betwisten', async () => {
-    const b = (await payload.find({ collection: 'boetes', where: { match: { equals: ids.m1 } }, overrideAccess: true })).docs[0]
+    const b = (await payload.find({ collection: 'boetes', where: { and: [{ match: { equals: ids.m1 } }, { soort: { equals: ids.ff } }] }, overrideAccess: true })).docs[0]
     const uitUser = (await payload.find({ collection: 'users', where: { email: { equals: `uitstaf-${S}@test.be` } }, overrideAccess: true })).docs[0]
     const zichtbaar = async () => (await payload.find({ collection: 'boetes', where: { club: { equals: ids.uit } }, user: uitUser, overrideAccess: false })).docs.length
     expect(await zichtbaar()).toBe(0)

@@ -10,8 +10,9 @@ import { buildRoster, getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import type { MatchSheetStatus } from '@/lib/matchsheet-workflow'
 import { getPayloadClient } from '@/lib/payload-client'
 import { matchPersonalCode, verifyCredential } from '@/lib/referee-credentials'
-import { buildFixedSimpleScore, EMPTY_SIMPLE_SCORE } from '@/lib/simple-score'
 import { forfaitScore } from '@/lib/standings'
+import { blokNoteren, type BladBlok } from '@/lib/voorbehoud'
+import { zetForfait } from '@/lib/forfait'
 
 /** De rijen van een opstelling met het speler-id en de controle-vlag. */
 const rijenVan = (v: unknown): { player: number | null; ibGecontroleerd: boolean }[] =>
@@ -173,38 +174,38 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
       return Response.json({ ok: true, keuring: updated.keuring, bevestigd: Boolean(updated.keuringBevestigd) })
     }
 
+    // Voorbehoud en uitsluiting (RCVK items 25, 27): noteren of een verkeerde regel schrappen, zolang
+    // de scheidsrechter nog niet aftekende (lib/voorbehoud.ts).
+    if (body.action === 'voorbehoud' || body.action === 'uitsluiting' || body.action === 'voorbehoud-schrappen' || body.action === 'uitsluiting-schrappen') {
+      const soort: BladBlok = String(body.action).startsWith('voorbehoud') ? 'voorbehoud' : 'uitsluiting'
+      const r = await blokNoteren(payload, sheet, soort, body as Record<string, unknown>, String(body.action).endsWith('-schrappen'))
+      return r.ok ? Response.json({ ok: true, rijen: r.rijen }) : Response.json({ error: r.error }, { status: r.status })
+    }
+
+    // "Zie scheidsrechtersrapport" (RCVK item 27) voor een andere onregelmatigheid; zelfde slot als
+    // voorbehoud en uitsluiting: vóór de handtekening van de scheidsrechter.
+    if (body.action === 'rapport-volgt') {
+      if (sheet.status === 'ingediend' || (sheet.scheidsrechter as { akkoord?: boolean } | undefined)?.akkoord) {
+        return Response.json({ error: 'De scheidsrechter tekende al af: daarna verandert er niets meer aan het blad (item 37).' }, { status: 409 })
+      }
+      const updated = await payload.update({ collection: 'matchsheets', id: sheet.id, data: { rapportVolgt: (body as { aan?: unknown }).aan === true }, overrideAccess: true })
+      return Response.json({ ok: true, rapportVolgt: Boolean(updated.rapportVolgt) })
+    }
+
     if (body.action === 'forfait') {
       // Forfait-uitslag van de wedstrijd: de niet-forfaiterende ploeg wint met 30–0 (dubbel: 0–0).
       // De score wordt meteen op de wedstrijd gezet zodat ze overal (live, rangschikking) klopt.
       const uitslag = (['geen', 'thuis', 'uit', 'dubbel'] as const).find((u) => u === body.uitslag) ?? 'geen'
-      const vorige = (sheet.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen'
-      await payload.update({
-        collection: 'matchsheets',
-        id: sheet.id,
-        data: { forfait: { uitslag } },
-        user,
-        overrideAccess: false,
-      })
-      const score = forfaitScore(uitslag)
-      // De wedstrijd-update gebeurt met overrideAccess: enkel SR/federatie raakt tot hier, en de
-      // matches-collectie laat een SR-account zelf geen update toe.
-      if (score) {
-        await payload.update({
-          collection: 'matches',
-          id: matchId,
-          data: { status: 'finished', simpleScore: buildFixedSimpleScore(score.home, score.away) as unknown as Record<string, unknown> },
-          overrideAccess: true,
-        })
-      } else if (vorige !== 'geen') {
-        // Forfait teruggedraaid: zet de wedstrijd terug op gepland en wis de forfait-score.
-        await payload.update({
-          collection: 'matches',
-          id: matchId,
-          data: { status: 'scheduled', simpleScore: EMPTY_SIMPLE_SCORE as unknown as Record<string, unknown> },
-          overrideAccess: true,
-        })
+      const vorig = (sheet.forfait ?? {}) as { uitslag?: string; gemeldOp?: string | null; moment?: string | null }
+      if (uitslag === 'geen' && (vorig.uitslag ?? 'geen') === 'geen') {
+        return Response.json({ ok: true, uitslag, score: null, status: sheet.status })
       }
-      const status = await volgBladStatus(payload, matchId)
+      // Een forfait dat de club vooraf meldde, houdt zijn moment (tijdig/laat); vastgesteld ter plaatse
+      // telt als "ter plaatse" (RCVK item 34: het moment bepaalt de boete). Terugdraaien wist het ook.
+      const moment = uitslag === 'geen' ? null : vorig.gemeldOp ? (vorig.moment ?? null) : 'ter_plaatse'
+      await zetForfait(payload, Number(matchId), sheet.id, uitslag, uitslag === 'geen' ? { moment: null, gemeldOp: null, gemeldDoor: null } : { moment })
+      const score = forfaitScore(uitslag)
+      const status = (await payload.find({ collection: 'matchsheets', where: { match: { equals: Number(matchId) } }, depth: 0, limit: 1, overrideAccess: true })).docs[0]?.status ?? null
       return Response.json({ ok: true, uitslag, score, status })
     }
 
