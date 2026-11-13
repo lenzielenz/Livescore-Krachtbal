@@ -94,6 +94,9 @@ export async function MijnDossier({ payload, playerId, ouder }: { payload: Paylo
       {p.soortLid !== 'lid' && (
         <div className="pf-dossier-acties">
           <KaartAanvragen open={open} playerId={ouder ? playerId : undefined} voor={ouder ? 'kind' : 'zelf'} />
+          <a className="wb-btn" href={`/lid/${playerId}`}>
+            📇 Gegevens &amp; documenten
+          </a>
           {/* Elk lid heeft zijn eigen attest met QR-code: afdrukken, laten invullen, bezorgen. */}
           <a className="wb-btn" href={`/api/medische-kaart/pdf?ids=${playerId}`} target="_blank" rel="noopener">
             🖨️ Attest afdrukken

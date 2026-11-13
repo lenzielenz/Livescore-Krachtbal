@@ -539,6 +539,10 @@ export function ClubLeden({
                           <span className="cl-sub">👪 {l.ouder.email}</span>
                         )
                       ) : null}
+                      {/* De ledenfiche: adres, contact, toestemmingen, documenten, attest van lidmaatschap. */}
+                      <a className="cl-btn" href={`/lid/${l.id}`}>
+                        📇 fiche
+                      </a>
                       {l.soortLid !== 'lid' && (
                         <KaartAanvragen open={l.kaartOpen} playerId={l.id} klein />
                       )}

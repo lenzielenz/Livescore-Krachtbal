@@ -140,6 +140,18 @@ export const Settings: GlobalConfig = {
         { name: 'factuurIban', label: 'IBAN (rekening voor de betalingen)', type: 'text' },
         { name: 'factuurBic', label: 'BIC', type: 'text' },
         {
+          // Peppol (lib/peppol.ts): onder welke btw-categorie de e-factuur valt. Laat de boekhouder dit kiezen.
+          name: 'factuurBtwRegime',
+          label: 'Btw-regime',
+          type: 'select',
+          defaultValue: 'niet-onderworpen',
+          options: [
+            { label: 'Niet onderworpen aan btw (vzw zonder btw-nummer)', value: 'niet-onderworpen' },
+            { label: 'Vrijgesteld van btw (met btw-nummer, bv. art. 44 WBTW)', value: 'vrijgesteld' },
+          ],
+        },
+        { name: 'factuurBtwNummer', label: 'Btw-nummer (enkel bij "vrijgesteld")', type: 'text', admin: { placeholder: 'BE0400000000' } },
+        {
           name: 'factuurBtwVermelding',
           label: 'Btw-vermelding',
           type: 'text',

@@ -39,6 +39,16 @@ const relId = (v: unknown): string | null => {
   return id == null ? null : String(id)
 }
 
+// Persoonsgegevens van de ledenfiche (adres, telefoon, noodcontact, toestemmingen): enkel de federatie en de
+// staf van de eigen club — niet de scheidsrechter (die heeft enkel de geboortedatum nodig voor de categorie).
+// Het lid zelf en de ouders lezen en wijzigen ze via "Mijn profiel" (server-side, lib/ledenfiche.ts).
+const persoonsgegevensRead: FieldAccess = ({ req, doc }) => {
+  if (isFederationLevel(req.user)) return true
+  if (!hasRole(req.user, 'club-beheerder', 'club-medewerker')) return false
+  const eigen = userClubId(req.user)
+  return eigen != null && relId((doc as { club?: unknown } | undefined)?.club) === String(eigen)
+}
+
 // Medisch attest en doktersverbod bepalen of iemand mag spelen: enkel de federatie zet ze (via
 // /beheer/leden, dat met overrideAccess schrijft). Een club kon zijn eigen spelers anders zelf
 // speelgerechtigd maken.
@@ -280,6 +290,54 @@ export const Players: CollectionConfig = {
           type: 'email',
           access: { read: sensitiveFieldRead },
           admin: { description: 'Voor jeugd: de ouder ziet het dossier van het kind in zijn eigen login.' },
+        },
+        {
+          // De ledenfiche (lib/ledenfiche.ts): wat de federatie en de verzekeraar nodig hebben, en wat het lid zelf
+          // op "Mijn profiel" bijhoudt. Bewust GEEN rijksregisternummer: dat mag enkel met een wettelijke machtiging.
+          type: 'collapsible',
+          label: 'Ledenfiche: adres en contact',
+          admin: { initCollapsed: true },
+          fields: [
+            {
+              type: 'row',
+              fields: [
+                { name: 'straat', label: 'Straat en nummer', type: 'text', access: { read: persoonsgegevensRead } },
+                { name: 'postcode', label: 'Postcode', type: 'text', access: { read: persoonsgegevensRead } },
+                { name: 'gemeente', label: 'Gemeente', type: 'text', access: { read: persoonsgegevensRead } },
+              ],
+            },
+            {
+              type: 'row',
+              fields: [
+                { name: 'land', label: 'Land', type: 'text', defaultValue: 'BE', access: { read: persoonsgegevensRead } },
+                { name: 'telefoon', label: 'Telefoon', type: 'text', access: { read: persoonsgegevensRead } },
+                { name: 'nationaliteit', label: 'Nationaliteit', type: 'text', access: { read: persoonsgegevensRead } },
+              ],
+            },
+            {
+              type: 'row',
+              fields: [
+                { name: 'noodcontactNaam', label: 'Noodcontact: naam', type: 'text', access: { read: persoonsgegevensRead } },
+                { name: 'noodcontactTelefoon', label: 'Noodcontact: telefoon', type: 'text', access: { read: persoonsgegevensRead } },
+              ],
+            },
+            {
+              type: 'row',
+              fields: [
+                {
+                  name: 'toestemmingFoto',
+                  label: "Toestemming foto's en video",
+                  type: 'checkbox',
+                  access: { read: persoonsgegevensRead },
+                  admin: { description: 'Beeldmateriaal van wedstrijden en activiteiten mag gepubliceerd worden.' },
+                },
+                { name: 'toestemmingNieuws', label: 'Nieuwsbrief ontvangen', type: 'checkbox', access: { read: persoonsgegevensRead } },
+                { name: 'toestemmingOp', label: 'Toestemmingen gegeven op', type: 'date', access: { read: persoonsgegevensRead }, admin: { readOnly: true } },
+              ],
+            },
+            { name: 'lidSinds', label: 'Lid sinds', type: 'date', admin: { date: { pickerAppearance: 'dayOnly' } } },
+            { name: 'ficheBijgewerktOp', label: 'Ledenfiche bijgewerkt op', type: 'date', admin: { readOnly: true } },
+          ],
         },
         {
           // Een tweede ouder: krijgt net zo goed een login met het dossier van het kind (lib/ouders.ts).

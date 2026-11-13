@@ -298,6 +298,14 @@ is (€13 + km-vergoeding, zoals op de kwitantie). Code: `src/lib/boetes.ts`.
   eerdere facturen.
 - **Opvolging**: vervallen facturen op het dashboard; de club krijgt één herinnering per week
   (`lib/termijnen.ts`). **Boekhoudexport**: CSV met per factuur totaal, betaald en open.
+- **E-factuur (Peppol)**: elke verstuurde factuur ook als UBL 2.1 volgens **Peppol BIS Billing 3.0**
+  (`/api/facturen/<id>/ubl`, knop "e-factuur" bij de federatie en de club) — voor een boekhoudpakket of een
+  Peppol-toegangspunt. Beide partijen worden aangeduid met hun ondernemingsnummer (schema 0208): vul dat in bij de
+  club (clubgegevens → Facturatie) en bij de federatie. Btw: "niet onderworpen" (categorie O, vzw zonder
+  btw-nummer) of "vrijgesteld" (categorie E, met btw-nummer); laat de boekhouder kiezen. **Versturen over het
+  Peppol-netwerk** vraagt een toegangspunt (access point) waar de federatie zich aansluit (bv. Hermes van de
+  FOD Financiën, of een commerciële dienst); dat bestand kan er zo in. Een geannuleerde factuur wordt (nog) geen
+  creditnota in UBL.
 - **Instellingen** (Federatie-instellingen → Facturatie aan de clubs): naam, adres, ondernemingsnummer, IBAN, BIC,
   btw-vermelding (laat de boekhouder die invullen), betaaltermijn, tarieven van de aansluitingen.
 - Code: `src/lib/facturatie.ts` (puur: mededeling, bedragen in centen, betaalstand, bankafschrift),
@@ -474,6 +482,28 @@ Details en aannames: [REGELS-CONFORMITEIT.md §6](REGELS-CONFORMITEIT.md).
   `medische-kaart-server.ts` (wie mag wat, een stapel opladen), `submit/pdf-medische-kaart.ts`,
   `src/components/AttestBezorgen.tsx` (camera met kader). Tests: `tests/unit/attest.unit.spec.ts`,
   `medische-kaart-lezen.unit.spec.ts`, `medische-kaart-qr.unit.spec.ts`, `tests/int/medische-kaart-qr.int.spec.ts`.
+
+### Ledenfiche, lidmaatschap en verzekerden
+
+- **Ledenfiche** (`/lid/<id>`, vanuit *Mijn profiel*, de ledenlijst van de club (knop "📇 fiche") en het dossier
+  bij de federatie): adres, telefoon, nationaliteit, noodcontact en toestemmingen (foto's/video, nieuwsbrief, met
+  de datum waarop ze gegeven werden). Het lid zelf en elke ouder houden ze bij; de staf van de club en de
+  federatie ook. De scheidsrechter ziet ze niet (enkel de geboortedatum, voor de categorie). Bewust **geen
+  rijksregisternummer**: dat mag in België enkel verwerkt worden met een wettelijke machtiging.
+- **Lidmaatschap per seizoen** (collection `lidmaatschappen`): aangesloten = actief en goedgekeurd (speler met
+  geldige vergunning, of goedgekeurd gewoon lid). Elke dag (en bij het openen van de lijst) wordt vastgelegd wie
+  aangesloten is, bij welke club, vanaf wanneer; wie stopt of van club verandert, krijgt een einddatum maar
+  blijft in de lijst van dat seizoen. Zo blijft de lijst van een voorbij seizoen dezelfde.
+- **Verzekerden** (`/beheer/verzekerden`): per seizoen, per club, of enkel wie aansloot sinds een datum (de
+  aanvullingen voor de verzekeraar), met CSV-export (naam, geboortedatum, adres, club, soort, vanaf, tot).
+- **Documenten per lid** (op de ledenfiche): het formulier van de mutualiteit, een identiteitskaart, een
+  toestemming… Enkel de federatie, de club en het lid of de ouders zien ze; de club kan een document verbergen
+  voor het lid (interne nota). Een lid verwijdert enkel wat het zelf opliet; de club hoort het als een lid iets
+  oplaadt.
+- **Attest van lidmaatschap** (PDF, op de ledenfiche): voor de mutualiteit (terugbetaling van het lidgeld) of de
+  werkgever. De federatie verklaart de aansluiting; de club vult het ontvangen lidgeld in, tekent en stempelt.
+- Code: `src/lib/ledenfiche.ts`, `lidmaatschap.ts`, `lid-documenten.ts`, `submit/pdf-attest-lidmaatschap.ts`.
+  Tests: `tests/unit/ledenfiche-peppol.unit.spec.ts`, `tests/int/ledenfiche.int.spec.ts`.
 
 ### Ouders van jeugdspelers
 

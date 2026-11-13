@@ -57,6 +57,9 @@ export default async function LidDossierPage({ params }: { params: Promise<{ id:
         </p>
         <h1 className="page-title">{lid.naam || 'Lid'}</h1>
         <p>
+          <Link href={`/lid/${lid.id}`}>📇 Ledenfiche: adres, contact, toestemmingen en documenten →</Link>
+        </p>
+        <p>
           <span className={`led-chip ${lid.toon === 'ok' ? 'ok' : lid.toon === 'fout' ? 'fout' : lid.toon === 'wacht' ? 'wacht' : lid.toon === 'todo' ? 'let' : 'nul'}`}>{TOON_LABEL[lid.toon]}</span>{' '}
           {lid.keuring !== 'nvt' && (
             <span className={`led-chip ${lid.keuring === 'geldig' ? 'ok' : lid.keuring === 'verlopen' ? 'fout' : lid.keuring === 'verloopt' ? 'let' : 'nul'}`}>

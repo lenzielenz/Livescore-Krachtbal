@@ -20,6 +20,8 @@ import { AftrapWijzigingen } from './collections/AftrapWijzigingen'
 import { BoeteSoorten, Boetes } from './collections/Boetes'
 import { Betalingen } from './collections/Betalingen'
 import { Facturen } from './collections/Facturen'
+import { LidDocumenten } from './collections/LidDocumenten'
+import { Lidmaatschappen } from './collections/Lidmaatschappen'
 import { InschrijvingsRondes, Inschrijvingen } from './collections/Inschrijvingen'
 import { Verplaatsingsaanvragen } from './collections/Verplaatsingsaanvragen'
 import { Dossiers } from './collections/Dossiers'
@@ -146,6 +148,8 @@ export default buildConfig({
     Boetes,
     Facturen,
     Betalingen,
+    Lidmaatschappen,
+    LidDocumenten,
     InschrijvingsRondes,
     Inschrijvingen,
     Verplaatsingsaanvragen,

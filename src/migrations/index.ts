@@ -155,6 +155,7 @@ import * as migration_20261112_200000_oauth_identiteiten from './20261112_200000
 import * as migration_20261113_080000_kaart_qr from './20261113_080000_kaart_qr'
 import * as migration_20261113_140000_attest_nakijken from './20261113_140000_attest_nakijken'
 import * as migration_20261113_200000_facturatie from './20261113_200000_facturatie'
+import * as migration_20261113_230000_ledenfiche_documenten from './20261113_230000_ledenfiche_documenten'
 
 export const migrations = [
   {
@@ -936,5 +937,10 @@ export const migrations = [
     up: migration_20261113_200000_facturatie.up,
     down: migration_20261113_200000_facturatie.down,
     name: '20261113_200000_facturatie',
+  },
+  {
+    up: migration_20261113_230000_ledenfiche_documenten.up,
+    down: migration_20261113_230000_ledenfiche_documenten.down,
+    name: '20261113_230000_ledenfiche_documenten',
   },
 ];

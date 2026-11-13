@@ -1,0 +1,24 @@
+/* Ledenfiche (/lid/[id]): gegevens, attest van lidmaatschap, documenten. */
+.lid { max-width: 820px; display: flex; flex-direction: column; gap: 14px; }
+.lid h2 { margin: 0 0 6px; }
+
+.lf { display: flex; flex-direction: column; gap: 12px; }
+.lf fieldset { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 12px; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.lf legend { padding: 0 6px; color: var(--dim); font-size: 0.82rem; font-weight: 700; }
+.lf label { display: flex; flex-direction: column; gap: 3px; font-size: 0.85rem; color: var(--dim); }
+.lf input:not([type='checkbox']) { min-height: 40px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--txt); padding: 0 10px; font: inherit; }
+.lf .lf-breed { grid-column: 1 / -1; }
+.lf .lf-vink { flex-direction: row; align-items: center; gap: 8px; color: var(--txt); grid-column: 1 / -1; }
+.lf button { align-self: flex-start; }
+
+.ld { display: flex; flex-direction: column; gap: 12px; }
+.ld-lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ld-lijst li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
+.ld-lijst a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.ld-dim { color: var(--dim); font-size: 0.84rem; flex: 1; }
+.ld-x { background: none; border: none; color: var(--dim); cursor: pointer; }
+.ld-x:hover { color: #ff8a75; }
+.ld-nieuw { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; align-items: end; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 12px; }
+.ld-nieuw label { display: flex; flex-direction: column; gap: 3px; font-size: 0.85rem; color: var(--dim); }
+.ld-nieuw input:not([type='checkbox']):not([type='file']), .ld-nieuw select { min-height: 40px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--txt); padding: 0 10px; font: inherit; }
+.ld-nieuw .ld-vink { flex-direction: row; align-items: center; gap: 8px; color: var(--txt); }

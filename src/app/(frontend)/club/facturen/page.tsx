@@ -90,6 +90,9 @@ export default async function ClubFacturenPage({ searchParams }: { searchParams:
                   <a className="wb-btn" href={`/api/facturen/${r.id}/pdf`} target="_blank" rel="noopener">
                     PDF
                   </a>
+                  <a className="wb-btn" href={`/api/facturen/${r.id}/ubl`} title="Voor je boekhoudpakket (UBL / Peppol)">
+                    e-factuur
+                  </a>
                   {mollieActief() && <OnlineBetalen id={r.id} />}
                 </div>
               </div>
