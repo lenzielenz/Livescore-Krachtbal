@@ -2,7 +2,8 @@ import type { Payload } from 'payload'
 
 import { categorieVoorGeboortedatum } from './age-categories'
 import { getSeasonStartYear } from './matchsheet-data'
-import { isSpeelgerechtigd, keuringGeldig, KEURING_GELDIG_DAGEN } from './registratie'
+import { keuringStand } from './leden-register'
+import { isSpeelgerechtigd } from './registratie'
 import { seasonFromDate } from './seasons'
 
 // Statistieken over de hele organisatie, voor de federatie (/federatie/statistieken). Alles
@@ -107,7 +108,6 @@ export async function federatieStatistieken(payload: Payload, nu: Date = new Dat
     totaal: 0, spelers: 0, gewoneLeden: 0, speelgerechtigd: 0, meisjes: 0, jongens: 0, geslachtOnbekend: 0,
     jeugd: 0, senioren: 0, leeftijdOnbekend: 0, keuringVerlopen: 0, keuringVerlooptBinnen30: 0,
   }
-  const binnen30 = new Date(nu.getTime() - (KEURING_GELDIG_DAGEN - 30) * 86_400_000)
   for (const p of players.docs) {
     l.totaal += 1
     const speler = p.soortLid !== 'lid'
@@ -126,8 +126,9 @@ export async function federatieStatistieken(payload: Payload, nu: Date = new Dat
       else l.jeugd += 1
     }
     if (speler && p.medischeKeuringOp) {
-      if (!keuringGeldig(p.medischeKeuringOp as string, nu)) l.keuringVerlopen += 1
-      else if (new Date(String(p.medischeKeuringOp)) < binnen30) l.keuringVerlooptBinnen30 += 1
+      const k = keuringStand({ medischeKeuringOp: p.medischeKeuringOp as string }, nu)
+      if (k === 'verlopen') l.keuringVerlopen += 1
+      else if (k === 'verloopt') l.keuringVerlooptBinnen30 += 1
     }
     tel(perReg, REG_LABEL[String(p.registratieStatus ?? '')] ?? String(p.registratieStatus))
     const c = perClub.get(clubVanPloeg.get(relId(p.team) ?? -1) ?? relId(p.club) ?? -1)

@@ -4,7 +4,7 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { generateRefereeReceiptPdf } from '@/lib/submit/pdf-vergoeding'
 import { buildKwitantieData } from '@/lib/vergoeding-data'
 
-// Kwitantie scheidsrechter (formulier_2): €13/wedstrijd + €0,4327/km over een periode.
+// Kwitantie scheidsrechter (formulier_2): €13/wedstrijd + km × km-tarief (Settings.kmTarief) over een periode.
 export async function GET(req: Request, { params }: { params: Promise<{ officialId: string }> }) {
   const { officialId } = await params
   try {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-export function KwitantieForm({ officials }: { officials: { id: number; name: string }[] }) {
+export function KwitantieForm({ officials, kmTariefTekst }: { officials: { id: number; name: string }[]; kmTariefTekst: string }) {
   const [officialId, setOfficialId] = useState<string>(officials[0] ? String(officials[0].id) : '')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -18,7 +18,7 @@ export function KwitantieForm({ officials }: { officials: { id: number; name: st
   return (
     <section className="wb-card" style={{ maxWidth: 520 }}>
       <h2>Kwitantie scheidsrechter</h2>
-      <p className="wb-sub">€13 per wedstrijd + €0,4327 per km, over de gekozen periode.</p>
+      <p className="wb-sub">€13 per wedstrijd + {kmTariefTekst} per km, over de gekozen periode.</p>
       {officials.length === 0 ? (
         <p className="wb-sub">Nog geen scheidsrechters geregistreerd.</p>
       ) : (

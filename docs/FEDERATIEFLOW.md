@@ -35,7 +35,7 @@ nergens rechten.
 3. Federatie, `/beheer/leden` → *Registraties & kaarten*: de wachtrij met attest, vergunningsnummer,
    goedkeuren (ook alles tegelijk) of afkeuren met een reden. Ook op het bord.
 
-Regels (`src/lib/registratie.ts`): een keuring is 365 dagen geldig; terwijl de federatie beslist
+Regels (`src/lib/registratie.ts`): een keuring geldt het competitieseizoen waarin ze gebeurde (tot 30 juni); terwijl de federatie beslist
 ligt het lid vast; na goedkeuring wijzigt enkel de federatie naam, geboortedatum en geslacht. Het
 attest zien enkel de federatie, de staf van de eigen club en het lid (of de ouder).
 
@@ -391,14 +391,63 @@ Details en aannames: [REGELS-CONFORMITEIT.md §6](REGELS-CONFORMITEIT.md).
 - Het lid vraagt zijn medische kaart aan vanuit *Mijn profiel*; de club kan het ook voor het lid doen.
   De aanvraag gaat naar de federatie (`/beheer/leden`); de andere partij krijgt een melding (🔔).
 
+### Medisch attest met QR-code
+
+- Het **medisch attest** is het formulier van de federatie (krachtbal.be → formulieren → medisch attest),
+  machineleesbaar gemaakt: één A4 per lid met de gegevens al ingevuld, "Geschikt voor de krachtbalsport",
+  "Mag NIET 1 categorie hoger spelen" (aankruisen i.p.v. schrappen — zonder kruisje mag de speler volgens de
+  spelregels 1 categorie hoger), datumhokjes, stempel en handtekening, en het vak "Ontvangen" voor de
+  federatie. Rechtsboven een **QR-code** (ook leesbaar eronder, bv. `KYA-RWAXQPCD`): enkel een ondertekende
+  code (dossiernummer + handtekening met het server-geheim), geen naam, niet te raden of te vervalsen.
+- **Elk lid heeft zijn eigen attest.** De club maakt de ledenlijst aan; het lid (en elke ouder) vindt op
+  *Mijn profiel* het attest van zichzelf en van de kinderen: afdrukken (`/api/medische-kaart/pdf?ids=…`),
+  laten invullen, bezorgen. De club drukt ze af voor de eigen leden, de federatie voor iedereen.
+- **Blanco attest** (`/api/attest/blanco`, voor iedereen): hetzelfde blad zonder lid; de QR wijst naar `/attest`.
+  Het lid schrijft men er met de hand op. Een opgeladen blanco attest gaat altijd naar de federatie.
+- **Bezorgen zonder login**: de algemene link **`/attest`** en de QR-link **`/k/<code>`**. Twee manieren:
+  1. *Foto nemen met kader* — de camera opent met een kader in de vorm van het attest (de vier hoekjes op de
+     zwarte hoekmerken). De camera zoekt intussen de QR: het kader kleurt groen als de QR van dit lid goed in
+     beeld staat (dichter/verder/draaien wordt gezegd) en neemt dan zelf de foto. Lamp aan bij weinig licht.
+  2. *Bestand opladen* — een scan (PDF), een foto, iets wat via WhatsApp doorgestuurd werd.
+  Wie zonder login oplaadt, ziet enkel "Kaat K."; meer verklapt het systeem niet. Rate limit 20 per kwartier
+  per IP. Ingelogd oplaadt (Mijn profiel) gebruikt dezelfde schermen.
+- **Automatisch goedgekeurd als alles juist staat** (`src/lib/attest.ts`): de QR van het lid op de foto, het
+  blad uitgelijnd op de vier hoekmerken, "geschikt" duidelijk aangekruist en "mag niet hoger" duidelijk
+  (aangekruist of leeg). Dan geldt de keuring meteen (datum: wat de uploader gaf, anders vandaag) en zien het
+  lid, de ouders en de club het. Al de rest gaat **ter nakijken naar de federatie** (`/beheer/attesten`, met
+  teller in het menu en op het dashboard): een blanco attest (het systeem stelt het lid voor met dezelfde naam
+  en geboortedatum), een foto zonder QR (bv. het eigen formulier van de arts), een onduidelijk vakje,
+  "geschikt" niet aangekruist. De federatie koppelt het lid, zet de datum en keurt goed, of keurt af met een
+  reden. Telkens een melding aan het lid, de ouders en de club; wie zonder login een e-mailadres gaf, een mail.
+  Een attest dat wacht, raakt een eerder goedgekeurd attest niet aan. Keurt de federatie een registratie goed,
+  dan ook het attest dat erbij lag.
+- **Het lezen** (`src/lib/medische-kaart-lezen.ts`): QR (van wie) → de vier hoekmerken (alle volle zwarte
+  vierkanten; per hoek het dichtste bij wat de QR voorspelt) → de foto rechtrekenen → elk vakje nog eens
+  lokaal opzoeken aan zijn gedrukte kader (tot 4 mm ernaast: een blad dat bol ligt, gevouwen is of in de hand
+  gehouden wordt) → inkt tegenover het papier ernaast (ook met schaduw). Vindt het een kader niet, dan zegt
+  het niets over dat vakje (twijfel → nakijken). Getest op: scheef tot 25°, 1 cm bol over alle hoeken,
+  schuin gefotografeerd, wazig, zwak licht met ruis, WhatsApp (1600 px, twee keer zwaar gecomprimeerd) en
+  combinaties; lege vakjes worden nooit als kruisje gelezen. "Mag niet hoger" aangekruist → het doktersverbod
+  staat meteen in het dossier (nooit vanzelf opgeheven). De maten staan op één plek
+  (`src/lib/medische-kaart-layout.ts`) voor de PDF, de lezer én het camerakader.
+- **Geldigheid**: één competitieseizoen — de keuring geldt tot 30 juni van het seizoen waarin ze gebeurde
+  (`keuringGeldig` in `src/lib/registratie.ts`, seizoen vanaf 1 juli). Vanaf 1 juni "verloopt binnenkort"
+  voor iedereen: dan is een attest voor het volgende seizoen nodig.
+- Code: `src/lib/attest.ts` (wanneer goed), `attest-server.ts` (opslaan, beslissen, publiek, wachtrij),
+  `medische-kaart-code.ts`, `medische-kaart-scan.ts` (QR uit foto of PDF: sharp + jsQR),
+  `medische-kaart-server.ts` (wie mag wat, een stapel opladen), `submit/pdf-medische-kaart.ts`,
+  `src/components/AttestBezorgen.tsx` (camera met kader). Tests: `tests/unit/attest.unit.spec.ts`,
+  `medische-kaart-lezen.unit.spec.ts`, `medische-kaart-qr.unit.spec.ts`, `tests/int/medische-kaart-qr.int.spec.ts`.
+
 ### Ouders van jeugdspelers
 
-- De club vult bij een jeugdspeler het **e-mailadres van een ouder** in (`/club/leden`). Dat account
-  krijgt het kind meteen (niet pas na goedkeuring); bestaat het nog niet, dan wordt het aangemaakt en
-  krijgt de ouder een uitnodiging (of geeft de clubbeheerder de link door: knop "👪 ouder").
-- Op *Mijn profiel* ziet de ouder het **dossier van het kind**: status, keuring, aanvragen. Hij vraagt er de
-  medische kaart aan en **voert de keuring in** (datum + ingevuld attest). De club krijgt telkens een melding
-  om na te kijken en in te dienen.
+- De club vult bij een jeugdspeler het **e-mailadres van één of twee ouders** in (`/club/leden`:
+  `ouderEmail`, `ouder2Email`). Elk van die accounts krijgt het kind meteen (niet pas na goedkeuring);
+  bestaat het nog niet, dan wordt het aangemaakt en krijgt de ouder een uitnodiging (of geeft de
+  clubbeheerder de link door: knop "👪 ouder"). Beide ouders hebben dezelfde toegang.
+- Op *Mijn profiel* ziet de ouder het **dossier van elk kind**: status, keuring, hoe het met het medisch attest
+  staat (goedgekeurd, bij de federatie, afgekeurd met reden). Hij **drukt er het attest af** (met de QR van dat
+  kind) en **bezorgt het** (camera met kader of bestand). De club krijgt telkens een melding.
 - Verandert de club het adres, dan ziet de vorige ouder het dossier niet meer. Een ouder kan zichzelf
   niet aan een kind koppelen: enkel de club (via het adres) of de federatie (`Users.kinderen`).
 - Code: `src/lib/ouders.ts`, `src/lib/medische-kaart.ts` (`keuringInvoeren`), `/api/medische-kaart/keuring`.

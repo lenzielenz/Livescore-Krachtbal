@@ -1,7 +1,7 @@
 import type { Where } from 'payload'
 
 import { AGE_CATEGORIES, type AgeCategory, eigenCategorie, peiljaar } from './age-categories'
-import { KEURING_GELDIG_DAGEN } from './registratie'
+import { seizoenBegin, seizoenEinde } from './registratie'
 
 // Het ledenregister van de federatie: duizenden leden, honderden clubs. Puur — geen DB.
 //
@@ -61,18 +61,18 @@ export function toonVan(p: LidVelden): Toon {
   return 'todo'
 }
 
-/** Het einde van de geldigheid van een keuring (ms), of null zonder datum. */
+/** Het einde van de geldigheid van een keuring (ms, exclusief): het einde van haar seizoen; null zonder datum. */
 export function keuringTot(op: string | Date | null | undefined): number | null {
   if (!op) return null
-  const t = new Date(op).getTime()
-  return Number.isFinite(t) ? t + KEURING_GELDIG_DAGEN * DAG : null
+  const d = new Date(op)
+  return Number.isFinite(d.getTime()) ? seizoenEinde(d) : null
 }
 
 export function keuringStand(p: LidVelden, nu: Date = new Date()): KeuringStand {
   if (isLid(p) || !isActief(p)) return 'nvt'
   const tot = keuringTot(p.medischeKeuringOp)
   if (tot == null) return 'onbekend'
-  if (tot < nu.getTime()) return 'verlopen'
+  if (tot <= nu.getTime()) return 'verlopen'
   if (tot <= nu.getTime() + KEURING_WAARSCHUW_DAGEN * DAG) return 'verloopt'
   return 'geldig'
 }
@@ -124,18 +124,25 @@ export function toonWhere(t: Toon): Where {
 }
 
 export function keuringWhere(k: Exclude<KeuringStand, 'nvt'>, nu: Date = new Date()): Where {
-  const grensVerlopen = new Date(nu.getTime() - KEURING_GELDIG_DAGEN * DAG).toISOString()
-  const grensWaarschuw = new Date(nu.getTime() - (KEURING_GELDIG_DAGEN - KEURING_WAARSCHUW_DAGEN) * DAG).toISOString()
+  // Per seizoen: geldig = een keuring van dit seizoen (of al van het volgende). "Verloopt" = het seizoen eindigt
+  // binnen de waarschuwingstermijn: dan verlopen alle keuringen van dit seizoen samen op 30 juni.
+  const begin = new Date(seizoenBegin(nu)).toISOString()
+  const einde = new Date(seizoenEinde(nu)).toISOString()
+  const bijnaOm = seizoenEinde(nu) - nu.getTime() <= KEURING_WAARSCHUW_DAGEN * DAG
   const basis: Where[] = [spelerW, actiefW]
+  const ditSeizoen: Where[] = [{ medischeKeuringOp: { greater_than_equal: begin } }, { medischeKeuringOp: { less_than: einde } }]
+  const niets: Where[] = [{ medischeKeuringOp: { exists: true } }, { medischeKeuringOp: { exists: false } }]
   switch (k) {
     case 'onbekend':
       return { and: [...basis, { medischeKeuringOp: { exists: false } }] }
     case 'verlopen':
-      return { and: [...basis, { medischeKeuringOp: { less_than: grensVerlopen } }] }
+      return { and: [...basis, { medischeKeuringOp: { less_than: begin } }] }
     case 'verloopt':
-      return { and: [...basis, { medischeKeuringOp: { greater_than_equal: grensVerlopen } }, { medischeKeuringOp: { less_than_equal: grensWaarschuw } }] }
+      return { and: [...basis, ...(bijnaOm ? ditSeizoen : niets)] }
     case 'geldig':
-      return { and: [...basis, { medischeKeuringOp: { greater_than: grensWaarschuw } }] }
+      return {
+        and: [...basis, bijnaOm ? { medischeKeuringOp: { greater_than_equal: einde } } : { medischeKeuringOp: { greater_than_equal: begin } }],
+      }
   }
 }
 

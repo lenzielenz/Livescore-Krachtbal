@@ -31,18 +31,23 @@ describe('toestand van een lid', () => {
   })
 })
 
-describe('medische keuring (365 dagen)', () => {
+describe('medische keuring (één competitieseizoen, tot 30 juni)', () => {
   it('geldig, verloopt binnen 30 dagen, verlopen, onbekend, niet nodig', () => {
     expect(keuringStand({ medischeKeuringOp: dagenGeleden(10) }, NU)).toBe('geldig')
-    expect(keuringStand({ medischeKeuringOp: dagenGeleden(340) }, NU)).toBe('verloopt')
-    expect(keuringStand({ medischeKeuringOp: dagenGeleden(366) }, NU)).toBe('verlopen')
+    // Gekeurd op 1 juli 2026: het nieuwe seizoen, geldig. Op 30 juni 2026: vorig seizoen, verlopen.
+    expect(keuringStand({ medischeKeuringOp: '2026-07-01' }, NU)).toBe('geldig')
+    expect(keuringStand({ medischeKeuringOp: '2026-06-30' }, NU)).toBe('verlopen')
+    expect(keuringStand({ medischeKeuringOp: '2026-01-10' }, new Date('2026-06-12T10:00:00Z'))).toBe('verloopt')
+    expect(keuringStand({ medischeKeuringOp: '2026-01-10' }, new Date('2026-05-12T10:00:00Z'))).toBe('geldig')
     expect(keuringStand({}, NU)).toBe('onbekend')
     expect(keuringStand({ soortLid: 'lid', medischeKeuringOp: dagenGeleden(800) }, NU)).toBe('nvt')
     expect(keuringStand({ actief: false, medischeKeuringOp: dagenGeleden(800) }, NU)).toBe('nvt')
   })
   it('telt de dagen tot het einde', () => {
-    expect(keuringDagen({ medischeKeuringOp: dagenGeleden(340) }, NU)).toBe(25)
-    expect(keuringDagen({ medischeKeuringOp: dagenGeleden(370) }, NU)).toBe(-5)
+    // NU = 12 november 2026: tot 1 juli 2027 (00:00 Belgische tijd) zijn het nog 230 volle dagen.
+    expect(keuringDagen({ medischeKeuringOp: '2026-09-01' }, NU)).toBe(230)
+    // Seizoen 2025-2026 verliep op 1 juli 2026: ruim 134 dagen geleden (naar beneden afgerond: -135).
+    expect(keuringDagen({ medischeKeuringOp: '2026-03-01' }, NU)).toBe(-135)
     expect(keuringDagen({}, NU)).toBeNull()
   })
 })

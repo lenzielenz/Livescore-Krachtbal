@@ -3,7 +3,7 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { ledenIndienen, lidOpslaan } from '@/lib/registratie-server'
 
 // Ledenregistratie door de club (zie lib/registratie-server.ts):
-//   POST { actie: 'opslaan', playerId?, teamId, voornaam, achternaam, birthDate, geslacht, email?, ouderEmail?, soortLid,
+//   POST { actie: 'opslaan', playerId?, teamId, voornaam, achternaam, birthDate, geslacht, email?, ouderEmail?, ouder2Email?, soortLid,
 //          shirtNumber?, medischeKeuringOp? } → { ok, id }
 //   POST { actie: 'indienen', playerIds: number[] } → { ok, ingediend, overgeslagen }
 // Enkel clubstaf (club-beheerder/-medewerker), enkel voor de eigen club.
@@ -41,6 +41,7 @@ export async function POST(req: Request) {
         geslacht: String(body.geslacht ?? ''),
         email: body.email ? String(body.email) : null,
         ouderEmail: body.ouderEmail ? String(body.ouderEmail) : null,
+        ouder2Email: body.ouder2Email ? String(body.ouder2Email) : null,
         soortLid: String(body.soortLid ?? 'speler'),
         shirtNumber: body.shirtNumber != null && body.shirtNumber !== '' ? Number(body.shirtNumber) : null,
         medischeKeuringOp: body.medischeKeuringOp ? String(body.medischeKeuringOp) : null,

@@ -37,22 +37,22 @@ Bepaalt **speelduur** en **vereiste officials** per reeks/categorie. Gezaghebben
 
 ## 2. Kwitantie scheidsrechter (`formulier_2.pdf`)
 
-Vergoeding per scheidsrechter: **€13 per wedstrijd** + **€0,4327 per km**. Per blad meerdere wedstrijden
-(wedstrijdnr, datum, uur, reeks, thuis, bezoekers), aantal wedstrijden × €13 + aantal km × €0,4327, naam + handtekening.
+Vergoeding per scheidsrechter: **€13 per wedstrijd** + **€0,4452 per km**. Per blad meerdere wedstrijden
+(wedstrijdnr, datum, uur, reeks, thuis, bezoekers), aantal wedstrijden × €13 + aantal km × €0,4452, naam + handtekening.
 
 > Status: ✅ kwitantie-PDF per scheidsrechter over een periode via `/vergoedingen` →
 > `/api/scheidsrechter/[officialId]/kwitantie`. Bundelt de toegewezen wedstrijden, telt €13/wedstrijd +
-> €0,4327/km (km per wedstrijd ingevuld op het scheidsrechterscherm). Logica in `src/lib/vergoeding.ts`
+> €0,4452/km (km per wedstrijd ingevuld op het scheidsrechterscherm). Logica in `src/lib/vergoeding.ts`
 > + `src/lib/vergoeding-data.ts`, PDF in `src/lib/submit/pdf-vergoeding.ts`.
 
 ## 3. Onkostenblad forfait (`formulier_3.pdf`)
 
 In te vullen enkel bij FF wanneer de scheidsrechter betaald/verplaatst is: wedstrijdnr, datum, uur, reeks, ploegen,
-wedstrijdvergoeding (×€13), verpl.kosten (×€0,4259/km), gemelde forfait thuis/bezoekers (ja/neen), #auto's (max 2), km.
+wedstrijdvergoeding (×€13), verpl.kosten (×€0,4452/km), gemelde forfait thuis/bezoekers (ja/neen), #auto's (max 2), km.
 
 > Status: ✅ forfait-blok op het wedstrijdblad (van toepassing, gemeld thuis/bezoekers, #auto's, km).
 > FF-onkostenblad-PDF via `/api/match/[id]/forfait` (knop op het scheidsrechterscherm). Telt €13/wedstrijd +
-> €0,4259/km — **bewust** het andere km-tarief dan de kwitantie (bevestigd met Robin).
+> €0,4452/km — sinds november 2026 één km-tarief voor beide formulieren, instelbaar door de federatie (`Settings.kmTarief`, `/vergoedingen`).
 
 ## 4. Aangifte lichamelijk ongeval (`formulier_14.pdf` — DVV/OKRA-SPORT)
 
@@ -84,4 +84,4 @@ scoreborden, wedstrijdschema, kampioenenhulde…). Vooral organisatorisch, niet 
 5. **Bekerfinale-checklist** — optioneel/organisatorisch.
 
 > ✅ Alle vijf de punten zijn uitgewerkt (juni 2026). Bevestigd met Robin: de km-vergoeding verschilt
-> **bewust** per formulier (€0,4327 kwitantie vs €0,4259 forfait) — beide tarieven staan zo in `vergoeding.ts`.
+> één tarief voor kwitantie en forfait (formulier_2: €0,4452), instelbaar door de federatie (`Settings.kmTarief`); standaard in `vergoeding.ts`.

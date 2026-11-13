@@ -4,9 +4,15 @@
 import type { Payload } from 'payload'
 
 import { REEKS_OPTIONS } from './reeksen'
-import { FORFAIT_MAX_AUTOS, berekenForfait, berekenKwitantie } from './vergoeding'
+import { FORFAIT_MAX_AUTOS, berekenForfait, berekenKwitantie, geldigKmTarief } from './vergoeding'
 import type { ForfaitData, KwitantieData, KwitantieRegel } from './submit/pdf-vergoeding'
 import { formatDateBE, formatTimeBE } from './datetime'
+
+/** Het km-tarief dat de federatie instelde (Settings.kmTarief), of het standaardtarief. */
+export async function kmTarief(payload: Payload): Promise<number> {
+  const s = (await payload.findGlobal({ slug: 'settings', depth: 0 }).catch(() => null)) as { kmTarief?: unknown } | null
+  return geldigKmTarief(s?.kmTarief)
+}
 
 function reeksLabel(code: unknown): string {
   const found = REEKS_OPTIONS.find((o) => o.value === code)
@@ -89,7 +95,7 @@ export async function buildKwitantieData(
     federationNumber: (official as { federationNumber?: string } | null)?.federationNumber ?? undefined,
     periode,
     regels,
-    berekening: berekenKwitantie(regels.length, totaalKm),
+    berekening: berekenKwitantie(regels.length, totaalKm, await kmTarief(payload)),
   }
 }
 
@@ -130,6 +136,6 @@ export async function buildForfaitData(payload: Payload, matchId: number | strin
     // Re-valideer de max op API-niveau (het admin-veld max is geen harde grens bij directe writes).
     aantalAutos: Math.min(FORFAIT_MAX_AUTOS, Math.max(0, forfait.aantalAutos ?? 0)),
     km,
-    berekening: berekenForfait(1, km),
+    berekening: berekenForfait(1, km, await kmTarief(payload)),
   }
 }

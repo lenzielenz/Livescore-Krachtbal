@@ -24,3 +24,21 @@
 .pl-nieuw { background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
 .pl-rood { color: #e0533d; font-weight: 700; font-size: 0.74rem; }
 .pl-oranje { color: #c98a1f; font-size: 0.74rem; }
+
+/* Paneel om één wedstrijd aan te passen (WedstrijdPaneel.tsx): rechts op een scherm, onderaan op een gsm. */
+.pl-schaduw { position: fixed; inset: 0; z-index: 40; background: rgb(0 0 0 / 0.35); }
+.pl-paneel { position: fixed; z-index: 41; top: 0; right: 0; bottom: 0; width: min(420px, 100vw); overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--bg); color: var(--txt); border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgb(0 0 0 / 0.2); }
+.pl-paneel-kop { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.pl-paneel-kop h2 { margin: 2px 0; font-size: 1.1rem; }
+.pl-sluit { border: 1px solid var(--line); background: var(--panel); color: var(--txt); border-radius: 8px; min-width: 40px; min-height: 40px; cursor: pointer; }
+.pl-blok { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); }
+.pl-blok h3 { margin: 0; font-size: 0.95rem; display: inline; }
+.pl-blok summary { cursor: pointer; }
+.pl-veld { min-height: 42px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--txt); padding: 6px 8px; font: inherit; }
+.pl-rij { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pl-uitleg { font-size: 0.8rem; color: var(--dim); }
+.pl-links a { color: var(--accent); font-weight: 700; }
+.pl-kaart { cursor: pointer; }
+@media (max-width: 640px) {
+  .pl-paneel { top: auto; left: 0; width: 100vw; max-height: 88vh; border-left: 0; border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; }
+}

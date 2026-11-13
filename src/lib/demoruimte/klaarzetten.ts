@@ -10,6 +10,7 @@ import { boeteBehandelen, boeteManueel, boeteVoorstellen } from '../boetes'
 import { brusselsMidnightUtc, dateStrBE, shiftDateStr, zaterdagVan } from '../datetime'
 import { inschrijvingOpslaan } from '../inschrijving'
 import { planKalender } from '../kalender-planner'
+import { seizoenBegin } from '../registratie'
 import { kaartAanvragen } from '../medische-kaart'
 import { SYSTEEM_STATUS, volgBladStatus } from '../blad-status'
 import { advanceSimpleHalf, recordSimpleGoal } from '../simple-match-engine'
@@ -36,6 +37,8 @@ export function demoWachtwoord(): string {
   return createHash('sha256').update(`demo-accounts:${process.env.PAYLOAD_SECRET ?? ''}`).digest('base64url').slice(0, 24)
 }
 const DAG = 86_400_000
+/** Een keuring van `dagen` geleden, maar nooit vóór het begin van dit seizoen (ze geldt één seizoen). */
+const keuringDitSeizoen = (dagen: number) => new Date(Math.max(seizoenBegin(new Date()) + DAG, Date.now() - dagen * DAG)).toISOString()
 
 type Ctx = { params: Promise<{ id: string; matchId: string }> }
 type Route = (req: Request, ctx: Ctx) => Promise<Response>
@@ -204,7 +207,7 @@ export async function demoKlaarzetten(payload: Payload, opties: { forceer?: bool
           medischAttest: true,
           registratieStatus: 'goedgekeurd',
           soortLid: 'speler',
-          medischeKeuringOp: new Date(Date.now() - 60 * DAG).toISOString(),
+          medischeKeuringOp: keuringDitSeizoen(60),
           // U14: 12 jaar op het peiljaar van dit seizoen (lib/age-categories.ts), zodat de regels hen toelaten.
           birthDate: p.endsWith('U14') ? `${startJaar - 11}-03-14` : p.endsWith('D') ? '1999-06-02' : '1996-09-21',
           geslacht: p.endsWith('D') ? 'v' : 'm',
@@ -236,7 +239,7 @@ export async function demoKlaarzetten(payload: Payload, opties: { forceer?: bool
         data: {
           name: n, voornaam, achternaam, geslacht: g, team: g === 'm' ? ploeg['SM-H'] : ploeg['SM-D'], shirtNumber: g === 'm' ? 21 : 22, soortLid: 'speler', birthDate: '2004-02-11',
           vergunningsstatus: 'geen', registratieStatus: 'ingediend', ingediendOp: new Date(Date.now() - 2 * DAG).toISOString(),
-          medischeKeuringOp: new Date(Date.now() - 10 * DAG).toISOString(), email: `${voornaam.toLowerCase()}@voorbeeld.be`,
+          medischeKeuringOp: keuringDitSeizoen(10), email: `${voornaam.toLowerCase()}@voorbeeld.be`,
         } as never,
         overrideAccess: true,
       })
@@ -244,10 +247,11 @@ export async function demoKlaarzetten(payload: Payload, opties: { forceer?: bool
     // Niet iedereen is in orde — zodat de federatie per club iets te herinneren heeft. Enkel
     // reservespelers (de zevende), die in geen enkele klaargezette selectie staan.
     const zet = (id: number, data: Record<string, unknown>) => payload.update({ collection: 'players', id, data: data as never, overrideAccess: true })
-    const keuringOver = (dagen: number) => new Date(Date.now() - (365 - dagen) * DAG).toISOString()
-    await zet(spelers['SM-D'][6].id, { medischeKeuringOp: keuringOver(12) })
+    // Een keuring geldt één seizoen: een keuring van vorig seizoen is verlopen.
+    const vorigSeizoen = (dagen: number) => new Date(seizoenBegin(new Date()) - dagen * DAG).toISOString()
+    await zet(spelers['SM-D'][6].id, { medischeKeuringOp: vorigSeizoen(12) })
     await zet(spelers['BA-D'][6].id, { registratieStatus: 'afgekeurd', vergunningsstatus: 'geen', medischAttest: false, afkeurReden: 'doktersattest onleesbaar — laad een nieuw op' })
-    await zet(spelers['OP-H'][6].id, { medischeKeuringOp: keuringOver(5) })
+    await zet(spelers['OP-H'][6].id, { medischeKeuringOp: vorigSeizoen(40) })
     await zet(spelers['ZB-D'][6].id, { registratieStatus: 'concept', vergunningsstatus: 'geen', medischAttest: false, medischeKeuringOp: null })
     await zet(spelers['LE-H'][6].id, { registratieStatus: 'concept', vergunningsstatus: 'geen', medischAttest: false, medischeKeuringOp: null })
     // Een nieuw lid van Sint-Michiels dat de club nog moet aanvullen (keuring ontbreekt).

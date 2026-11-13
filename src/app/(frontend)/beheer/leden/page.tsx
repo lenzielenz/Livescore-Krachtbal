@@ -87,7 +87,8 @@ export default async function LedenPage({ searchParams }: { searchParams: Promis
           Alle leden van alle clubs, met hun vergunning en medische keuring. Een keuring geldt 365 dagen. Een verlopen keuring{' '}
           <strong>{beleid === 'blokkeren' ? 'blokkeert de opstelling' : 'geeft een waarschuwing in de opstelling'}</strong>
           {beleid === 'waarschuwen' && t.verlopen > 0 ? ` — blokkeren zou nu ${t.verlopen} speler${t.verlopen === 1 ? '' : 's'} raken` : ''} (
-          <Link href="/admin/globals/settings">instelling</Link>).
+          <Link href="/admin/globals/settings">instelling</Link>). De medische kaart draagt een QR-code:{' '}
+          <Link href="/medische-kaart/opladen">📷 kaarten opladen</Link> in een stapel zet elke kaart bij het juiste lid.
         </p>
 
         <nav className="led-tegels" aria-label="Tellingen">
@@ -300,6 +301,7 @@ async function Registraties() {
       clubNaam: a.club && typeof a.club === 'object' ? String(a.club.name ?? '—') : '—',
       via: a.via === 'club' ? 'club' : 'lid',
       op: String(a.createdAt),
+      playerId: speler?.id != null ? Number(speler.id) : null,
     }
   })
   return (

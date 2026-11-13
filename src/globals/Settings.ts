@@ -73,7 +73,7 @@ export const Settings: GlobalConfig = {
       admin: { description: 'Jonger dan deze leeftijd mag een lid zonder e-mailadres geregistreerd worden.' },
     },
     {
-      // Een medische keuring geldt 365 dagen (lib/registratie.ts). Wat als ze verlopen is? Eerst
+      // Een medische keuring geldt één competitieseizoen, tot 30 juni (lib/registratie.ts). Wat als ze verlopen is? Eerst
       // waarschuwen (de opstelling toont het, het ledenregister telt wie het zou raken); de federatie
       // zet blokkeren aan wanneer de clubs hun keuringen bijgewerkt hebben. Zonder keuringsdatum: geen
       // blokkade (oudere leden), wel zichtbaar in het register als "geen keuringsdatum".
@@ -85,7 +85,7 @@ export const Settings: GlobalConfig = {
         { label: 'Waarschuwen (mag nog spelen)', value: 'waarschuwen' },
         { label: 'Blokkeren (kan niet opgesteld worden)', value: 'blokkeren' },
       ],
-      admin: { description: 'Een keuring geldt 365 dagen. Het ledenregister toont hoeveel spelers blokkeren zou raken.' },
+      admin: { description: 'Een keuring geldt het competitieseizoen waarin ze valt (tot 30 juni). Het ledenregister toont hoeveel spelers blokkeren zou raken.' },
     },
     {
       // Drempel waarboven een speler door administratieve knipjes geblokkeerd wordt (fase 8).
@@ -114,6 +114,18 @@ export const Settings: GlobalConfig = {
         { label: 'Beide clubs, elk de helft', value: 'gedeeld' },
       ],
       admin: { description: 'Bepaalt wat elke club ziet onder "Scheidsrechterskosten" op haar boete-overzicht.' },
+    },
+    {
+      // Eén km-vergoeding voor de kwitantie van de scheidsrechter én het forfait-onkostenblad (lib/vergoeding.ts).
+      // Formulier_2 van de federatie: € 0,4452. De federatie past dit aan wanneer het tarief verandert; de
+      // kwitanties, onkostenbladen en scheidsrechterskosten van de clubs rekenen meteen met het nieuwe tarief.
+      name: 'kmTarief',
+      label: 'Kilometervergoeding (€ per km)',
+      type: 'number',
+      defaultValue: 0.4452,
+      min: 0.01,
+      max: 4.99,
+      admin: { step: 0.0001, description: 'Geldt voor de kwitantie en het forfait-onkostenblad. Standaard € 0,4452.' },
     },
     {
       name: 'forfaitKostenBetaler',

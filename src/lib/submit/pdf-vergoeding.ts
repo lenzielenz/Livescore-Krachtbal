@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 
-import { formatEuro, type VergoedingBerekening } from '../vergoeding'
+import { formatEuro, formatKmTarief, type VergoedingBerekening } from '../vergoeding'
 
 // PDF-generatie voor de scheidsrechtersvergoedingen:
 // - Kwitantie scheidsrechter (formulier_2): meerdere wedstrijden per blad.
@@ -118,7 +118,7 @@ export async function generateRefereeReceiptPdf(data: KwitantieData): Promise<Ui
     `${data.berekening.aantalWedstrijden} wedstrijden × €13 = ${formatEuro(data.berekening.wedstrijdvergoeding)}`,
     { size: 10 },
   )
-  w.line(`${data.berekening.km} km × €0,4327 = ${formatEuro(data.berekening.kmVergoeding)}`, { size: 10 })
+  w.line(`${data.berekening.km} km × ${formatKmTarief(data.berekening.perKm)} = ${formatEuro(data.berekening.kmVergoeding)}`, { size: 10 })
   w.line(`TOTAAL: ${formatEuro(data.berekening.totaal)}`, { size: 12, b: true, gap: 40 })
 
   w.line('Naam + handtekening scheidsrechter:', { size: 9, color: grey })
@@ -171,7 +171,7 @@ export async function generateForfaitPdf(data: ForfaitData): Promise<Uint8Array>
   w.line(`Afgelegde km: ${data.km}`, { size: 10, gap: 20 })
 
   w.line(`Wedstrijdvergoeding: ${data.berekening.aantalWedstrijden} × €13 = ${formatEuro(data.berekening.wedstrijdvergoeding)}`, { size: 10 })
-  w.line(`Verplaatsingskosten: ${data.berekening.km} km × €0,4259 = ${formatEuro(data.berekening.kmVergoeding)}`, { size: 10 })
+  w.line(`Verplaatsingskosten: ${data.berekening.km} km × ${formatKmTarief(data.berekening.perKm)} = ${formatEuro(data.berekening.kmVergoeding)}`, { size: 10 })
   w.line(`TOTAAL: ${formatEuro(data.berekening.totaal)}`, { size: 12, b: true, gap: 40 })
 
   w.line('Naam + handtekening scheidsrechter:', { size: 9, color: grey })

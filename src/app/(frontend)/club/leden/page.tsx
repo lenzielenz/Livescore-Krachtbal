@@ -120,6 +120,7 @@ export default async function ClubLedenPage() {
       email: String(p.email ?? ''),
       login: loginVan.get(Number(p.id)) ?? null,
       ouderEmail: String(p.ouderEmail ?? ''),
+      ouder2Email: String(p.ouder2Email ?? ''),
       ouder: ouderVan.get(Number(p.id)) ?? null,
       kaartOpen: kaartOpen.has(Number(p.id)),
       knipjes: knipjesTekst(vast?.get(Number(p.id))),
@@ -135,7 +136,9 @@ export default async function ClubLedenPage() {
         </h1>
         <p className="acc-page-intro">
           Voeg een lid toe, vul de medische keuring in en laad het doktersattest op. Vink aan wie klaar is en dien in bij de
-          federatie. Zodra de federatie goedkeurt, staat er een <strong>✅</strong> en kan het lid opgesteld worden.
+          federatie. Zodra de federatie goedkeurt, staat er een <strong>✅</strong> en kan het lid opgesteld worden. De medische kaart
+          draagt een QR-code: <Link href="/medische-kaart/opladen">📷 laad een stapel ingevulde kaarten op</Link> en elke kaart komt bij het
+          juiste lid.
         </p>
         {teams.length === 0 ? (
           <p className="empty">Je club heeft nog geen ploegen. Vraag de federatie om je ploegen aan te maken.</p>

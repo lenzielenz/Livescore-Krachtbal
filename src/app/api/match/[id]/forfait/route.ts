@@ -22,7 +22,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 import { generateForfaitPdf } from '@/lib/submit/pdf-vergoeding'
 import { buildForfaitData } from '@/lib/vergoeding-data'
 
-// Onkostenblad forfait (formulier_3): €13/wedstrijd + €0,4259/km, per wedstrijd bij FF.
+// Onkostenblad forfait (formulier_3): €13/wedstrijd + km × km-tarief (Settings.kmTarief), per wedstrijd bij FF.
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   try {

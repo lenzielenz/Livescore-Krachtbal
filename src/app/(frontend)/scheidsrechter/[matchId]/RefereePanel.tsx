@@ -66,6 +66,7 @@ export function RefereePanel({
   vrijgaveCode,
   backupRefereeName,
   andereTafel = null,
+  kmTariefTekst = '€0,4452',
 }: {
   matchId: string
   reeks: Reeks | null
@@ -94,6 +95,8 @@ export function RefereePanel({
   backupRefereeName: string | null
   /** Naam van wie deze lopende wedstrijd al aantekent (een andere tafel), of null. */
   andereTafel?: string | null
+  /** Het km-tarief zoals de federatie het instelde, bv. "€0,4452". */
+  kmTariefTekst?: string
 }) {
   const [status, setStatus] = useState<MatchSheetStatus>(initialStatus as MatchSheetStatus)
   const [keuring, setKeuring] = useState<Record<string, string>>(initialKeuring)
@@ -521,7 +524,7 @@ export function RefereePanel({
       <section className="wb-card">
         <h2>Vergoeding</h2>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }}>
-          Afgelegde km (kwitantie, €0,4327/km)
+          Afgelegde km (kwitantie, {kmTariefTekst}/km)
           <input
             className="wb-input"
             type="number"
@@ -548,7 +551,7 @@ export function RefereePanel({
               onChange={(e) => setVerg((v) => ({ ...v, aantalAutos: e.target.value === '' ? '' : Number(e.target.value) }))} />
           </label>
           <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)', flex: 1 }}>
-            Verpl. km (€0,4259/km)
+            Verpl. km ({kmTariefTekst}/km)
             <input className="wb-input" type="number" min={0} value={verg.km}
               onChange={(e) => setVerg((v) => ({ ...v, km: e.target.value === '' ? '' : Number(e.target.value) }))} />
           </label>

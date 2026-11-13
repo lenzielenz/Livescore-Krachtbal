@@ -84,6 +84,7 @@ export type ExportLid = {
   status: string
   email: string
   ouderEmail: string
+  ouder2Email: string
   login: boolean
 }
 
@@ -98,6 +99,7 @@ const KOLOMMEN: [keyof ExportLid, string][] = [
   ['status', 'Status'],
   ['email', 'E-mail'],
   ['ouderEmail', 'E-mail ouder'],
+  ['ouder2Email', 'E-mail tweede ouder'],
   ['login', 'Login'],
 ]
 

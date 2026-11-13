@@ -289,7 +289,7 @@ export const MatchSheets: CollectionConfig = {
           type: 'number',
           min: 0,
           admin: {
-            description: 'Aantal km voor deze wedstrijd — telt mee op de kwitantie (€0,4327/km).',
+            description: 'Aantal km voor deze wedstrijd — telt mee op de kwitantie (km-tarief uit de instellingen).',
           },
         },
         {
@@ -362,7 +362,7 @@ export const MatchSheets: CollectionConfig = {
                   label: 'Verplaatsing (km)',
                   type: 'number',
                   min: 0,
-                  admin: { description: 'Telt mee op het forfait-onkostenblad (€0,4259/km).' },
+                  admin: { description: 'Telt mee op het forfait-onkostenblad (km-tarief uit de instellingen).' },
                 },
               ],
             },

@@ -79,14 +79,15 @@ describe('ouders van jeugdspelers', () => {
     expect((await meldingenVan(ids.beheerder))[0].titel).toContain('Een ouder vroeg de medische kaart')
   })
 
-  it('de ouder voert de keuring in: datum + attest; de club hoort het', async () => {
+  it('de ouder laadt het attest op; zonder QR kijkt de federatie het na; de club hoort het', async () => {
     const ouder = await gebruiker(ids.ouder)
     expect(await keuringInvoeren(payload, ouder, ids.kind, { datum: '2026-09-15', bestand: null })).toMatchObject({ ok: false, status: 400 })
-    expect((await keuringInvoeren(payload, ouder, ids.kind, { datum: '2026-09-15', bestand: await pdf() })).ok).toBe(true)
+    // Een PDF zonder QR (bv. het eigen formulier van de arts): bewaard, maar niet vanzelf goedgekeurd.
+    expect(await keuringInvoeren(payload, ouder, ids.kind, { datum: '2026-09-15', bestand: await pdf() })).toMatchObject({ ok: true, status: 'nakijken' })
     const p = await payload.findByID({ collection: 'players', id: ids.kind, depth: 0, overrideAccess: true })
-    expect(String(p.medischeKeuringOp).slice(0, 10)).toBe('2026-09-15')
+    expect(p.medischeKeuringOp ?? null).toBeNull()
     expect(p.medischAttestBestand).toBeTruthy()
-    expect((await meldingenVan(ids.beheerder))[0].titel).toContain('Nieuwe keuring')
+    expect((await meldingenVan(ids.beheerder))[0].titel).toContain('Nieuw medisch attest')
     // De ouder mag het attest van zijn kind lezen, een vreemde niet.
     const attest = await payload.find({ collection: 'medische-attesten', where: { player: { equals: ids.kind } }, user: ouder, overrideAccess: false })
     expect(attest.docs).toHaveLength(1)
@@ -117,5 +118,17 @@ describe('ouders van jeugdspelers', () => {
     expect(kinderen(await gebruiker(ids.ouder))).toEqual([])
     const tweede = (await payload.find({ collection: 'users', where: { email: { equals: nieuw } }, overrideAccess: true, depth: 0 })).docs[0]
     expect(kinderen(tweede)).toEqual([ids.kind])
+  })
+
+  it('twee ouders: allebei een login met het kind; een adres weghalen raakt de andere ouder niet', async () => {
+    const a = `mama-${STAMP}@test.be`
+    const b = `papa-${STAMP}@test.be`
+    const basis = { playerId: ids.kind, teamId: ids.ploeg, voornaam: 'Mila', achternaam: `Ouders${STAMP}`, birthDate: '2017-03-01', geslacht: 'v', soortLid: 'speler' }
+    expect((await lidOpslaan(payload, ids.club, { ...basis, ouderEmail: a, ouder2Email: b })).ok).toBe(true)
+    const zoek = async (mail: string) => (await payload.find({ collection: 'users', where: { email: { equals: mail } }, overrideAccess: true, depth: 0 })).docs[0]!
+    expect([kinderen(await zoek(a)), kinderen(await zoek(b))]).toEqual([[ids.kind], [ids.kind]])
+    expect((await lidOpslaan(payload, ids.club, { ...basis, ouderEmail: a, ouder2Email: null })).ok).toBe(true)
+    expect([kinderen(await zoek(a)), kinderen(await zoek(b))]).toEqual([[ids.kind], []])
+    expect((await lidOpslaan(payload, ids.club, { ...basis, ouderEmail: 'fout', ouder2Email: b })).ok).toBe(false)
   })
 })

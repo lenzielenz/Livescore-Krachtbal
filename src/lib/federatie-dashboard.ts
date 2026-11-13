@@ -48,7 +48,7 @@ export async function federatieTaken(payload: Payload, nu: Date = new Date()): P
     .catch(() => ({ totalDocs: 0 }))
   const iso = (ms: number) => new Date(ms).toISOString()
 
-  const [registraties, komend, live, recentAf, clubs, beheerders, kaarten, ongevallen, ongevallenOpen, afgelast] = await Promise.all([
+  const [registraties, komend, live, recentAf, clubs, beheerders, kaarten, ongevallen, ongevallenOpen, afgelast, attesten] = await Promise.all([
     payload.count({ collection: 'players', where: { registratieStatus: { equals: 'ingediend' } }, overrideAccess: true }),
     payload.find({
       collection: 'matches',
@@ -82,6 +82,7 @@ export async function federatieTaken(payload: Payload, nu: Date = new Date()): P
     payload.find({ collection: 'accidents', where: { status: { equals: 'ingediend' } }, sort: 'ingediendOp', depth: 0, limit: 4, overrideAccess: true }),
     payload.count({ collection: 'accidents', where: { status: { equals: 'gemeld' } }, overrideAccess: true }),
     payload.find({ collection: 'afgelastingen', where: { status: { equals: 'gemeld' } }, sort: 'createdAt', depth: 2, limit: 4, overrideAccess: true }),
+    payload.count({ collection: 'medische-attesten', where: { status: { equals: 'nakijken' } }, overrideAccess: true }),
   ])
 
   const matchIds = [...komend.docs, ...recentAf.docs].map((m) => Number(m.id))
@@ -208,6 +209,17 @@ export async function federatieTaken(payload: Payload, nu: Date = new Date()): P
       href: '/ongevallen',
       actie: 'Behandelen',
       items: ongevallen.docs.map((a) => ({ label: String(a.slachtofferNaam ?? ''), href: '/ongevallen' })),
+    },
+    {
+      sleutel: 'attesten',
+      icoon: '🩺',
+      titel: 'Medische attesten na te kijken',
+      uitleg: 'Niet vanzelf goedgekeurd: een blanco attest, een foto zonder QR-code of een onduidelijk vakje.',
+      aantal: attesten.totalDocs,
+      dringend: kleur(attesten.totalDocs, false),
+      href: '/beheer/attesten',
+      actie: 'Nakijken',
+      items: [],
     },
     {
       sleutel: 'kaarten',

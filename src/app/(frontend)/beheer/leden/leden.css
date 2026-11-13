@@ -122,3 +122,4 @@
 @media (max-width: 640px) {
   .led-filter select { max-width: none; flex: 1 1 45%; }
 }
+.led-sub { color: var(--dim); font-size: 0.82rem; }

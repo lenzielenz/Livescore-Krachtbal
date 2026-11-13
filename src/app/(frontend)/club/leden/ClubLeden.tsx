@@ -38,6 +38,7 @@ export type ClubLid = {
   login: { id: number; email: string } | null
   /** E-mailadres van een ouder (jeugd) en diens account, dat het dossier van het kind ziet. */
   ouderEmail: string
+  ouder2Email: string
   ouder: { id: number; email: string } | null
   /** Ligt er een aanvraag voor een medische kaart bij de federatie? */
   kaartOpen: boolean
@@ -112,6 +113,7 @@ function LidFormulier({
     medischeKeuringOp: lid?.medischeKeuringOp ?? '',
     email: lid?.email ?? '',
     ouderEmail: lid?.ouderEmail ?? '',
+    ouder2Email: lid?.ouder2Email ?? '',
   })
   const [bestand, setBestand] = useState<File | null>(null)
   const [bezig, setBezig] = useState(false)
@@ -190,7 +192,17 @@ function LidFormulier({
             value={v.ouderEmail}
             onChange={set('ouderEmail')}
             autoComplete="off"
-            placeholder="ouder ziet het dossier en voert de keuring in"
+            placeholder="ouder ziet het dossier en laadt het attest op"
+          />
+        </label>
+        <label>
+          E-mailadres tweede ouder (jeugd)
+          <input
+            type="email"
+            value={v.ouder2Email}
+            onChange={set('ouder2Email')}
+            autoComplete="off"
+            placeholder="beide ouders krijgen dezelfde toegang"
           />
         </label>
         <label>
@@ -253,7 +265,7 @@ function LidFormulier({
   )
 }
 
-// Medische keuring (365 dagen): verloopt binnen 30 dagen of verlopen (lib/leden-register.ts).
+// Medische keuring (geldt één competitieseizoen): verloopt binnen 30 dagen of verlopen (lib/leden-register.ts).
 const keuringLet = (l: ClubLid) => {
   const k = keuringStand({ soortLid: l.soortLid, actief: l.actief, medischeKeuringOp: l.medischeKeuringOp || null })
   return k === 'verloopt' || k === 'verlopen'
@@ -363,6 +375,7 @@ export function ClubLeden({
         status: registratieIcoon(input(l), undefined, emailVanaf).label,
         email: l.email,
         ouderEmail: l.ouderEmail,
+        ouder2Email: l.ouder2Email,
         login: Boolean(l.login),
       })),
     )

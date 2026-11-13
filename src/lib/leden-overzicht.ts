@@ -4,7 +4,7 @@
 // op; hier staat wat er geteld wordt en hoe de herinnering luidt, zodat wat je vooraf ziet exact is
 // wat er verstuurd wordt.
 
-import { KEURING_GELDIG_DAGEN } from './registratie'
+import { keuringTot } from './leden-register'
 
 export type LidToestand = 'ok' | 'wacht' | 'todo' | 'fout' | 'lid'
 
@@ -37,7 +37,8 @@ export type ClubLedenRij = {
 /** Binnen hoeveel dagen een verlopende keuring meetelt in de herinnering. */
 export const KEURING_HERINNER_DAGEN = 30
 
-const dagenTot = (op: string, nu: Date) => KEURING_GELDIG_DAGEN - Math.floor((nu.getTime() - new Date(op).getTime()) / 86_400_000)
+// De keuring geldt tot het einde van haar seizoen (lib/registratie.ts → seizoenEinde).
+const dagenTot = (op: string, nu: Date) => Math.floor(((keuringTot(op) ?? 0) - nu.getTime()) / 86_400_000)
 
 export function keuringVerlooptBinnenkort(op: string, nu: Date = new Date(), binnen = KEURING_HERINNER_DAGEN): boolean {
   if (!op) return false

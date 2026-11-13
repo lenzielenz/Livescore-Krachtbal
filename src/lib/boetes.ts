@@ -2,7 +2,7 @@ import type { Payload, Where } from 'payload'
 
 import { formatDateBE } from './datetime'
 import { clubStaf, federatieAccounts, meld, relId } from './meldingen'
-import { berekenForfait, berekenKwitantie, formatEuro } from './vergoeding'
+import { berekenForfait, berekenKwitantie, formatEuro, geldigKmTarief } from './vergoeding'
 
 // Boetes aan clubs (collections/Boetes.ts). De bedragen staan niet in het reglement van dit
 // project: de federatie zet de boetelijst op (boete-soorten). Het systeem stelt voor, de federatie
@@ -339,18 +339,19 @@ export async function boeteLijst(payload: Payload, where: Where, limit = 300): P
 export const OPEN_STATUSSEN = ['opgelegd', 'betaling_gemeld', 'betwist'] as const
 
 export type KostenRij = { matchId: number; titel: string; datum: string; soort: 'kwitantie' | 'forfait'; aandeel: number; bedrag: number }
-export type Scheidsrechterskosten = { betaler: string | null; forfaitBetaler: string | null; rijen: KostenRij[]; totaal: number }
+export type Scheidsrechterskosten = { betaler: string | null; forfaitBetaler: string | null; rijen: KostenRij[]; totaal: number; perKm: number }
 
 /**
  * Wat deze club aan scheidsrechterskosten draagt (instelling `scheidsrechterKostenBetaler`), per
- * gefloten wedstrijd: €13 + km × €0,4327 (lib/vergoeding.ts). Bij een forfait het onkostenblad
- * (€13 + km × €0,4259) als `forfaitKostenBetaler` = de ploeg die forfait gaf.
+ * gefloten wedstrijd: €13 + km × het km-tarief (Settings.kmTarief, lib/vergoeding.ts). Bij een forfait het
+ * onkostenblad (zelfde bedragen) als `forfaitKostenBetaler` = de ploeg die forfait gaf.
  */
 export async function scheidsrechterskosten(payload: Payload, clubId: number, sindsIso?: string): Promise<Scheidsrechterskosten> {
-  const s = (await payload.findGlobal({ slug: 'settings', depth: 0 }).catch(() => null)) as { scheidsrechterKostenBetaler?: string | null; forfaitKostenBetaler?: string | null } | null
+  const s = (await payload.findGlobal({ slug: 'settings', depth: 0 }).catch(() => null)) as { scheidsrechterKostenBetaler?: string | null; forfaitKostenBetaler?: string | null; kmTarief?: unknown } | null
+  const perKm = geldigKmTarief(s?.kmTarief)
   const betaler = s?.scheidsrechterKostenBetaler ?? null
   const forfaitBetaler = s?.forfaitKostenBetaler ?? null
-  const uit = { betaler, forfaitBetaler, rijen: [] as KostenRij[], totaal: 0 }
+  const uit = { betaler, forfaitBetaler, rijen: [] as KostenRij[], totaal: 0, perKm }
   if (betaler !== 'thuisclub' && betaler !== 'gedeeld' && forfaitBetaler !== 'forfaitploeg') return uit
   const ploegen = (await payload.find({ collection: 'teams', where: { club: { equals: clubId } }, depth: 0, limit: 200, overrideAccess: true })).docs.map((t) => t.id)
   if (!ploegen.length) return uit
@@ -380,14 +381,14 @@ export async function scheidsrechterskosten(payload: Payload, clubId: number, si
       const gaf = (uitslag === 'thuis' && thuis) || (uitslag === 'uit' && !thuis) || uitslag === 'dubbel'
       if (!gaf) continue
       const aandeel = uitslag === 'dubbel' ? 0.5 : 1
-      const bedrag = Math.round(berekenForfait(1, blad.forfait?.km ?? 0).totaal * aandeel * 100) / 100
+      const bedrag = Math.round(berekenForfait(1, blad.forfait?.km ?? 0, perKm).totaal * aandeel * 100) / 100
       uit.rijen.push({ matchId: Number(m.id), titel, datum: String(m.date), soort: 'forfait', aandeel, bedrag })
       continue
     }
     if (m.status !== 'finished') continue
     const aandeel = betaler === 'thuisclub' ? (thuis ? 1 : 0) : betaler === 'gedeeld' ? 0.5 : 0
     if (!aandeel) continue
-    const bedrag = Math.round(berekenKwitantie(1, blad.refereeKm ?? 0).totaal * aandeel * 100) / 100
+    const bedrag = Math.round(berekenKwitantie(1, blad.refereeKm ?? 0, perKm).totaal * aandeel * 100) / 100
     uit.rijen.push({ matchId: Number(m.id), titel, datum: String(m.date), soort: 'kwitantie', aandeel, bedrag })
   }
   uit.rijen.sort((a, b) => a.datum.localeCompare(b.datum))

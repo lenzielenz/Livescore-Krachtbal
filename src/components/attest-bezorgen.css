@@ -1,0 +1,85 @@
+/* Het medisch attest bezorgen (AttestBezorgen.tsx): keuze, camera met kader, uitkomst. */
+.ab { display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Twee manieren ── */
+.ab-keuze { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 620px) { .ab-keuze { grid-template-columns: 1.2fr 1fr; } }
+.ab-tegel {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left;
+  padding: 18px 18px 16px; border-radius: var(--r-card-lg, 16px); border: 1px solid var(--line);
+  background: var(--panel-grad, var(--panel)); color: var(--txt); font: inherit; cursor: pointer;
+  transition: transform 0.15s var(--ease-out, ease), border-color 0.15s, box-shadow 0.15s;
+}
+.ab-tegel:hover, .ab-tegel:focus-visible { transform: translateY(-2px); border-color: var(--accent); box-shadow: var(--glow-accent, none); outline: none; }
+.ab-tegel strong { font-size: 1.08rem; }
+.ab-tegel span:last-child { color: var(--dim); font-size: 0.9rem; line-height: 1.4; }
+.ab-tegel-hoofd { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.ab-icoon { font-size: 2rem; line-height: 1; }
+
+/* ── Bezig ── */
+.ab-bezig { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; padding: 18px; border-radius: var(--r-card-lg, 16px); border: 1px solid var(--line); background: var(--panel); }
+.ab-bezig p { margin: 0; color: var(--dim); }
+.ab-bezig strong { color: var(--txt); }
+.ab-spinner { width: 38px; height: 38px; border-radius: 50%; border: 4px solid var(--line); border-top-color: var(--accent); animation: ab-draai 0.9s linear infinite; }
+@keyframes ab-draai { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ab-spinner { animation-duration: 3s; } }
+.ab-voorbeeld { max-width: min(260px, 70vw); max-height: 260px; border-radius: 10px; border: 1px solid var(--line); object-fit: contain; background: #000; }
+.ab-voorbeeld-klein { max-width: 160px; max-height: 160px; }
+
+/* ── Gegevens bij een blanco attest ── */
+.ab-gegevens { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: var(--r-card-lg, 16px); border: 1px solid var(--line); background: var(--panel); }
+.ab-gegevens label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: 0.92rem; }
+.ab-gegevens small { color: var(--dim); font-weight: 400; }
+.ab-gegevens input { min-height: 44px; border-radius: var(--r-control, 10px); border: 1px solid var(--line); background: var(--bg); color: var(--txt); padding: 0 12px; font: inherit; }
+.ab-kop { display: flex; gap: 12px; align-items: flex-start; }
+.ab-kop > span { font-size: 1.6rem; line-height: 1; }
+.ab-kop p { margin: 4px 0 0; color: var(--dim); }
+.ab-knoppen { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ── Uitkomst: groot en duidelijk ── */
+.ab-uitkomst { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 24px 18px 20px; border-radius: var(--r-card-lg, 16px); border: 2px solid; }
+.ab-uitkomst h3 { margin: 0; font-size: 1.45rem; }
+.ab-uitkomst p { margin: 0; max-width: 46ch; line-height: 1.45; }
+.ab-groot { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; font-size: 2.4rem; font-weight: 800; color: #fff; margin-bottom: 4px; }
+.ab-goed { border-color: #2e9d57; background: color-mix(in srgb, #2e9d57 12%, var(--panel)); }
+.ab-goed .ab-groot { background: #2e9d57; box-shadow: 0 10px 30px -8px #2e9d57; }
+.ab-wacht { border-color: #d39b2a; background: color-mix(in srgb, #d39b2a 11%, var(--panel)); }
+.ab-wacht .ab-groot { background: #d39b2a; }
+.ab-fout { border-color: #e0533d; background: color-mix(in srgb, #e0533d 11%, var(--panel)); }
+.ab-fout .ab-groot { background: #e0533d; }
+.ab-reden { padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--bg) 60%, transparent); }
+.ab-let { color: #e2b04a; font-weight: 600; }
+.ab-klein { color: var(--dim); font-size: 0.86rem; }
+.ab-tips { text-align: left; margin: 4px 0 8px; padding-left: 20px; color: var(--dim-strong, var(--txt)); line-height: 1.5; max-width: 46ch; }
+
+/* ── Camera met kader (schermvullend) ── */
+.ab-camera { position: fixed; inset: 0; z-index: 1000; background: #000; display: flex; flex-direction: column; }
+.ab-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ab-masker { position: absolute; inset: 0 0 96px; display: grid; place-items: center; pointer-events: none; }
+.ab-kader {
+  position: relative; aspect-ratio: 210 / 297; width: min(90vw, calc((100vh - 170px) * 210 / 297)); width: min(90vw, calc((100dvh - 170px) * 210 / 297));
+  border-radius: 6px; border: 2px dashed rgba(255, 255, 255, 0.75);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55); transition: border-color 0.2s;
+}
+.ab-kader-goed { border: 3px solid #35c46a; }
+.ab-kader-fout { border-color: #ff6a52; }
+.ab-merk { position: absolute; border: 3px solid #fff; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6); }
+.ab-kader-goed .ab-merk { border-color: #35c46a; background: rgba(53, 196, 106, 0.25); }
+.ab-qrvak { position: absolute; border: 2px dashed rgba(255, 255, 255, 0.6); border-radius: 4px; display: grid; place-items: center; color: rgba(255, 255, 255, 0.7); font-weight: 700; font-size: 0.8rem; }
+.ab-kader-goed .ab-qrvak { border-color: #35c46a; color: #35c46a; }
+.ab-aftel { position: absolute; inset: 0; display: grid; place-items: center; font-size: 4rem; font-weight: 800; color: #fff; text-shadow: 0 4px 20px rgba(0, 0, 0, 0.7); }
+.ab-camtekst {
+  position: absolute; top: max(12px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(92vw, 520px);
+  padding: 10px 14px; border-radius: 12px; text-align: center; font-weight: 700; color: #fff; background: rgba(20, 22, 28, 0.85);
+}
+.ab-camtekst-goed { background: rgba(31, 128, 66, 0.92); }
+.ab-camtekst-fout { background: rgba(180, 52, 36, 0.92); }
+.ab-cambalk {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 96px; padding-bottom: env(safe-area-inset-bottom);
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding-inline: 16px; background: rgba(0, 0, 0, 0.75);
+}
+.ab-cam-knop { justify-self: start; background: none; border: 1px solid rgba(255, 255, 255, 0.4); color: #fff; border-radius: 999px; padding: 8px 14px; font: inherit; cursor: pointer; }
+.ab-cambalk .ab-cam-knop:last-child { justify-self: end; }
+.ab-sluiter { width: 68px; height: 68px; border-radius: 50%; border: 5px solid #fff; background: rgba(255, 255, 255, 0.25); cursor: pointer; }
+.ab-sluiter:active { background: #fff; }
+.ab-sluiter:disabled { opacity: 0.4; }

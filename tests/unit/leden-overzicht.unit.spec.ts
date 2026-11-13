@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import { herinneringTekst, herinneringVoor, keuringVerlooptBinnenkort, ledenPerClub, type OverzichtLid } from '@/lib/leden-overzicht'
 
-const nu = new Date('2026-10-20T12:00:00Z')
+// Eind juni: de keuringen van het seizoen 2025-2026 verlopen op 30 juni (een keuring geldt één seizoen).
+const nu = new Date('2026-06-20T12:00:00Z')
 const dagenGeleden = (d: number) => new Date(nu.getTime() - d * 86_400_000).toISOString().slice(0, 10)
 const lid = (id: number, clubId: number, toon: OverzichtLid['toon'], extra: Partial<OverzichtLid> = {}): OverzichtLid => ({
   id,
@@ -11,14 +12,14 @@ const lid = (id: number, clubId: number, toon: OverzichtLid['toon'], extra: Part
   clubNaam: clubId === 1 ? 'KBC Sint-Michiels' : 'KC Baasrode',
   toon,
   reden: '',
-  keuringOp: dagenGeleden(60),
+  keuringOp: '2026-07-01', // al voor het volgende seizoen gekeurd: in orde
   ...extra,
 })
 
 describe('ledenPerClub', () => {
   const leden = [
     lid(1, 1, 'ok'),
-    lid(2, 1, 'ok', { keuringOp: dagenGeleden(355) }),
+    lid(2, 1, 'ok', { keuringOp: '2025-09-15' }),
     lid(3, 1, 'wacht'),
     lid(4, 1, 'todo', { reden: 'ontbreekt: keuringsdatum' }),
     lid(5, 2, 'ok'),
@@ -40,17 +41,17 @@ describe('ledenPerClub', () => {
     expect(sm.teDoen.map((l) => l.id)).toEqual([2, 4])
   })
 
-  it('keuring verloopt binnen 30 dagen, niet al verlopen of nog ver weg', () => {
-    expect(keuringVerlooptBinnenkort(dagenGeleden(340), nu)).toBe(true)
-    expect(keuringVerlooptBinnenkort(dagenGeleden(300), nu)).toBe(false)
-    expect(keuringVerlooptBinnenkort(dagenGeleden(400), nu)).toBe(true) // al verlopen: ook vernieuwen
+  it('keuring verloopt binnen 30 dagen (einde seizoen), of al verlopen; niet als het seizoen nog ver loopt', () => {
+    expect(keuringVerlooptBinnenkort('2025-09-15', nu)).toBe(true) // dit seizoen: verloopt op 30 juni
+    expect(keuringVerlooptBinnenkort('2025-09-15', new Date('2026-04-01T12:00:00Z'))).toBe(false) // nog ver weg
+    expect(keuringVerlooptBinnenkort(dagenGeleden(400), nu)).toBe(true) // vorig seizoen, al verlopen: ook vernieuwen
     expect(keuringVerlooptBinnenkort('', nu)).toBe(false)
   })
 })
 
 describe('herinneringVoor', () => {
   it('somt op wat er mist, per lid', () => {
-    const club = ledenPerClub([lid(2, 1, 'ok', { keuringOp: dagenGeleden(355) }), lid(4, 1, 'todo', { reden: 'ontbreekt: keuringsdatum' }), lid(6, 1, 'fout', { reden: 'attest onleesbaar' })], nu).clubs[0]
+    const club = ledenPerClub([lid(2, 1, 'ok', { keuringOp: '2025-09-15' }), lid(4, 1, 'todo', { reden: 'ontbreekt: keuringsdatum' }), lid(6, 1, 'fout', { reden: 'attest onleesbaar' })], nu).clubs[0]
     const h = herinneringVoor(club, nu)!
     expect(h.titel).toBe('Herinnering van de federatie: 3 leden niet in orde')
     expect(h.tekst).toBe('KBC Sint-Michiels: 1 lid nog aan te vullen of in te dienen, 1 lid afgekeurd, 1 keuring (bijna) verlopen. Wie niet in orde is, kan niet opgesteld worden.')
