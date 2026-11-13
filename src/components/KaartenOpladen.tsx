@@ -7,7 +7,9 @@ import { toast } from '@/components/Toaster'
 import { dateStrBE } from '@/lib/datetime'
 import './kaarten-opladen.css'
 
-type Resultaat = { bestand: string; ok: true; playerId: number; naam: string; viaQr: boolean; meldingen?: string[] } | { bestand: string; ok: false; fout: string }
+type Resultaat =
+  | { bestand: string; ok: true; playerId: number | null; naam: string; viaQr: boolean; status?: string; reden?: string | null; meldingen?: string[] }
+  | { bestand: string; ok: false; fout: string }
 
 // Ingevulde medische kaarten opladen (/api/medische-kaart/opladen). De QR op elke foto zegt bij welk lid
 // de kaart hoort — niemand hoeft te kiezen. Twee vormen:
@@ -69,7 +71,7 @@ export function KaartenOpladen({ voorLid, naam }: { voorLid?: number; naam?: str
         <input type="date" value={datum} max={dateStrBE()} onChange={(e) => setDatum(e.target.value)} required={enkel} />
       </label>
       <button type="button" className="wb-btn wb-btn-primary" disabled={bezig || !bestanden.length || (enkel && !datum)} onClick={() => void opladen()}>
-        {bezig ? 'Bezig met lezen…' : enkel ? 'Kaart opladen' : `${bestanden.length || ''} kaart${bestanden.length === 1 ? '' : 'en'} opladen`}
+        {bezig ? 'Bezig met lezen…' : enkel ? 'Kaart opladen' : bestanden.length ? `${bestanden.length} kaart${bestanden.length === 1 ? '' : 'en'} opladen` : 'Kaarten opladen'}
       </button>
       {resultaten.length > 0 && (
         <ul className="ko-lijst">
@@ -79,9 +81,11 @@ export function KaartenOpladen({ voorLid, naam }: { voorLid?: number; naam?: str
               {r.ok ? (
                 <>
                   <strong>
-                    ✅ {r.naam}
+                    {r.status === 'nakijken' ? '📨' : '✅'} {r.naam || 'Lid nog toe te kennen'}
                     {r.viaQr ? ' · herkend via QR' : ''}
+                    {r.status === 'nakijken' ? ' · ter nakijken' : r.status === 'goedgekeurd' ? ' · goedgekeurd' : ''}
                   </strong>
+                  {r.status === 'nakijken' && r.reden && <span className="ko-let">{r.reden}</span>}
                   {r.meldingen?.map((m) => (
                     <span key={m} className="ko-let">
                       ⚠️ {m}

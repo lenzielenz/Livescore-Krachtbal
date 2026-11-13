@@ -67,6 +67,7 @@ export function RefereePanel({
   backupRefereeName,
   andereTafel = null,
   kmTariefTekst = '€0,4452',
+  fase,
 }: {
   matchId: string
   reeks: Reeks | null
@@ -97,7 +98,11 @@ export function RefereePanel({
   andereTafel?: string | null
   /** Het km-tarief zoals de federatie het instelde, bv. "€0,4452". */
   kmTariefTekst?: string
+  /** Welk deel van de wedstrijddag (page.tsx): vóór (officials, keuring, vrijgave, starten), uitzondering (forfait), tijdens
+   *  (naar aantekenen) of na (eindstand, vergoeding). Leeg = alles. */
+  fase?: 'voor' | 'tijdens' | 'na' | 'uitzondering'
 }) {
+  const toon = (...f: ('voor' | 'tijdens' | 'na' | 'uitzondering')[]) => !fase || f.includes(fase)
   const [status, setStatus] = useState<MatchSheetStatus>(initialStatus as MatchSheetStatus)
   const [keuring, setKeuring] = useState<Record<string, string>>(initialKeuring)
   const [keuringBevestigd, setKeuringBevestigd] = useState<boolean>(initialKeuringBevestigd)
@@ -268,6 +273,252 @@ export function RefereePanel({
 
   return (
     <div className="wb-grid">
+      {msg && (fase === 'na' || fase === 'uitzondering') && <p className="wb-msg" style={{ gridColumn: '1 / -1' }}>{msg}</p>}
+
+      {toon('na') && (
+      <section className="wb-card" style={{ gridColumn: '1 / -1', borderColor: eindeAkkoord ? '#2a9d6a' : undefined }}>
+        <h2>Eindstand bevestigen</h2>
+        <p className="wb-sub">
+          De scheidsrechter bekrachtigt de officiële eindstand. Pas hiermee is de uitslag
+          scheidsrechterlijk goedgekeurd.
+        </p>
+        <p style={{ fontSize: '1.25rem', fontWeight: 800, margin: '2px 0 12px', color: 'var(--txt)' }}>
+          {homeTeam} <span style={{ color: 'var(--accent)' }}>{homeScore} – {awayScore}</span> {awayTeam}
+        </p>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)', marginBottom: 10 }}>
+          Naam scheidsrechter
+          <input
+            className="wb-input"
+            placeholder="Voor- en achternaam"
+            value={eindeNaam}
+            onChange={(e) => setEindeNaam(e.target.value)}
+          />
+        </label>
+
+        {eindeAkkoord ? (
+          <div className="wb-btn-row" style={{ marginTop: 0 }}>
+            <span className="wb-status" style={{ color: '#2a9d6a' }}>✓ Eindstand bevestigd{eindeNaam ? ` — ${eindeNaam}` : ''}</span>
+            <button type="button" onClick={() => saveEindeAkkoord(false)} disabled={busy} className="wb-btn">
+              Bevestiging intrekken
+            </button>
+          </div>
+        ) : !matchFinished ? (
+          <p className="wb-sub" style={{ color: '#e0a23d' }}>
+            De eindstand kan pas bevestigd worden zodra de wedstrijd is afgelopen.
+          </p>
+        ) : isFederation ? (
+          <button type="button" onClick={() => saveEindeAkkoord(true)} disabled={busy} className="wb-btn wb-btn-primary">
+            ✓ Eindstand bevestigen
+          </button>
+        ) : (
+          <>
+            {/* De scheidsrechter toont zijn persoonlijke QR; scan ze hier om de eindstand te bekrachtigen. */}
+            <QrScanner onResult={(qr) => saveEindeAkkoord(true, { qr })} />
+            <p className="wb-sub" style={{ margin: '12px 0 4px' }}>
+              Geen QR? Voer een code in (persoonlijke code of vrijgavecode) als backup:
+            </p>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <input
+                className="wb-input"
+                placeholder="Code"
+                value={eindeCode}
+                onChange={(e) => setEindeCode(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                onClick={() => saveEindeAkkoord(true)}
+                disabled={busy || !eindeCode.trim()}
+                className="wb-btn wb-btn-primary"
+              >
+                ✓ Bevestigen
+              </button>
+            </div>
+          </>
+        )}
+      </section>
+      )}
+
+      {toon('uitzondering') && (
+      <section className="wb-card" style={ffSaved !== 'geen' ? { borderColor: '#e0533d' } : undefined}>
+        <h2>Forfait</h2>
+        <p className="wb-sub">
+          Ploeg niet opgedaagd? Duid aan wie forfait gaf — de uitslag (30–0 of 0–30) wordt meteen
+          op de wedstrijd gezet.
+        </p>
+        <div className="wb-btn-row" style={{ marginTop: 0 }}>
+          {FORFAIT_OPTIES.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              className={`wb-btn ${ffUitslag === o.value ? 'wb-btn-primary' : ''}`}
+              style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+              onClick={() => setFfUitslag(o.value)}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        {ffSaved !== 'geen' && (
+          <p className="wb-sub" style={{ color: '#e0533d', marginTop: 8 }}>
+            Forfait toegepast ({FORFAIT_OPTIES.find((o) => o.value === ffSaved)?.label}). De wedstrijd staat
+            als afgelopen met de forfait-uitslag.
+          </p>
+        )}
+        <button
+          onClick={saveForfait}
+          disabled={busy || ffUitslag === ffSaved}
+          className="wb-btn wb-btn-primary"
+          style={{ marginTop: 10 }}
+        >
+          {ffUitslag === 'geen' && ffSaved !== 'geen' ? 'Forfait verwijderen' : 'Forfait toepassen'}
+        </button>
+      </section>
+      )}
+
+      {toon('voor') && (
+      <section className="wb-card" id="officials">
+        <h2>Officials</h2>
+        {officialsHint && <p className="wb-sub">{officialsHint}</p>}
+        {/* Eén oogopslag: alles geldig → groen. Wat schort, staat bij het veld zelf. */}
+        {validation.ok && <div className="ops-ready ok">✓ Officials volledig en geldig</div>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {OFFICIAL_FUNCTIE_KEYS.map((key) => {
+            const st = officialFieldStatus(key, officials)
+            return (
+              <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }}>
+                <span className="off-lbl">
+                  {OFFICIAL_LABELS[key]}
+                  {st === 'ok' ? (
+                    <span className="off-st ok">✓ OK</span>
+                  ) : st === 'onvolledig' ? (
+                    <span className="off-st bad">naam én voornaam nodig</span>
+                  ) : st === 'conflict' ? (
+                    <span className="off-st bad">mag geen grensrechter zijn (Art. 25)</span>
+                  ) : required.has(key) ? (
+                    <span className="off-st bad">*verplicht</span>
+                  ) : null}
+                </span>
+                <input
+                  className={`wb-input${st === 'ok' ? ' field-ok' : st === 'onvolledig' || st === 'conflict' ? ' field-bad' : ''}`}
+                  placeholder="Voornaam + naam"
+                  value={officials[key] ?? ''}
+                  onChange={(e) => setOfficials((o) => ({ ...o, [key]: e.target.value }))}
+                />
+              </label>
+            )
+          })}
+        </div>
+        <button onClick={saveOfficials} disabled={busy} className="wb-btn wb-btn-primary" style={{ marginTop: 14 }}>
+          Officials bewaren
+        </button>
+      </section>
+      )}
+
+      {toon('voor') && (
+      <section className={`wb-card${keuringBevestigd ? ' ops-locked' : ''}`}>
+        <h2>Materiële keuring</h2>
+        {/* Bevestigd = vergrendeld slot, voor iedereen duidelijk dat de keuring in orde is. */}
+        {keuringBevestigd ? (
+          <div className="ops-ready locked">
+            🔒 Keuring bevestigd en vergrendeld{keuringAllesOk ? ' · alles OK' : ` · ${keuringNietOk} × NIET OK`}
+          </div>
+        ) : keuringAllesOk ? (
+          <div className="ops-ready ok">✓ Alles OK — bevestig om te vergrendelen.</div>
+        ) : (
+          <div className="ops-ready todo">{keuringNietOk} {keuringNietOk === 1 ? 'punt' : 'punten'} NIET OK.</div>
+        )}
+        <div>
+          {KEURING_ITEMS.map((item) => (
+            <div key={item.name} className="wb-check">
+              <span>{item.label}</span>
+              <select
+                className="wb-select"
+                aria-label={item.label}
+                value={keuring[item.name] ?? 'ok'}
+                disabled={keuringBevestigd}
+                onChange={(e) => setKeuring((k) => ({ ...k, [item.name]: e.target.value }))}
+              >
+                {KEURING_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+        {keuringBevestigd ? (
+          <button onClick={() => saveKeuring(false)} disabled={busy} className="wb-btn" style={{ marginTop: 14 }}>
+            🔓 Keuring ontgrendelen
+          </button>
+        ) : (
+          <div className="wb-btn-row" style={{ marginTop: 14 }}>
+            <button onClick={() => saveKeuring()} disabled={busy} className="wb-btn wb-btn-primary">
+              Keuring bewaren
+            </button>
+            <button onClick={() => saveKeuring(true)} disabled={busy} className="wb-btn wb-btn-confirm">
+              🔒 Bevestigen &amp; vergrendelen
+            </button>
+          </div>
+        )}
+      </section>
+      )}
+
+      {toon('na') && (
+      <section className="wb-card">
+        <h2>Vergoeding</h2>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }}>
+          Afgelegde km (kwitantie, {kmTariefTekst}/km)
+          <input
+            className="wb-input"
+            type="number"
+            min={0}
+            value={verg.refereeKm}
+            onChange={(e) => setVerg((v) => ({ ...v, refereeKm: e.target.value === '' ? '' : Number(e.target.value) }))}
+          />
+        </label>
+
+        <p className="wb-sub" style={{ marginTop: 12, marginBottom: 4 }}>Forfait-onkostenblad (enkel bij FF):</p>
+        <label className="wb-check"><span>Onkostenblad van toepassing</span>
+          <input type="checkbox" checked={verg.vanToepassing} onChange={(e) => setVerg((v) => ({ ...v, vanToepassing: e.target.checked }))} />
+        </label>
+        <label className="wb-check"><span>Forfait gemeld — thuis</span>
+          <input type="checkbox" checked={verg.gemeldThuis} onChange={(e) => setVerg((v) => ({ ...v, gemeldThuis: e.target.checked }))} />
+        </label>
+        <label className="wb-check"><span>Forfait gemeld — bezoekers</span>
+          <input type="checkbox" checked={verg.gemeldUit} onChange={(e) => setVerg((v) => ({ ...v, gemeldUit: e.target.checked }))} />
+        </label>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)', flex: 1 }}>
+            Auto&apos;s (max 2)
+            <input className="wb-input" type="number" min={0} max={2} value={verg.aantalAutos}
+              onChange={(e) => setVerg((v) => ({ ...v, aantalAutos: e.target.value === '' ? '' : Number(e.target.value) }))} />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)', flex: 1 }}>
+            Verpl. km ({kmTariefTekst}/km)
+            <input className="wb-input" type="number" min={0} value={verg.km}
+              onChange={(e) => setVerg((v) => ({ ...v, km: e.target.value === '' ? '' : Number(e.target.value) }))} />
+          </label>
+        </div>
+
+        <button onClick={saveVergoeding} disabled={busy} className="wb-btn wb-btn-primary" style={{ marginTop: 14 }}>
+          Bewaren
+        </button>
+        <div className="wb-btn-row" style={{ marginTop: 10 }}>
+          <a className="wb-btn" href={`/api/match/${matchId}/forfait`} target="_blank" rel="noreferrer" style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
+            ⬇ Forfait-onkostenblad (PDF)
+          </a>
+          {assignedRefereeId != null && (
+            <a className="wb-btn" href={`/api/scheidsrechter/${assignedRefereeId}/kwitantie`} target="_blank" rel="noreferrer" style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
+              ⬇ Kwitantie scheidsrechter (PDF)
+            </a>
+          )}
+        </div>
+      </section>
+      )}
+
+      {toon('voor') && (
       <section className="wb-card" style={{ gridColumn: '1 / -1', borderColor: startAkkoord ? '#2a9d6a' : undefined }}>
         <h2>Wedstrijdstart vrijgeven</h2>
         <p className="wb-sub">
@@ -338,240 +589,8 @@ export function RefereePanel({
           </>
         )}
       </section>
-
-      <section className="wb-card" style={{ gridColumn: '1 / -1', borderColor: eindeAkkoord ? '#2a9d6a' : undefined }}>
-        <h2>Eindstand bevestigen</h2>
-        <p className="wb-sub">
-          De scheidsrechter bekrachtigt de officiële eindstand. Pas hiermee is de uitslag
-          scheidsrechterlijk goedgekeurd.
-        </p>
-        <p style={{ fontSize: '1.25rem', fontWeight: 800, margin: '2px 0 12px', color: 'var(--txt)' }}>
-          {homeTeam} <span style={{ color: 'var(--accent)' }}>{homeScore} – {awayScore}</span> {awayTeam}
-        </p>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)', marginBottom: 10 }}>
-          Naam scheidsrechter
-          <input
-            className="wb-input"
-            placeholder="Voor- en achternaam"
-            value={eindeNaam}
-            onChange={(e) => setEindeNaam(e.target.value)}
-          />
-        </label>
-
-        {eindeAkkoord ? (
-          <div className="wb-btn-row" style={{ marginTop: 0 }}>
-            <span className="wb-status" style={{ color: '#2a9d6a' }}>✓ Eindstand bevestigd{eindeNaam ? ` — ${eindeNaam}` : ''}</span>
-            <button type="button" onClick={() => saveEindeAkkoord(false)} disabled={busy} className="wb-btn">
-              Bevestiging intrekken
-            </button>
-          </div>
-        ) : !matchFinished ? (
-          <p className="wb-sub" style={{ color: '#e0a23d' }}>
-            De eindstand kan pas bevestigd worden zodra de wedstrijd is afgelopen.
-          </p>
-        ) : isFederation ? (
-          <button type="button" onClick={() => saveEindeAkkoord(true)} disabled={busy} className="wb-btn wb-btn-primary">
-            ✓ Eindstand bevestigen
-          </button>
-        ) : (
-          <>
-            {/* De scheidsrechter toont zijn persoonlijke QR; scan ze hier om de eindstand te bekrachtigen. */}
-            <QrScanner onResult={(qr) => saveEindeAkkoord(true, { qr })} />
-            <p className="wb-sub" style={{ margin: '12px 0 4px' }}>
-              Geen QR? Voer een code in (persoonlijke code of vrijgavecode) als backup:
-            </p>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-              <input
-                className="wb-input"
-                placeholder="Code"
-                value={eindeCode}
-                onChange={(e) => setEindeCode(e.target.value)}
-                style={{ flex: 1 }}
-              />
-              <button
-                type="button"
-                onClick={() => saveEindeAkkoord(true)}
-                disabled={busy || !eindeCode.trim()}
-                className="wb-btn wb-btn-primary"
-              >
-                ✓ Bevestigen
-              </button>
-            </div>
-          </>
-        )}
-      </section>
-
-      <section className="wb-card" style={ffSaved !== 'geen' ? { borderColor: '#e0533d' } : undefined}>
-        <h2>Forfait</h2>
-        <p className="wb-sub">
-          Ploeg niet opgedaagd? Duid aan wie forfait gaf — de uitslag (30–0 of 0–30) wordt meteen
-          op de wedstrijd gezet.
-        </p>
-        <div className="wb-btn-row" style={{ marginTop: 0 }}>
-          {FORFAIT_OPTIES.map((o) => (
-            <button
-              key={o.value}
-              type="button"
-              className={`wb-btn ${ffUitslag === o.value ? 'wb-btn-primary' : ''}`}
-              style={{ padding: '6px 12px', fontSize: '0.82rem' }}
-              onClick={() => setFfUitslag(o.value)}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-        {ffSaved !== 'geen' && (
-          <p className="wb-sub" style={{ color: '#e0533d', marginTop: 8 }}>
-            Forfait toegepast ({FORFAIT_OPTIES.find((o) => o.value === ffSaved)?.label}). De wedstrijd staat
-            als afgelopen met de forfait-uitslag.
-          </p>
-        )}
-        <button
-          onClick={saveForfait}
-          disabled={busy || ffUitslag === ffSaved}
-          className="wb-btn wb-btn-primary"
-          style={{ marginTop: 10 }}
-        >
-          {ffUitslag === 'geen' && ffSaved !== 'geen' ? 'Forfait verwijderen' : 'Forfait toepassen'}
-        </button>
-      </section>
-
-      <section className="wb-card" id="officials">
-        <h2>Officials</h2>
-        {officialsHint && <p className="wb-sub">{officialsHint}</p>}
-        {/* Eén oogopslag: alles geldig → groen. Wat schort, staat bij het veld zelf. */}
-        {validation.ok && <div className="ops-ready ok">✓ Officials volledig en geldig</div>}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {OFFICIAL_FUNCTIE_KEYS.map((key) => {
-            const st = officialFieldStatus(key, officials)
-            return (
-              <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }}>
-                <span className="off-lbl">
-                  {OFFICIAL_LABELS[key]}
-                  {st === 'ok' ? (
-                    <span className="off-st ok">✓ OK</span>
-                  ) : st === 'onvolledig' ? (
-                    <span className="off-st bad">naam én voornaam nodig</span>
-                  ) : st === 'conflict' ? (
-                    <span className="off-st bad">mag geen grensrechter zijn (Art. 25)</span>
-                  ) : required.has(key) ? (
-                    <span className="off-st bad">*verplicht</span>
-                  ) : null}
-                </span>
-                <input
-                  className={`wb-input${st === 'ok' ? ' field-ok' : st === 'onvolledig' || st === 'conflict' ? ' field-bad' : ''}`}
-                  placeholder="Voornaam + naam"
-                  value={officials[key] ?? ''}
-                  onChange={(e) => setOfficials((o) => ({ ...o, [key]: e.target.value }))}
-                />
-              </label>
-            )
-          })}
-        </div>
-        <button onClick={saveOfficials} disabled={busy} className="wb-btn wb-btn-primary" style={{ marginTop: 14 }}>
-          Officials bewaren
-        </button>
-      </section>
-
-      <section className={`wb-card${keuringBevestigd ? ' ops-locked' : ''}`}>
-        <h2>Materiële keuring</h2>
-        {/* Bevestigd = vergrendeld slot, voor iedereen duidelijk dat de keuring in orde is. */}
-        {keuringBevestigd ? (
-          <div className="ops-ready locked">
-            🔒 Keuring bevestigd en vergrendeld{keuringAllesOk ? ' · alles OK' : ` · ${keuringNietOk} × NIET OK`}
-          </div>
-        ) : keuringAllesOk ? (
-          <div className="ops-ready ok">✓ Alles OK — bevestig om te vergrendelen.</div>
-        ) : (
-          <div className="ops-ready todo">{keuringNietOk} {keuringNietOk === 1 ? 'punt' : 'punten'} NIET OK.</div>
-        )}
-        <div>
-          {KEURING_ITEMS.map((item) => (
-            <div key={item.name} className="wb-check">
-              <span>{item.label}</span>
-              <select
-                className="wb-select"
-                aria-label={item.label}
-                value={keuring[item.name] ?? 'ok'}
-                disabled={keuringBevestigd}
-                onChange={(e) => setKeuring((k) => ({ ...k, [item.name]: e.target.value }))}
-              >
-                {KEURING_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
-        </div>
-        {keuringBevestigd ? (
-          <button onClick={() => saveKeuring(false)} disabled={busy} className="wb-btn" style={{ marginTop: 14 }}>
-            🔓 Keuring ontgrendelen
-          </button>
-        ) : (
-          <div className="wb-btn-row" style={{ marginTop: 14 }}>
-            <button onClick={() => saveKeuring()} disabled={busy} className="wb-btn wb-btn-primary">
-              Keuring bewaren
-            </button>
-            <button onClick={() => saveKeuring(true)} disabled={busy} className="wb-btn wb-btn-confirm">
-              🔒 Bevestigen &amp; vergrendelen
-            </button>
-          </div>
-        )}
-      </section>
-
-      <section className="wb-card">
-        <h2>Vergoeding</h2>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }}>
-          Afgelegde km (kwitantie, {kmTariefTekst}/km)
-          <input
-            className="wb-input"
-            type="number"
-            min={0}
-            value={verg.refereeKm}
-            onChange={(e) => setVerg((v) => ({ ...v, refereeKm: e.target.value === '' ? '' : Number(e.target.value) }))}
-          />
-        </label>
-
-        <p className="wb-sub" style={{ marginTop: 12, marginBottom: 4 }}>Forfait-onkostenblad (enkel bij FF):</p>
-        <label className="wb-check"><span>Onkostenblad van toepassing</span>
-          <input type="checkbox" checked={verg.vanToepassing} onChange={(e) => setVerg((v) => ({ ...v, vanToepassing: e.target.checked }))} />
-        </label>
-        <label className="wb-check"><span>Forfait gemeld — thuis</span>
-          <input type="checkbox" checked={verg.gemeldThuis} onChange={(e) => setVerg((v) => ({ ...v, gemeldThuis: e.target.checked }))} />
-        </label>
-        <label className="wb-check"><span>Forfait gemeld — bezoekers</span>
-          <input type="checkbox" checked={verg.gemeldUit} onChange={(e) => setVerg((v) => ({ ...v, gemeldUit: e.target.checked }))} />
-        </label>
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)', flex: 1 }}>
-            Auto&apos;s (max 2)
-            <input className="wb-input" type="number" min={0} max={2} value={verg.aantalAutos}
-              onChange={(e) => setVerg((v) => ({ ...v, aantalAutos: e.target.value === '' ? '' : Number(e.target.value) }))} />
-          </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)', flex: 1 }}>
-            Verpl. km ({kmTariefTekst}/km)
-            <input className="wb-input" type="number" min={0} value={verg.km}
-              onChange={(e) => setVerg((v) => ({ ...v, km: e.target.value === '' ? '' : Number(e.target.value) }))} />
-          </label>
-        </div>
-
-        <button onClick={saveVergoeding} disabled={busy} className="wb-btn wb-btn-primary" style={{ marginTop: 14 }}>
-          Bewaren
-        </button>
-        <div className="wb-btn-row" style={{ marginTop: 10 }}>
-          <a className="wb-btn" href={`/api/match/${matchId}/forfait`} target="_blank" rel="noreferrer" style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
-            ⬇ Forfait-onkostenblad (PDF)
-          </a>
-          {assignedRefereeId != null && (
-            <a className="wb-btn" href={`/api/scheidsrechter/${assignedRefereeId}/kwitantie`} target="_blank" rel="noreferrer" style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
-              ⬇ Kwitantie scheidsrechter (PDF)
-            </a>
-          )}
-        </div>
-      </section>
-
+      )}
+      {toon('voor', 'tijdens') && (
       <section className="wb-card">
         <h2>Wedstrijd starten</h2>
         <p className="wb-sub">
@@ -623,6 +642,7 @@ export function RefereePanel({
         )}
         {msg && <p className="wb-msg">{msg}</p>}
       </section>
+      )}
     </div>
   )
 }

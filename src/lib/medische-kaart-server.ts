@@ -81,7 +81,7 @@ export async function kaartGegevens(payload: Payload, playerIds: number[], basis
 }
 
 export type OpgeladenKaart =
-  | { bestand: string; ok: true; playerId: number; naam: string; viaQr: boolean; status: AttestStatus; reden: string | null; meldingen: string[] }
+  | { bestand: string; ok: true; playerId: number | null; naam: string; viaQr: boolean; status: AttestStatus; reden: string | null; meldingen: string[] }
   | { bestand: string; ok: false; fout: string }
 
 /**
@@ -116,6 +116,13 @@ export async function kaartenOpladen(
       continue
     }
     const playerId = scan?.playerId ?? (bestanden.length === 1 ? (o.voorLid ?? null) : null)
+    // De federatie laadt ook kaarten zonder (leesbare) QR op, of blanco kaarten: die komen ter nakijken in
+    // /beheer/attesten, waar ze aan het juiste lid toegekend worden.
+    if (playerId == null && isFederationLevel(user)) {
+      const r = await attestOpslaan(payload, { playerId: null, bestand: b, userId: Number(user.id), via: 'federatie', scan, keuringOp: datum, opgegeven: { naam: b.name.replace(/\.[a-z0-9]+$/i, '').slice(0, 100) || 'Opgeladen door de federatie', geboortedatum: null, club: null, email: null } })
+      uit.push({ bestand: b.name, ok: true, playerId: null, naam: '', viaQr: false, status: r.status, reden: 'Lid nog toe te kennen in de lijst hieronder.', meldingen: [] })
+      continue
+    }
     if (playerId == null) {
       uit.push({
         bestand: b.name,

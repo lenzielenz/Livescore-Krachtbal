@@ -670,3 +670,10 @@
 .af-fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 8px; }
 .af-fotos img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); display: block; }
 .wb-link { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font: inherit; text-decoration: underline; }
+
+/* Scheidsrechter: wat nog moet in deze fase (scheidsrechter/[matchId]/page.tsx). */
+.sr-volgende { margin: 0 0 16px; padding: 10px 14px; border-radius: 12px; border: 1px solid color-mix(in srgb, #f0b04a 50%, var(--line)); background: color-mix(in srgb, #f0b04a 10%, var(--panel)); font-size: 0.92rem; }
+.sr-volgende.sr-klaar { border-color: color-mix(in srgb, #2ec27e 50%, var(--line)); background: color-mix(in srgb, #2ec27e 10%, var(--panel)); color: #6fdc96; font-weight: 700; }
+.sr-uitzondering { margin: 16px 0; border: 1px dashed var(--line); border-radius: 12px; padding: 10px 14px; }
+.sr-uitzondering > summary { cursor: pointer; font-weight: 700; color: var(--dim); }
+.sr-uitzondering[open] > summary { margin-bottom: 12px; }
