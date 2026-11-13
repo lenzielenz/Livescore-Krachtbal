@@ -32,8 +32,21 @@ import { aanleidingenVanBlad, rapportenVanWedstrijd } from '@/lib/sr-rapport'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ScheidsrechterPage({ params }: { params: Promise<{ matchId: string }> }) {
+// De wedstrijdpagina van de scheidsrechter, in drie tabbladen volgens de wedstrijddag (in plaats van alles onder
+// elkaar): VÓÓR (spelers controleren, materiële keuring, officials, vrijgeven, afgelasten, aftrap, forfait),
+// TIJDENS (naar het aantekenen, voorbehoud en uitsluiting, blessure, noodblad) en NA (wie speelde, eindstand,
+// scheidsrechtersrapport, vergoeding). Het tabblad dat bij de stand van de wedstrijd hoort, opent vanzelf; bovenaan
+// staat telkens wat nog moet.
+type Fase = 'voor' | 'tijdens' | 'na'
+const FASEN: { k: Fase; label: string }[] = [
+  { k: 'voor', label: 'Vóór de wedstrijd' },
+  { k: 'tijdens', label: 'Tijdens' },
+  { k: 'na', label: 'Na de wedstrijd' },
+]
+
+export default async function ScheidsrechterPage({ params, searchParams }: { params: Promise<{ matchId: string }>; searchParams: Promise<{ fase?: string }> }) {
   const { matchId } = await params
+  const faseVraag = (await searchParams).fase
   const payload = await getPayloadClient()
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
   // Analysewedstrijden horen niet in de competitie-wedstrijdbladflow (privé, eigen analyse-database).
@@ -127,6 +140,88 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
 
   const releaseAt = new Date(new Date(match.date as string).getTime() - releaseMinutes * 60_000)
 
+  // Welk tabblad opent: wat de scheidsrechter vroeg, anders volgens de stand van de wedstrijd.
+  const status = String(liveState?.match.status ?? match.status ?? 'scheduled')
+  const fase: Fase = faseVraag === 'voor' || faseVraag === 'tijdens' || faseVraag === 'na' ? faseVraag : status === 'finished' ? 'na' : status === 'live' ? 'tijdens' : 'voor'
+  const blad = (sheet ?? {}) as { keuringBevestigd?: boolean; wedstrijdstart?: { akkoord?: boolean }; wedstrijdeinde?: { akkoord?: boolean }; scheidsrechter?: { akkoord?: boolean }; status?: string }
+  const nietGecontroleerd = [...controle.home, ...controle.away].filter((r) => !r.gecontroleerd || r.blokkade).length
+  // Per fase: wat moet er nog (een bolletje met een getal op het tabblad) — of klaar (✓).
+  const teDoen: Record<Fase, string[]> = {
+    voor: [
+      ...(nietGecontroleerd ? [`${nietGecontroleerd} speler${nietGecontroleerd === 1 ? '' : 's'} controleren`] : []),
+      ...(blad.keuringBevestigd ? [] : ['materiële keuring bevestigen']),
+      ...(blad.wedstrijdstart?.akkoord ? [] : ['wedstrijd vrijgeven']),
+    ],
+    tijdens: status === 'live' ? ['de wedstrijd loopt: aantekenen'] : [],
+    na:
+      status === 'finished'
+        ? [...(blad.wedstrijdeinde?.akkoord ? [] : ['eindstand bevestigen']), ...(blad.status === 'ingediend' ? [] : ['aftekenen en indienen'])]
+        : [],
+  }
+  const klaar: Record<Fase, boolean> = {
+    voor: teDoen.voor.length === 0,
+    tijdens: status === 'finished',
+    na: blad.status === 'ingediend',
+  }
+
+  const kmTekst = formatKmTarief(await kmTarief(payload))
+  const aantalOnregelmatig = ((sheet?.voorbehoud ?? []) as unknown[]).length + ((sheet?.uitsluitingen ?? []) as unknown[]).length
+  const paneel = (f: Fase | 'uitzondering') => (
+        <RefereePanel
+          matchId={matchId}
+          reeks={(match.reeks as Reeks) ?? null}
+          assignedRefereeId={
+            typeof sheet?.assignedReferee === 'object'
+              ? (sheet?.assignedReferee?.id ?? null)
+              : ((sheet?.assignedReferee as number | null) ?? null)
+          }
+          initialStatus={(sheet?.status as string) ?? 'concept'}
+          initialKeuring={(sheet?.keuring as Record<string, string>) ?? {}}
+          initialKeuringBevestigd={Boolean(sheet?.keuringBevestigd)}
+          initialOfficials={(sheet?.officials as Record<string, string>) ?? {}}
+          initialVergoeding={{
+            refereeKm: (sheet?.refereeKm as number) ?? '',
+            vanToepassing: Boolean((sheet?.forfait as { vanToepassing?: boolean } | undefined)?.vanToepassing),
+            gemeldThuis: Boolean((sheet?.forfait as { gemeldThuis?: boolean } | undefined)?.gemeldThuis),
+            gemeldUit: Boolean((sheet?.forfait as { gemeldUit?: boolean } | undefined)?.gemeldUit),
+            aantalAutos: (sheet?.forfait as { aantalAutos?: number } | undefined)?.aantalAutos ?? '',
+            km: (sheet?.forfait as { km?: number } | undefined)?.km ?? '',
+          }}
+          initialForfaitUitslag={(sheet?.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen'}
+          initialStartAkkoord={Boolean((sheet?.wedstrijdstart as { akkoord?: boolean } | undefined)?.akkoord)}
+          initialStartNaam={(sheet?.wedstrijdstart as { naam?: string } | undefined)?.naam ?? ''}
+          initialEindeAkkoord={Boolean((sheet?.wedstrijdeinde as { akkoord?: boolean } | undefined)?.akkoord)}
+          initialEindeNaam={(sheet?.wedstrijdeinde as { naam?: string } | undefined)?.naam ?? ''}
+          matchFinished={liveState?.match.status === 'finished'}
+          homeScore={liveState?.score.home ?? 0}
+          awayScore={liveState?.score.away ?? 0}
+          homeTeam={liveState?.teams.home.name ?? 'Thuis'}
+          awayTeam={liveState?.teams.away.name ?? 'Uit'}
+          spelersNietInOrde={[...controle.home, ...controle.away].filter((r) => !r.gecontroleerd || r.blokkade).length}
+          lineupReady={{
+            homeOk: countLineup(sheet?.homeLineup) >= SELECTIE_MIN,
+            awayOk: countLineup(sheet?.awayLineup) >= SELECTIE_MIN,
+          }}
+          officialsHint={match.reeks ? vereisteOfficialsTekst(match.reeks as Reeks) : null}
+          isFederation={isFederation}
+          fase={f}
+          kmTariefTekst={kmTekst}
+          vrijgaveCode={isFederation ? ((sheet?.vrijgaveCode as string | undefined) ?? null) : null}
+          backupRefereeName={backupRefereeName}
+          andereTafel={
+            // Tekent een clubtafel deze lopende wedstrijd al aan? Dan geen knop "Naar aantekenen"
+            // voor de scheidsrechter (er kan maar één aantekenaar zijn, zie claimHeld); de
+            // federatie blijft er als noodrem wel door.
+            liveState?.trust.claimActive &&
+            liveState.trust.scorerId != null &&
+            Number(liveState.trust.scorerId) !== Number((user as { id?: number } | null)?.id) &&
+            !isFederation
+              ? (liveState.trust.scorerName ?? 'Iemand anders')
+              : null
+          }
+        />
+  )
+
   return (
     <>
       <SiteHeader active="scheidsrechters" />
@@ -135,6 +230,25 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
         Scheidsrechter <span className="brand">·</span> {String(match.title ?? '')}
       </h1>
       <MatchDayNav matchId={matchId} current="scheidsrechter" />
+
+      <nav className="ctabs" aria-label="Fasen van de wedstrijd">
+        {FASEN.map((f) => (
+          <Link key={f.k} href={`/scheidsrechter/${matchId}?fase=${f.k}`} className={`ctab${f.k === fase ? ' actief' : ''}`} aria-current={f.k === fase ? 'page' : undefined}>
+            <span className="ctab-icoon" aria-hidden>
+              {klaar[f.k] ? '✓' : FASEN.indexOf(f) + 1}
+            </span>
+            <span className="ctab-tekst">{f.label}</span>
+            {!klaar[f.k] && teDoen[f.k].length > 0 ? <span className="ctab-teller">{teDoen[f.k].length}</span> : null}
+          </Link>
+        ))}
+      </nav>
+      {teDoen[fase].length > 0 ? (
+        <p className="sr-volgende">
+          <strong>Nog te doen:</strong> {teDoen[fase].join(' · ')}
+        </p>
+      ) : (
+        <p className="sr-volgende sr-klaar">✓ {fase === 'voor' ? 'Alles klaar vóór de wedstrijd.' : fase === 'tijdens' ? (status === 'finished' ? 'De wedstrijd is gespeeld.' : 'De wedstrijd is nog niet begonnen.') : 'Het blad is ingediend.'}</p>
+      )}
 
       {/* Afgelast (terrein, weer)? Dan ligt de wedstrijd stil tot de federatie herplant. */}
       {afgelasting ? (
@@ -159,32 +273,10 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
             </div>
           )}
         </section>
-      ) : (
-        match.status === 'scheduled' &&
-        magAfgelastenHier && (
-          <section className="wb-card" style={{ marginBottom: 16 }}>
-            <h2>Terrein of weer niet in orde?</h2>
-            <p className="wb-sub">Gelast af met een paar foto&apos;s van de omstandigheden. De federatie plant een nieuwe datum.</p>
-            <Afgelasten matchId={matchId} />
-          </section>
-        )
-      )}
+      ) : null}
 
-      {aftrapRecht?.wijzigen && aftrapMatch?.date && (
-        <AftrapVerschuiven
-          matchId={Number(matchId)}
-          aftrap={String(aftrapMatch.date)}
-          magMeeschuiven={aftrapRecht.meeschuiven}
-          volgende={aftrapVolgende.map((v) => ({
-            id: v.id,
-            titel: `${(v.homeTeam as { name?: string } | null)?.name ?? '?'} – ${(v.awayTeam as { name?: string } | null)?.name ?? '?'}`,
-            aftrap: String(v.date),
-          }))}
-          geschiedenis={aftrapLog}
-        />
-      )}
 
-      {!released && !magControleren ? (
+      {fase !== 'voor' ? null : !released && !magControleren ? (
         <p className="wb-intro">
           De opstellingen worden zichtbaar vanaf{' '}
           {formatDateTimeBE(releaseAt, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}{' '}
@@ -197,60 +289,40 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
         </div>
       )}
 
-      <RefereePanel
-        matchId={matchId}
-        reeks={(match.reeks as Reeks) ?? null}
-        assignedRefereeId={
-          typeof sheet?.assignedReferee === 'object'
-            ? (sheet?.assignedReferee?.id ?? null)
-            : ((sheet?.assignedReferee as number | null) ?? null)
-        }
-        initialStatus={(sheet?.status as string) ?? 'concept'}
-        initialKeuring={(sheet?.keuring as Record<string, string>) ?? {}}
-        initialKeuringBevestigd={Boolean(sheet?.keuringBevestigd)}
-        initialOfficials={(sheet?.officials as Record<string, string>) ?? {}}
-        initialVergoeding={{
-          refereeKm: (sheet?.refereeKm as number) ?? '',
-          vanToepassing: Boolean((sheet?.forfait as { vanToepassing?: boolean } | undefined)?.vanToepassing),
-          gemeldThuis: Boolean((sheet?.forfait as { gemeldThuis?: boolean } | undefined)?.gemeldThuis),
-          gemeldUit: Boolean((sheet?.forfait as { gemeldUit?: boolean } | undefined)?.gemeldUit),
-          aantalAutos: (sheet?.forfait as { aantalAutos?: number } | undefined)?.aantalAutos ?? '',
-          km: (sheet?.forfait as { km?: number } | undefined)?.km ?? '',
-        }}
-        initialForfaitUitslag={(sheet?.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen'}
-        initialStartAkkoord={Boolean((sheet?.wedstrijdstart as { akkoord?: boolean } | undefined)?.akkoord)}
-        initialStartNaam={(sheet?.wedstrijdstart as { naam?: string } | undefined)?.naam ?? ''}
-        initialEindeAkkoord={Boolean((sheet?.wedstrijdeinde as { akkoord?: boolean } | undefined)?.akkoord)}
-        initialEindeNaam={(sheet?.wedstrijdeinde as { naam?: string } | undefined)?.naam ?? ''}
-        matchFinished={liveState?.match.status === 'finished'}
-        homeScore={liveState?.score.home ?? 0}
-        awayScore={liveState?.score.away ?? 0}
-        homeTeam={liveState?.teams.home.name ?? 'Thuis'}
-        awayTeam={liveState?.teams.away.name ?? 'Uit'}
-        spelersNietInOrde={[...controle.home, ...controle.away].filter((r) => !r.gecontroleerd || r.blokkade).length}
-        lineupReady={{
-          homeOk: countLineup(sheet?.homeLineup) >= SELECTIE_MIN,
-          awayOk: countLineup(sheet?.awayLineup) >= SELECTIE_MIN,
-        }}
-        officialsHint={match.reeks ? vereisteOfficialsTekst(match.reeks as Reeks) : null}
-        isFederation={isFederation}
-        kmTariefTekst={formatKmTarief(await kmTarief(payload))}
-        vrijgaveCode={isFederation ? ((sheet?.vrijgaveCode as string | undefined) ?? null) : null}
-        backupRefereeName={backupRefereeName}
-        andereTafel={
-          // Tekent een clubtafel deze lopende wedstrijd al aan? Dan geen knop "Naar aantekenen"
-          // voor de scheidsrechter (er kan maar één aantekenaar zijn, zie claimHeld); de
-          // federatie blijft er als noodrem wel door.
-          liveState?.trust.claimActive &&
-          liveState.trust.scorerId != null &&
-          Number(liveState.trust.scorerId) !== Number((user as { id?: number } | null)?.id) &&
-          !isFederation
-            ? (liveState.trust.scorerName ?? 'Iemand anders')
-            : null
-        }
-      />
+      {paneel(fase)}
 
-      {magControleren && (
+      {fase === 'voor' && !afgelasting && match.status === 'scheduled' && (
+        <details className="sr-uitzondering">
+          <summary>Loopt er iets anders? Afgelasten · aftrap verschuiven · forfait</summary>
+          {magAfgelastenHier && (
+            <section className="wb-card" style={{ marginBottom: 16 }}>
+              <h2>Terrein of weer niet in orde?</h2>
+              <p className="wb-sub">Gelast af met een paar foto&apos;s van de omstandigheden. De federatie plant een nieuwe datum.</p>
+              <Afgelasten matchId={matchId} />
+            </section>
+          )}
+          {aftrapRecht?.wijzigen && aftrapMatch?.date && (
+            <AftrapVerschuiven
+              matchId={Number(matchId)}
+              aftrap={String(aftrapMatch.date)}
+              magMeeschuiven={aftrapRecht.meeschuiven}
+              volgende={aftrapVolgende.map((v) => ({
+                id: v.id,
+                titel: `${(v.homeTeam as { name?: string } | null)?.name ?? '?'} – ${(v.awayTeam as { name?: string } | null)?.name ?? '?'}`,
+                aftrap: String(v.date),
+              }))}
+              geschiedenis={aftrapLog}
+            />
+          )}
+          {magControleren && (
+            paneel('uitzondering')
+          )}
+        </details>
+      )}
+
+      {fase === 'tijdens' && magControleren && (
+        <details className="sr-uitzondering" open={aantalOnregelmatig > 0}>
+          <summary>⚖️ Voorbehoud of uitsluiting{aantalOnregelmatig ? ` (${aantalOnregelmatig} genoteerd)` : ' noteren'}</summary>
         <VoorbehoudPaneel
           matchId={matchId}
           ploegen={{ thuis: liveState?.teams.home.name ?? 'Thuis', uit: liveState?.teams.away.name ?? 'Uit' }}
@@ -266,9 +338,10 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
           stand={liveState ? `${liveState.score.home}-${liveState.score.away}` : ''}
           rapportVolgtBegin={Boolean((sheet as { rapportVolgt?: boolean } | null)?.rapportVolgt)}
         />
+        </details>
       )}
 
-      {magControleren && (
+      {fase === 'na' && magControleren && (
         <RapportPaneel
           matchId={matchId}
           verplicht={sheet ? aanleidingenVanBlad(sheet as unknown as Parameters<typeof aanleidingenVanBlad>[0]) : []}
@@ -277,24 +350,28 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
         />
       )}
 
-      {liveState?.match.status === 'finished' && (isFederation || hasRole(user, 'scheidsrechter')) && (
+      {fase === 'na' && liveState?.match.status === 'finished' && (isFederation || hasRole(user, 'scheidsrechter')) && (
         <DeelnameBevestigen matchId={matchId} kanten={deelnameKanten} vergrendeld={sheet?.status === 'ingediend'} />
       )}
 
-      {liveState && liveState.match.status !== 'finished' && (
-        <p className="empty" style={{ marginTop: 16 }}>
-          Valt het aantekentoestel uit en kan niemand overnemen?{' '}
-          <a href={`/api/matchsheet/${matchId}/pdf?nood=1`} target="_blank" rel="noreferrer">
-            📝 Druk het noodblad af
-          </a>{' '}
-          — vooraf ingevuld met de stand en de spelers — en noteer verder op papier. De federatie geeft de eindstand nadien in.
-        </p>
+      {fase === 'tijdens' && liveState && liveState.match.status !== 'finished' && (
+        <details className="sr-uitzondering">
+          <summary>📝 Toestel uitgevallen? Noodblad</summary>
+          <p className="wb-sub">
+            Valt het aantekentoestel uit en kan niemand overnemen?{' '}
+            <a href={`/api/matchsheet/${matchId}/pdf?nood=1`} target="_blank" rel="noreferrer">
+              Druk het noodblad af
+            </a>{' '}
+            — vooraf ingevuld met de stand en de spelers — en noteer verder op papier. De federatie geeft de eindstand nadien in.
+          </p>
+        </details>
       )}
 
-      {blessureKantenLijst.length > 0 && (
-        <div style={{ marginTop: 16 }}>
+      {fase === 'tijdens' && blessureKantenLijst.length > 0 && (
+        <details className="sr-uitzondering">
+          <summary>🚑 Blessure doorgeven</summary>
           <BlessureMelden matchId={matchId} kanten={blessureKantenLijst} />
-        </div>
+        </details>
       )}
       </div>
     </>

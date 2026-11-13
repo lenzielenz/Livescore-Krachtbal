@@ -11,15 +11,20 @@ export function ClubDashboard({
   kerncijfers,
   teDoen,
   ploegen,
+  delen = ['kop', 'cijfers', 'taken', 'ploegen'],
 }: {
   club: { naam: string; logoUrl: string | null; logoFit: unknown }
   seizoen: string | null
   kerncijfers: Kerncijfer[]
   teDoen: TeDoen[]
   ploegen: PloegRij[]
+  /** Welke delen dit tabblad toont (Overzicht: kop, cijfers, taken; Leden: de ploegtabel). */
+  delen?: ('kop' | 'cijfers' | 'taken' | 'ploegen')[]
 }) {
+  const toon = (d: 'kop' | 'cijfers' | 'taken' | 'ploegen') => delen.includes(d)
   return (
     <section className="cdash" aria-label="Overzicht van je club">
+      {toon('kop') && (
       <header className="cdash-kop">
         <TeamLogo name={club.naam} logoUrl={club.logoUrl} logoFit={club.logoFit as never} size={52} />
         <div className="cdash-kop-tekst">
@@ -30,7 +35,9 @@ export function ClubDashboard({
           </span>
         </div>
       </header>
+      )}
 
+      {toon('cijfers') && (
       <div className="cdash-cijfers">
         {kerncijfers.map((k) => (
           <Link key={k.sleutel} href={k.href} className={`cdash-cijfer toon-${k.toon}`}>
@@ -39,7 +46,9 @@ export function ClubDashboard({
           </Link>
         ))}
       </div>
+      )}
 
+      {toon('taken') && (
       <div className="cdash-blok">
         <h3 className="cmenu-titel">Te doen</h3>
         {teDoen.length === 0 ? (
@@ -58,8 +67,9 @@ export function ClubDashboard({
           </ul>
         )}
       </div>
+      )}
 
-      {ploegen.length > 0 && (
+      {toon('ploegen') && ploegen.length > 0 && (
         <div className="cdash-blok">
           <div className="cdash-blok-kop">
             <h3 className="cmenu-titel">Ledenbestand per ploeg</h3>

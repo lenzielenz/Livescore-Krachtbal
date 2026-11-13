@@ -1,53 +1,46 @@
 import Link from 'next/link'
+import type { Payload } from 'payload'
 
-import { ProfileTools } from '@/components/ProfileTools'
 import { SiteHeader } from '@/components/SiteHeader'
 import { hasRole, isFederationLevel, userClubId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
+import { OPEN_STATUSSEN } from '@/lib/boetes'
 import { clinchStatus } from '@/lib/championship'
 import { magOpstellingVoor } from '@/lib/club-functies'
+import { clubOverzicht, type LidToon } from '@/lib/club-overzicht'
+import { dateStrBE, formatDateBE, shiftDateStr, zaterdagVan } from '@/lib/datetime'
+import { facturenLijst } from '@/lib/facturatie-server'
+import { getAuthUser } from '@/lib/auth-user'
+import { clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { sheetOpenForScoring } from '@/lib/matchsheet-workflow'
-import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
-import { getProfile } from '@/lib/profiles'
 import { buildReeksStandings } from '@/lib/reeks-standings'
 import { reeksNaam, REEKS_OPTIONS } from '@/lib/reeksen'
-import { isSupportersMode } from '@/lib/score-mode'
-import { claimHeld, sanitizeTrust } from '@/lib/score-trust'
-import { clubActies, primaireActie } from '@/lib/wedstrijddag-acties'
-import { ClaimButton } from './ClaimButton'
-import { MyTeamsPicker } from './MyTeamsPicker'
-import { ClubDashboard } from './ClubDashboard'
-import { ClubMenu } from './ClubMenu'
-import { InstagramWeekendCard } from './InstagramWeekendCard'
-import { formatDateBE } from '@/lib/datetime'
-import { OPEN_STATUSSEN } from '@/lib/boetes'
-import { clubOverzicht, type LidToon } from '@/lib/club-overzicht'
-import { clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { registratieIcoon } from '@/lib/registratie'
 import { emailVanaf } from '@/lib/registratie-server'
+import { isSupportersMode } from '@/lib/score-mode'
+import { claimHeld, sanitizeTrust } from '@/lib/score-trust'
+import { formatEuro } from '@/lib/vergoeding'
+import { clubActies, primaireActie } from '@/lib/wedstrijddag-acties'
+import { ClaimButton } from './ClaimButton'
+import { ClubDashboard } from './ClubDashboard'
+import { type ClubTab, ClubTabs, ClubTegels, zichtbareTabs } from './ClubMenu'
+import { InstagramWeekendCard } from './InstagramWeekendCard'
+import { MyTeamsPicker } from './MyTeamsPicker'
 
 export const dynamic = 'force-dynamic'
 
-const nameOf = (v: unknown): string => (v && typeof v === 'object' ? String((v as { name?: unknown }).name ?? '—') : '—')
+// "Mijn club" — in vijf vaste tabbladen (ClubMenu.tsx), in plaats van alles onder elkaar:
+//   Overzicht   wat te doen is + de wedstrijden van dit en volgend weekend (het startpunt)
+//   Wedstrijden alle komende wedstrijden, per speelweekend (de eerste twee open, de rest ingeklapt)
+//   Leden       ledenbestand per ploeg en alles rond registratie                    (clubstaf)
+//   Geld        wat er open staat: facturen, boetes, scheidsrechterskosten            (clubstaf)
+//   Meer        statistieken, schermen, pronostiek, referendum, inschrijving, Instagram
+// Elk tabblad laadt enkel wat het toont. Welke knoppen bij een wedstrijd horen, hangt van de aantekenmodus
+// af (wedstrijddag-acties.ts): in federatiemodus de opstelling, in supportersmodus meteen aantekenen.
 
-// Ploeg-groepering: 1NAH+1NAHB samen, 2NAH+2NAHB samen, alle jeugd samen, de rest apart.
-const HEREN_1 = new Set(['1NAH', '1NAHB'])
-const HEREN_2 = new Set(['2NAH', '2NAHB'])
-const JEUGD = new Set([
-  'U18J', 'U18M',
-  'U16J', 'U16M', 'U16MA', 'U16MB',
-  'U14J', 'U14JA', 'U14JB', 'U14M',
-  'U12', 'U12A', 'U12B',
-])
-const REEKS_ORDER = new Map<string, number>(REEKS_OPTIONS.map((o, i) => [o.value, i]))
-function groupOf(code: string): { key: string; label: string; order: number } {
-  if (HEREN_1.has(code)) return { key: '1nh', label: '1ste Nationale Heren', order: REEKS_ORDER.get('1NAH') ?? 0 }
-  if (HEREN_2.has(code)) return { key: '2nh', label: '2de Nationale Heren', order: REEKS_ORDER.get('2NAH') ?? 0 }
-  if (JEUGD.has(code)) return { key: 'jeugd', label: 'Jeugd', order: 100 }
-  return { key: code, label: reeksNaam(code), order: REEKS_ORDER.get(code) ?? 50 }
-}
+const nameOf = (v: unknown): string => (v && typeof v === 'object' ? String((v as { name?: unknown }).name ?? '—') : '—')
 
 type Row = {
   id: number
@@ -63,54 +56,63 @@ type Row = {
   afgelast: boolean
   home: string
   away: string
-  ownReady: boolean
+  /** Opstelling van de eigen ploeg klaar? Null = niet nagekeken (ver weg; de badge verschijnt dichterbij). */
+  ownReady: boolean | null
   location: string
   coachName: string | null
   coachMine: boolean
-  // Overname-aanvraag: wie vraagt om over te nemen, en of dat ik ben.
   takeoverName: string | null
   takeoverMine: boolean
-  // Toegewezen scheidsrechter (uit het wedstrijdblad), indien gekoppeld.
   refereeName: string | null
-  // Status van het wedstrijdblad: bepaalt of de scheidsrechter het aantekenen al heeft opengezet.
   sheetStatus: string | null
-  // Tekent iemand anders (niet ikzelf) deze wedstrijd al actief aan? Zie score-trust.ts.
   claimedByOther: boolean
   claimedByName: string | null
 }
 
-// `menu` vervangt de gewone snelkoppelingen door het tegelmenu van de club (enkel als we weten
-// wie er kijkt); zonder geldt de oude strook knoppen.
-function Shell({ children, menu }: { children: React.ReactNode; menu?: React.ReactNode }) {
+function Shell({ children, tabs }: { children: React.ReactNode; tabs?: React.ReactNode }) {
   return (
     <>
       <SiteHeader active="clubs" />
       <div className="site">
-        <h1 className="page-title"><span className="brand">Mijn club</span></h1>
-        {menu ?? <ProfileTools profile={getProfile('clubs')} currentHref="/club" />}
+        <h1 className="page-title">
+          <span className="brand">Mijn club</span>
+        </h1>
+        {tabs}
         {children}
       </div>
     </>
   )
 }
 
-// Club-dashboard: een club-beheerder ziet zijn komende wedstrijden en bereidt ze vlot voor. Wát
-// die voorbereiding is, hangt van de aantekenmodus af: in federatiemodus de opstelling, in
-// supportersmodus niets — daar tik je meteen op aantekenen (zie wedstrijddag-acties.ts).
-export default async function ClubPage({ searchParams }: { searchParams: Promise<{ alle?: string }> }) {
-  const { alle } = await searchParams
+/** Het speelweekend (zaterdag) van een wedstrijd, en hoe we het noemen. */
+function weekendVan(datum: string): string {
+  return zaterdagVan(dateStrBE(new Date(datum)))
+}
+function weekendLabel(za: string, ditWeekend: string): string {
+  if (za === ditWeekend) return 'Dit weekend'
+  if (za === shiftDateStr(ditWeekend, 7)) return 'Volgend weekend'
+  return `Weekend van ${formatDateBE(new Date(`${za}T12:00:00Z`), { weekday: 'short', day: 'numeric', month: 'long' })}`
+}
+
+export default async function ClubPage({ searchParams }: { searchParams: Promise<{ alle?: string; tab?: string }> }) {
+  const { alle, tab: tabRaw } = await searchParams
   const showAll = alle === '1'
   const payload = await getPayloadClient()
   const user = await getAuthUser()
   if (!user) {
     return (
       <Shell>
-        <p className="empty">Log in als club-beheerder om je komende wedstrijden te beheren. <Link href="/inloggen" className="hub-pill">Inloggen →</Link></p>
+        <p className="empty">
+          Log in als club-beheerder om je club te beheren.{' '}
+          <Link href="/inloggen" className="hub-pill">
+            Inloggen →
+          </Link>
+        </p>
       </Shell>
     )
   }
   const clubId = userClubId(user)
-  const isBeheerder = hasRole(user, 'club-beheerder')
+  const isBeheerder = hasRole(user, 'club-beheerder') || isFederationLevel(user)
   // Clubstaf (en federatie) beheert alle wedstrijden van de club en tekent aan; een coach zet enkel
   // de opstelling van zijn ploegen.
   const clubStaf = isFederationLevel(user) || hasRole(user, 'club-beheerder', 'club-medewerker')
@@ -122,28 +124,236 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
       </Shell>
     )
   }
+  const tabs = zichtbareTabs(clubStaf)
+  const tab: ClubTab = tabs.includes(tabRaw as ClubTab) ? (tabRaw as ClubTab) : 'overzicht'
 
-  // Vrije livescore voor alle wedstrijden? Dan bestaat de opstelling-/scheidsrechterflow niet en
-  // hoeft dit scherm er ook niet meer naar te verwijzen.
-  const supportersMode = await isSupportersMode(payload)
-
-  const club = await payload.findByID({ collection: 'clubs', id: clubId, depth: 0 }).catch(() => null)
-  const teams = await payload.find({ collection: 'teams', where: { and: [{ club: { equals: clubId } }, competitionWhere()] }, depth: 0, limit: 200 })
+  const [club, teams, supportersMode] = await Promise.all([
+    payload.findByID({ collection: 'clubs', id: clubId, depth: 0 }).catch(() => null),
+    payload.find({ collection: 'teams', where: { and: [{ club: { equals: clubId } }, competitionWhere()] }, depth: 0, limit: 200 }),
+    isSupportersMode(payload),
+  ])
   const teamIds = teams.docs.map((t) => t.id)
   if (teamIds.length === 0) {
     return (
-      <Shell>
+      <Shell tabs={<ClubTabs actief={tab} staf={clubStaf} />}>
         <p className="empty">{club?.name ? `${club.name}: ` : ''}nog geen ploegen geregistreerd.</p>
+        {tab === 'meer' && <ClubTegels tab="meer" staf={clubStaf} beheerder={isBeheerder} />}
       </Shell>
     )
   }
 
+  // ── Wedstrijden (Overzicht en Wedstrijden) ──
+  const metWedstrijden = tab === 'overzicht' || tab === 'wedstrijden'
+  const ditWeekend = zaterdagVan(dateStrBE())
+  const volgendWeekend = shiftDateStr(ditWeekend, 7)
+  const rows = metWedstrijden ? await wedstrijdRijen(payload, user, clubId, teamIds, supportersMode, tab === 'wedstrijden' ? null : volgendWeekend) : []
+
+  // "Mijn ploegen": de eigen voorkeur van de trainer/coach (team-ids); een coach zonder keuze ziet de
+  // ploegen waarvan hij de opstelling zet (lib/club-functies.ts).
+  const teamIdSet = new Set(teamIds.map(Number))
+  const allTeams = teams.docs.map((t) => {
+    const code = String((t as { reeks?: unknown }).reeks ?? '')
+    const cat = String((t as { category?: unknown }).category ?? '')
+    return { id: Number(t.id), name: String((t as { name?: unknown }).name ?? '—'), sub: code ? reeksNaam(code as Parameters<typeof reeksNaam>[0]) : cat }
+  })
+  const rawMine = (user as { myTeams?: unknown }).myTeams
+  const functiePloegen = clubStaf
+    ? []
+    : teams.docs.filter((t) => magOpstellingVoor(user, { id: t.id, club: clubId, category: String((t as { category?: unknown }).category ?? '') })).map((t) => Number(t.id))
+  const myTeams = (Array.isArray(rawMine) && rawMine.length ? rawMine.map(Number).filter((n) => Number.isFinite(n)) : functiePloegen).filter((id) => teamIdSet.has(id))
+  const mySet = new Set(myTeams)
+  const focusing = mySet.size > 0 && !showAll
+  const visibleRows = focusing ? rows.filter((r) => mySet.has(r.myTeamId)) : rows
+
+  // ── Clubdashboard (Overzicht: kop, cijfers, te doen; Leden: ploegtabel) ──
+  const tweeWeken = Date.now() + 14 * 86_400_000
+  const ov = clubStaf && (tab === 'overzicht' || tab === 'leden') ? await clubCijfers(payload, clubId, teams.docs as unknown as Record<string, unknown>[], rows, supportersMode, tweeWeken) : null
+  const seizoenStart = Number(((await payload.findGlobal({ slug: 'season' }).catch(() => null)) as { startYear?: unknown } | null)?.startYear)
+  const seizoen = Number.isFinite(seizoenStart) && seizoenStart > 0 ? `${seizoenStart}–${seizoenStart + 1}` : null
+  const dashboard = (delen: ('kop' | 'cijfers' | 'taken' | 'ploegen')[]) =>
+    ov ? (
+      <ClubDashboard
+        club={{ naam: String(club?.name ?? ''), logoUrl: clubLogoUrl({ club }), logoFit: clubLogoFit({ club }) }}
+        seizoen={seizoen}
+        kerncijfers={ov.kerncijfers}
+        teDoen={ov.teDoen}
+        ploegen={ov.ploegen}
+        delen={delen}
+      />
+    ) : null
+
+  const tabBalk = <ClubTabs actief={tab} staf={clubStaf} tellers={ov && tab === 'overzicht' ? { overzicht: ov.teDoen.length } : {}} />
+  const kaart = (m: Row) => <WedstrijdKaart key={m.id} m={m} supportersMode={supportersMode} magAantekenen={magAantekenen} />
+  const focusBalk =
+    mySet.size > 0 ? (
+      <p className="myteams-focusbar">
+        {focusing ? (
+          <>
+            Gefocust op jouw ploeg(en).{' '}
+            <Link href={`/club?${new URLSearchParams({ ...(tab !== 'overzicht' ? { tab } : {}), alle: '1' })}`} className="myteams-link">
+              Toon alle ploegen →
+            </Link>
+          </>
+        ) : (
+          <>
+            Je ziet alle ploegen van de club.{' '}
+            <Link href={tab === 'overzicht' ? '/club' : `/club?tab=${tab}`} className="myteams-link">
+              ← Enkel mijn ploeg(en)
+            </Link>
+          </>
+        )}
+      </p>
+    ) : null
+
+  // ── Overzicht ──
+  if (tab === 'overzicht') {
+    const live = visibleRows.filter((r) => r.status === 'live')
+    const dit = visibleRows.filter((r) => r.status !== 'live' && weekendVan(r.date) <= ditWeekend)
+    const volgend = visibleRows.filter((r) => r.status !== 'live' && weekendVan(r.date) === volgendWeekend)
+    const champs = await kampioenen(payload, teams.docs as unknown as Record<string, unknown>[], focusing ? mySet : null)
+    return (
+      <Shell tabs={tabBalk}>
+        {dashboard(['kop', 'cijfers', 'taken'])}
+        {focusBalk}
+        {live.length > 0 && (
+          <section className="club-group">
+            <h2 className="club-group-h">
+              Nu bezig <span className="club-group-n">{live.length}</span>
+            </h2>
+            <div className="club-list">{live.map(kaart)}</div>
+          </section>
+        )}
+        <section className="club-group">
+          <h2 className="club-group-h">
+            Dit weekend <span className="club-group-n">{dit.length}</span>
+          </h2>
+          {dit.length ? <div className="club-list">{dit.map(kaart)}</div> : <p className="empty">Geen wedstrijden dit weekend.</p>}
+        </section>
+        {volgend.length > 0 && (
+          <section className="club-group">
+            <h2 className="club-group-h">
+              Volgend weekend <span className="club-group-n">{volgend.length}</span>
+            </h2>
+            <div className="club-list">{volgend.map(kaart)}</div>
+          </section>
+        )}
+        <p>
+          <Link href="/club?tab=wedstrijden" className="cdash-knop">
+            📅 Alle komende wedstrijden →
+          </Link>
+        </p>
+        <Kampioenen champs={champs} />
+      </Shell>
+    )
+  }
+
+  // ── Wedstrijden ──
+  if (tab === 'wedstrijden') {
+    const weekends = new Map<string, Row[]>()
+    for (const r of visibleRows) {
+      const k = r.status === 'live' ? 'live' : weekendVan(r.date)
+      weekends.set(k, [...(weekends.get(k) ?? []), r])
+    }
+    const volgorde = [...weekends.keys()].sort((a, b) => (a === 'live' ? -1 : b === 'live' ? 1 : a.localeCompare(b)))
+    return (
+      <Shell tabs={tabBalk}>
+        <MyTeamsPicker teams={allTeams} initial={myTeams} />
+        {focusBalk}
+        {visibleRows.length === 0 ? (
+          <p className="empty">{focusing ? 'Geen geplande wedstrijden voor je gekozen ploeg(en).' : 'Geen geplande wedstrijden.'}</p>
+        ) : (
+          volgorde.map((k, i) => {
+            const lijst = weekends.get(k)!
+            const titel = k === 'live' ? 'Nu bezig' : weekendLabel(k, ditWeekend)
+            // Het begin open (nu bezig + de eerste twee weekends), de rest ingeklapt met een teller.
+            const open = k === 'live' || i < (weekends.has('live') ? 3 : 2)
+            return open ? (
+              <section key={k} className="club-group">
+                <h2 className="club-group-h">
+                  {titel} <span className="club-group-n">{lijst.length}</span>
+                </h2>
+                <div className="club-list">{lijst.map(kaart)}</div>
+              </section>
+            ) : (
+              <details key={k} className="club-week">
+                <summary>
+                  <span>{titel}</span> <span className="club-group-n">{lijst.length}</span>
+                  <span className="club-week-ploegen">{[...new Set(lijst.map((r) => (r.side === 'home' ? r.home : r.away)))].join(' · ')}</span>
+                </summary>
+                <div className="club-list">{lijst.map(kaart)}</div>
+              </details>
+            )
+          })
+        )}
+        <ClubTegels tab="wedstrijden" staf={clubStaf} beheerder={isBeheerder} />
+      </Shell>
+    )
+  }
+
+  // ── Leden ──
+  if (tab === 'leden') {
+    return (
+      <Shell tabs={tabBalk}>
+        <ClubTegels tab="leden" staf={clubStaf} beheerder={isBeheerder} />
+        {dashboard(['ploegen'])}
+      </Shell>
+    )
+  }
+
+  // ── Geld ──
+  if (tab === 'geld') {
+    const [boetes, facturen] = await Promise.all([
+      payload.find({ collection: 'boetes', where: { and: [{ club: { equals: clubId } }, { status: { in: [...OPEN_STATUSSEN] } }] }, depth: 0, limit: 500, pagination: false, overrideAccess: true }),
+      facturenLijst(payload, { and: [{ club: { equals: clubId } }, { status: { equals: 'verstuurd' } }] }).catch(() => []),
+    ])
+    const openF = facturen.filter((f) => f.beeld.open > 0)
+    const vervallen = openF.filter((f) => f.beeld.stand === 'vervallen')
+    const losseBoetes = boetes.docs.filter((b) => b.status === 'opgelegd')
+    return (
+      <Shell tabs={tabBalk}>
+        <div className="cdash-cijfers" style={{ marginBottom: 18 }}>
+          <Link href="/club/facturen" className={`cdash-cijfer toon-${vervallen.length ? 'actie' : openF.length ? 'let-op' : 'goed'}`}>
+            <span className="cdash-waarde">{formatEuro(openF.reduce((t, f) => t + f.beeld.open, 0))}</span>
+            <span className="cdash-label">
+              te betalen op {openF.length} {openF.length === 1 ? 'factuur' : 'facturen'}
+              {vervallen.length ? ` (${vervallen.length} vervallen)` : ''}
+            </span>
+          </Link>
+          <Link href="/club/boetes" className={`cdash-cijfer toon-${losseBoetes.length ? 'let-op' : 'goed'}`}>
+            <span className="cdash-waarde">{boetes.docs.length}</span>
+            <span className="cdash-label">open {boetes.docs.length === 1 ? 'boete' : 'boetes'} ({formatEuro(boetes.docs.reduce((t, b) => t + (Number(b.bedrag) || 0), 0))})</span>
+          </Link>
+        </div>
+        <ClubTegels tab="geld" staf={clubStaf} beheerder={isBeheerder} />
+        <p className="wb-sub">Een opgelegde boete komt op de volgende factuur van de federatie; betaal ze dan samen met die factuur.</p>
+      </Shell>
+    )
+  }
+
+  // ── Meer ──
+  return (
+    <Shell tabs={tabBalk}>
+      <ClubTegels tab="meer" staf={clubStaf} beheerder={isBeheerder} />
+      <details className="cmenu-extra">
+        <summary>📸 Weekendplan als Instagram-Story</summary>
+        <InstagramWeekendCard />
+      </details>
+    </Shell>
+  )
+}
+
+// ── Gegevens ────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * De komende (en lopende) wedstrijden van de club. `totWeekend`: enkel tot en met dat speelweekend (Overzicht);
+ * null = alle. De klaar-controle (die per wedstrijd het blad leest) enkel voor wat binnen twee weken valt.
+ */
+async function wedstrijdRijen(payload: Payload, user: unknown, clubId: number | string, teamIds: (number | string)[], supportersMode: boolean, totWeekend: string | null): Promise<Row[]> {
   const teamIdSet = new Set(teamIds.map(Number))
   const myUserId = Number((user as { id?: number }).id)
-  // Federatie/admin mogen altijd overnemen — zelfde noodrem als op het aantekenscherm zelf en in
-  // de actie-route (scorekeeper/[id]/page.tsx, api/match/[id]/action), zodat een supervisor nooit
-  // vast komt te zitten.
+  // Federatie/admin mogen altijd overnemen (zelfde noodrem als op het aantekenscherm).
   const bypassClaim = isFederationLevel(user)
+  const tot = totWeekend ? new Date(`${shiftDateStr(totWeekend, 2)}T00:00:00Z`).toISOString() : null
   const matches = await payload.find({
     collection: 'matches',
     where: {
@@ -151,25 +361,20 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
         { status: { in: ['scheduled', 'live'] } },
         { or: [{ homeTeam: { in: teamIds } }, { awayTeam: { in: teamIds } }] },
         competitionWhere(),
+        ...(tot ? [{ date: { less_than: tot } }] : []),
       ],
     },
     sort: 'date',
     depth: 2,
-    limit: 200,
+    limit: 300,
   })
-
-  // Toegewezen scheidsrechter per wedstrijd (uit het wedstrijdblad) — zodat het in de planning
-  // zichtbaar is. Ook in supportersmodus: de aanduiding blijft daar gewoon bestaan (het portaal
-  // schrijft ze via /api/scheidsrechter/wedstrijd/[matchId], dat geen modus kent), en /match/[id]
-  // toont ze ook. Wat er in supportersmodus wél niet meer mee doet, is de bladstatus: die bepaalt
-  // dan niet langer of je mag aantekenen — zie wedstrijddag-acties.ts.
-  const planMatchIds = matches.docs.map((m) => m.id)
-  const planSheets = planMatchIds.length
-    ? await payload.find({ collection: 'matchsheets', where: { match: { in: planMatchIds } }, depth: 1, pagination: false }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  const ids = matches.docs.map((m) => m.id)
+  const sheets = ids.length
+    ? await payload.find({ collection: 'matchsheets', where: { match: { in: ids } }, depth: 1, pagination: false }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
     : { docs: [] as Record<string, unknown>[] }
   const refByMatch = new Map<number, string>()
   const sheetStatusByMatch = new Map<number, string>()
-  for (const s of planSheets.docs) {
+  for (const s of sheets.docs) {
     const mid = (s as { match?: unknown }).match
     const midId = mid && typeof mid === 'object' ? Number((mid as { id?: number }).id) : Number(mid)
     const ar = (s as { assignedReferee?: unknown }).assignedReferee
@@ -178,17 +383,19 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
     const st = (s as { status?: unknown }).status
     if (Number.isFinite(midId) && typeof st === 'string') sheetStatusByMatch.set(midId, st)
   }
-
+  const nabij = Date.now() + 14 * 86_400_000
   const rows: Row[] = []
   for (const m of matches.docs) {
     if ((m as { isDemo?: boolean }).isDemo || (m as { analyseOnly?: boolean }).analyseOnly) continue
-    const homeTeam = m.homeTeam as { id?: number; name?: string; club?: unknown } | null
-    const awayTeam = m.awayTeam as { id?: number; name?: string; club?: unknown } | null
+    const homeTeam = m.homeTeam as { id?: number; name?: string; club?: unknown; category?: unknown } | null
+    const awayTeam = m.awayTeam as { id?: number; name?: string; club?: unknown; category?: unknown } | null
     const side: 'home' | 'away' = homeTeam?.id != null && teamIdSet.has(Number(homeTeam.id)) ? 'home' : 'away'
+    const eigen = side === 'home' ? homeTeam : awayTeam
     try {
-      // De klaar-controle leest per wedstrijd het blad; in supportersmodus zegt ze sowieso "klaar"
-      // en tonen we die badge niet meer, dus dan slaan we ze over.
-      const r = supportersMode ? null : await getMatchReadiness(payload, m.id)
+      // In supportersmodus valt er niets voor te bereiden; ver weg tonen we de badge nog niet (dat spaart een
+      // lezing van het blad per wedstrijd).
+      const dichtbij = m.status === 'live' || new Date(String(m.date)).getTime() <= nabij
+      const r = supportersMode || !dichtbij ? null : await getMatchReadiness(payload, m.id)
       const homeClub = homeTeam?.club as { name?: string; accommodatie?: string } | null
       const coach = (side === 'home' ? m.homeCoach : m.awayCoach) as { id?: number; name?: string; email?: string } | null
       const takeover = (side === 'home' ? m.homeTakeover : m.awayTakeover) as { id?: number; name?: string; email?: string } | null
@@ -201,21 +408,17 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
         date: m.date,
         status: String(m.status ?? 'scheduled'),
         side,
-        myTeamId: Number((side === 'home' ? homeTeam?.id : awayTeam?.id) ?? 0),
+        myTeamId: Number(eigen?.id ?? 0),
         afgelast: Boolean((m as { afgelast?: boolean }).afgelast),
-        magOpstelling: magOpstellingVoor(user, {
-          id: Number((side === 'home' ? homeTeam?.id : awayTeam?.id) ?? 0),
-          club: clubId,
-          category: (side === 'home' ? homeTeam : awayTeam) ? String(((side === 'home' ? homeTeam : awayTeam) as { category?: unknown }).category ?? '') : null,
-        }),
+        magOpstelling: magOpstellingVoor(user, { id: Number(eigen?.id ?? 0), club: clubId, category: eigen ? String(eigen.category ?? '') : null }),
         home: nameOf(homeTeam),
         away: nameOf(awayTeam),
-        ownReady: r ? (side === 'home' ? r.homeOk : r.awayOk) : true,
+        ownReady: supportersMode ? true : r ? (side === 'home' ? r.homeOk : r.awayOk) : null,
         // Locatie = terrein van de thuisclub (waar je moet zijn).
         location: (homeClub?.accommodatie || homeClub?.name || nameOf(homeTeam)).trim(),
-        coachName: coach ? (coach.name || coach.email || 'Geclaimd') : null,
+        coachName: coach ? coach.name || coach.email || 'Geclaimd' : null,
         coachMine: coach?.id != null && Number(coach.id) === myUserId,
-        takeoverName: takeover ? (takeover.name || takeover.email || 'Iemand') : null,
+        takeoverName: takeover ? takeover.name || takeover.email || 'Iemand' : null,
         takeoverMine: takeover?.id != null && Number(takeover.id) === myUserId,
         refereeName: refByMatch.get(m.id) ?? null,
         sheetStatus: sheetStatusByMatch.get(m.id) ?? null,
@@ -226,58 +429,75 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
       // Wedstrijd met ontbrekende ploeg overslaan.
     }
   }
+  return rows
+}
 
-  // "Mijn ploegen": de eigen voorkeur van de trainer/coach (team-ids). Enkel ploegen die nog
-  // bestaan in de club tellen mee. We tonen ook de reeks (of categorie) zodat gelijknamige
-  // ploegen — bv. meerdere "KBC St. Michiels" — uit elkaar te houden zijn.
-  const allTeams = teams.docs.map((t) => {
-    const code = String((t as { reeks?: unknown }).reeks ?? '')
-    const cat = String((t as { category?: unknown }).category ?? '')
-    return {
-      id: Number(t.id),
-      name: String((t as { name?: unknown }).name ?? '—'),
-      sub: code ? reeksNaam(code as Parameters<typeof reeksNaam>[0]) : cat,
-    }
-  })
-  const rawMine = (user as { myTeams?: unknown }).myTeams
-  // Een coach of jeugdverantwoordelijke zonder eigen keuze ziet meteen de ploegen waarvan hij de
-  // opstelling zet (lib/club-functies.ts) — niet de hele club met knoppen die voor hem niet werken.
-  const functiePloegen = clubStaf
-    ? []
-    : teams.docs
-        .filter((t) => magOpstellingVoor(user, { id: t.id, club: clubId, category: String((t as { category?: unknown }).category ?? '') }))
-        .map((t) => Number(t.id))
-  const myTeams = (Array.isArray(rawMine) && rawMine.length ? rawMine.map(Number).filter((n) => Number.isFinite(n)) : functiePloegen).filter((id) =>
-    teamIdSet.has(id),
-  )
-  const mySet = new Set(myTeams)
-  const focusing = mySet.size > 0 && !showAll
-  // Bij een actieve focus tonen we enkel de wedstrijden van de eigen ploeg(en).
-  const visibleRows = focusing ? rows.filter((r) => mySet.has(r.myTeamId)) : rows
-
-  // Groepeer per ploeg(groep).
-  const groups = new Map<string, { label: string; order: number; rows: Row[] }>()
-  for (const r of visibleRows) {
-    const g = groupOf(r.reeksCode)
-    let entry = groups.get(g.key)
-    if (!entry) {
-      entry = { label: g.label, order: g.order, rows: [] }
-      groups.set(g.key, entry)
-    }
-    entry.rows.push(r)
+/** Kerncijfers, te doen en ledenbestand per ploeg (lib/club-overzicht.ts). Alles afgeleid. */
+async function clubCijfers(payload: Payload, clubId: number | string, teams: Record<string, unknown>[], rows: Row[], supportersMode: boolean, tweeWeken: number) {
+  const teamIds = teams.map((t) => t.id as number)
+  const [spelers, blessures, boetes, vanaf] = await Promise.all([
+    payload.find({ collection: 'players', where: { team: { in: teamIds } }, depth: 0, limit: 3000, pagination: false, overrideAccess: true }),
+    payload
+      .find({ collection: 'accidents', where: { and: [{ club: { equals: clubId } }, { status: { in: ['gemeld', 'ingediend'] } }] }, depth: 0, limit: 500, pagination: false, overrideAccess: true })
+      .catch(() => ({ docs: [] as { status?: unknown }[] })),
+    payload
+      .find({ collection: 'boetes', where: { and: [{ club: { equals: clubId } }, { status: { in: [...OPEN_STATUSSEN] } }] }, depth: 0, limit: 500, pagination: false, overrideAccess: true })
+      .catch(() => ({ docs: [] as { status?: unknown; bedrag?: unknown }[] })),
+    emailVanaf(payload),
+  ])
+  const toonPerPloeg = new Map<number, LidToon[]>()
+  for (const p of spelers.docs) {
+    const tid = Number(typeof p.team === 'object' && p.team ? (p.team as { id?: unknown }).id : p.team)
+    const toon = registratieIcoon(
+      {
+        voornaam: String(p.voornaam ?? ''),
+        achternaam: String(p.achternaam ?? ''),
+        birthDate: p.birthDate ? String(p.birthDate).slice(0, 10) : '',
+        geslacht: String(p.geslacht ?? ''),
+        soortLid: String(p.soortLid ?? 'speler'),
+        medischeKeuringOp: p.medischeKeuringOp ? String(p.medischeKeuringOp).slice(0, 10) : '',
+        email: String(p.email ?? ''),
+        heeftAttest: Boolean(p.medischAttestBestand),
+        registratieStatus: String(p.registratieStatus ?? ''),
+        vergunningsstatus: String(p.vergunningsstatus ?? 'geen'),
+        medischAttest: Boolean(p.medischAttest),
+        actief: p.actief !== false,
+      },
+      undefined,
+      vanaf,
+    ).toon as LidToon
+    toonPerPloeg.set(tid, [...(toonPerPloeg.get(tid) ?? []), toon])
   }
-  const groupList = [...groups.values()].sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
+  return clubOverzicht({
+    ploegen: teams.map((t) => ({
+      id: Number(t.id),
+      naam: String(t.name ?? '—'),
+      reeks: t.reeks ? reeksNaam(t.reeks as Parameters<typeof reeksNaam>[0]) : String(t.category ?? ''),
+      toon: toonPerPloeg.get(Number(t.id)) ?? [],
+    })),
+    blessures: {
+      teBezorgen: blessures.docs.filter((b) => b.status === 'gemeld').length,
+      bijFederatie: blessures.docs.filter((b) => b.status === 'ingediend').length,
+    },
+    boetes: {
+      aantal: boetes.docs.length,
+      bedrag: boetes.docs.reduce((som, b) => som + (Number(b.bedrag) || 0), 0),
+      teBetalen: boetes.docs.filter((b) => b.status === 'opgelegd').length,
+    },
+    opstellingenTeDoen: supportersMode ? 0 : rows.filter((r) => r.ownReady === false && !r.afgelast && r.status === 'scheduled' && new Date(String(r.date)).getTime() <= tweeWeken).length,
+  })
+}
 
-  // Kampioenschap: per ploeg (in een competitiereeks) berekenen of ze (bijna) kampioen is.
+type Champ = { teamName: string; reeks: string; clinched: boolean; leading: boolean; pointsToClinch: number | null; winsToClinch: number | null }
+
+/** Ploegen die (bijna) kampioen zijn — enkel op het Overzicht. */
+async function kampioenen(payload: Payload, teams: Record<string, unknown>[], enkel: Set<number> | null): Promise<Champ[]> {
   const COMPETITIE = new Set<string>(REEKS_OPTIONS.map((o) => o.value).filter((v) => !['beker', 'recreatief', 'andere'].includes(v)))
-  const clubTeams = teams.docs
-    .map((t) => ({ id: Number(t.id), name: String((t as { name?: unknown }).name ?? '—'), reeks: String((t as { reeks?: unknown }).reeks ?? '') }))
-    .filter((t) => COMPETITIE.has(t.reeks))
-    .filter((t) => !focusing || mySet.has(t.id))
-  const reeksSet = [...new Set(clubTeams.map((t) => t.reeks))]
-  type Champ = { teamName: string; reeks: string; clinched: boolean; leading: boolean; pointsToClinch: number | null; winsToClinch: number | null }
+  const clubTeams = teams
+    .map((t) => ({ id: Number(t.id), name: String(t.name ?? '—'), reeks: String(t.reeks ?? '') }))
+    .filter((t) => COMPETITIE.has(t.reeks) && (!enkel || enkel.has(t.id)))
   const champs: Champ[] = []
-  for (const reeks of reeksSet) {
+  for (const reeks of [...new Set(clubTeams.map((t) => t.reeks))]) {
     const sb = await buildReeksStandings(payload, reeks).catch(() => null)
     if (!sb || sb.standings.length < 2) continue
     for (const t of clubTeams.filter((ct) => ct.reeks === reeks)) {
@@ -286,210 +506,124 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
       champs.push({ teamName: t.name, reeks: reeksNaam(reeks as Parameters<typeof reeksNaam>[0]), clinched: st.clinched, leading: st.leading, pointsToClinch: st.pointsToClinch, winsToClinch: st.winsToClinch })
     }
   }
-  champs.sort((a, b) => Number(b.clinched) - Number(a.clinched))
+  return champs.sort((a, b) => Number(b.clinched) - Number(a.clinched))
+}
 
-  // Clubdashboard (enkel voor de clubstaf): ledenbestand per ploeg, blessures, boetes en de
-  // opstellingen die nog moeten gebeuren. Alles afgeleid, niets apart bijgehouden.
-  let dashboard: React.ReactNode = null
-  if (clubStaf) {
-    const tweeWeken = Date.now() + 14 * 86_400_000
-    const [spelers, blessures, boetes, vanaf, seizoen] = await Promise.all([
-      payload.find({ collection: 'players', where: { team: { in: teamIds } }, depth: 0, limit: 3000, pagination: false, overrideAccess: true }),
-      payload.find({ collection: 'accidents', where: { and: [{ club: { equals: clubId } }, { status: { in: ['gemeld', 'ingediend'] } }] }, depth: 0, limit: 500, pagination: false, overrideAccess: true }).catch(() => ({ docs: [] as { status?: unknown }[] })),
-      payload.find({ collection: 'boetes', where: { and: [{ club: { equals: clubId } }, { status: { in: [...OPEN_STATUSSEN] } }] }, depth: 0, limit: 500, pagination: false, overrideAccess: true }).catch(() => ({ docs: [] as { status?: unknown; bedrag?: unknown }[] })),
-      emailVanaf(payload),
-      payload.findGlobal({ slug: 'season' }).catch(() => null),
-    ])
-    const toonPerPloeg = new Map<number, LidToon[]>()
-    for (const p of spelers.docs) {
-      const tid = Number(typeof p.team === 'object' && p.team ? (p.team as { id?: unknown }).id : p.team)
-      const toon = registratieIcoon(
-        {
-          voornaam: String(p.voornaam ?? ''),
-          achternaam: String(p.achternaam ?? ''),
-          birthDate: p.birthDate ? String(p.birthDate).slice(0, 10) : '',
-          geslacht: String(p.geslacht ?? ''),
-          soortLid: String(p.soortLid ?? 'speler'),
-          medischeKeuringOp: p.medischeKeuringOp ? String(p.medischeKeuringOp).slice(0, 10) : '',
-          email: String(p.email ?? ''),
-          heeftAttest: Boolean(p.medischAttestBestand),
-          registratieStatus: String(p.registratieStatus ?? ''),
-          vergunningsstatus: String(p.vergunningsstatus ?? 'geen'),
-          medischAttest: Boolean(p.medischAttest),
-          actief: p.actief !== false,
-        },
-        undefined,
-        vanaf,
-      ).toon as LidToon
-      const arr = toonPerPloeg.get(tid) ?? []
-      arr.push(toon)
-      toonPerPloeg.set(tid, arr)
-    }
-    const ov = clubOverzicht({
-      ploegen: teams.docs.map((t) => ({
-        id: Number(t.id),
-        naam: String((t as { name?: unknown }).name ?? '—'),
-        reeks: (t as { reeks?: unknown }).reeks ? reeksNaam((t as { reeks: string }).reeks as Parameters<typeof reeksNaam>[0]) : String((t as { category?: unknown }).category ?? ''),
-        toon: toonPerPloeg.get(Number(t.id)) ?? [],
-      })),
-      blessures: {
-        teBezorgen: blessures.docs.filter((b) => b.status === 'gemeld').length,
-        bijFederatie: blessures.docs.filter((b) => b.status === 'ingediend').length,
-      },
-      boetes: {
-        aantal: boetes.docs.length,
-        bedrag: boetes.docs.reduce((som, b) => som + (Number(b.bedrag) || 0), 0),
-        teBetalen: boetes.docs.filter((b) => b.status === 'opgelegd').length,
-      },
-      opstellingenTeDoen: supportersMode
-        ? 0
-        : rows.filter((r) => !r.ownReady && !r.afgelast && r.status === 'scheduled' && new Date(String(r.date)).getTime() <= tweeWeken).length,
-    })
-    const start = Number((seizoen as { startYear?: unknown } | null)?.startYear)
-    dashboard = (
-      <ClubDashboard
-        club={{ naam: String(club?.name ?? ''), logoUrl: clubLogoUrl({ club }), logoFit: clubLogoFit({ club }) }}
-        seizoen={Number.isFinite(start) && start > 0 ? `${start}–${start + 1}` : null}
-        kerncijfers={ov.kerncijfers}
-        teDoen={ov.teDoen}
-        ploegen={ov.ploegen}
-      />
-    )
-  }
+// ── Weergave ────────────────────────────────────────────────────────────────────────────────────────
 
+function Kampioenen({ champs }: { champs: Champ[] }) {
+  if (!champs.length) return null
   return (
-    <Shell menu={<>{dashboard}<ClubMenu staf={clubStaf} beheerder={isBeheerder || isFederationLevel(user)} /></>}>
-      <span id="wedstrijden" />
-      <h2 className="cmenu-titel cmenu-titel-wedstrijden">Wedstrijden</h2>
-      <MyTeamsPicker teams={allTeams} initial={myTeams} />
-
-      {mySet.size > 0 && (
-        <p className="myteams-focusbar">
-          {focusing ? (
-            <>Gefocust op jouw ploeg(en). <Link href="/club?alle=1" className="myteams-link">Toon alle ploegen van de club →</Link></>
-          ) : (
-            <>Je ziet alle ploegen van de club. <Link href="/club" className="myteams-link">← Focus op mijn ploeg(en)</Link></>
-          )}
-        </p>
-      )}
-
-      {visibleRows.length === 0 ? (
-        <p className="empty">{focusing ? 'Geen geplande wedstrijden voor je gekozen ploeg(en).' : 'Geen geplande wedstrijden voor je ploegen.'}</p>
-      ) : (
-        groupList.map((g) => (
-        <section key={g.label} className="club-group">
-          <h2 className="club-group-h">{g.label} <span className="club-group-n">{g.rows.length}</span></h2>
-          <div className="club-list">
-          {g.rows.map((m) => (
-            <div key={m.id} className="club-match">
-              <div className="club-match-info">
-                <span className="club-match-toprow">
-                  <span className={`club-role ${m.side}`}>{m.side === 'home' ? 'THUIS' : 'UIT'}</span>
-                  <span className="club-match-reeks">{m.reeks}</span>
-                  {m.status === 'live' ? (
-                    <span className="club-badge live">● LIVE</span>
-                  ) : supportersMode ? (
-                    // Er valt niets voor te bereiden: dezelfde woorden als de aantekenhub.
-                    <span className="club-badge ready">🎉 Vrije livescore</span>
-                  ) : m.ownReady ? (
-                    <span className="club-badge ready">✓ Klaar</span>
-                  ) : (
-                    <span className="club-badge todo">○ Voor te bereiden</span>
-                  )}
-                </span>
-                <span className="club-match-teams">{m.home} <span className="club-vs">–</span> {m.away}</span>
-                <span className="club-match-meta">
-                  {formatDateBE(new Date(m.date), { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                  {m.location ? <> · 📍 {m.location}</> : null}
-                  {m.refereeName ? <> · 🟡 SR: {m.refereeName}</> : null}
-                  {m.afgelast ? <> · <strong style={{ color: '#e0a23d' }}>⛈️ Afgelast — nieuwe datum volgt</strong></> : null}
-                </span>
-                <span className="club-match-coach">
-                  <ClaimButton matchId={m.id} coachName={m.coachName} mine={m.coachMine} takeoverName={m.takeoverName} takeoverMine={m.takeoverMine} />
-                </span>
-              </div>
-              <div className="club-match-actions">
-                {(() => {
-                  // Welke knoppen hier horen, hangt van de aantekenmodus af — die regel staat in
-                  // wedstrijddag-acties.ts. In supportersmodus is dat er maar één die telt:
-                  // aantekenen, zonder opstelling en zonder op een scheidsrechter te wachten.
-                  const alle = clubActies({
-                    supportersMode,
-                    side: m.side,
-                    live: m.status === 'live',
-                    bladOpen: sheetOpenForScoring(m.sheetStatus),
-                    claimedByOther: m.claimedByOther,
-                  })
-                  // Enkel de knoppen die voor deze gebruiker werken: een coach zet de opstelling
-                  // van zijn ploeg en volgt verder mee; aantekenen is voor de clubtafel.
-                  const gefilterd = alle.filter(
-                    (a) =>
-                      (a !== 'opstelling' || m.magOpstelling) &&
-                      ((a !== 'aantekenen' && a !== 'wachtOpScheidsrechter') || magAantekenen || supportersMode),
-                  )
-                  const acties = gefilterd.includes('bekijk') ? gefilterd : [...gefilterd, 'bekijk' as const]
-                  const primair = primaireActie(acties)
-                  const cls = (a: string) => `btn ${a === primair ? 'btn-primary' : 'btn-ghost'}`
-                  return acties.map((a) => {
-                    if (a === 'opstelling') {
-                      return <Link key={a} href={`/opstelling/${m.id}`} className={cls(a)}>Opstelling</Link>
-                    }
-                    if (a === 'aantekenen') {
-                      return <Link key={a} href={`/scorekeeper/${m.id}`} className={cls(a)}>Aantekenen</Link>
-                    }
-                    if (a === 'bekijk') {
-                      const title = m.claimedByOther
-                        ? `${m.claimedByName ?? 'Iemand anders'} tekent deze wedstrijd al aan.`
-                        : undefined
-                      return <Link key={a} href={`/match/${m.id}`} className={cls(a)} title={title}>Bekijk</Link>
-                    }
-                    return (
-                      <span key={a} className="btn btn-ghost is-disabled" title="De scheidsrechter heeft het wedstrijdblad nog niet opengezet om aan te tekenen.">
-                        ⏳ Wacht op scheidsrechter
-                      </span>
-                    )
-                  })
-                })()}
-              </div>
-            </div>
-          ))}
-          </div>
-        </section>
-        ))
-      )}
-
-      {champs.length > 0 && (
-        <div className="club-champ-wrap">
-          {champs.map((c, i) => {
-            const almost = c.winsToClinch != null && c.winsToClinch <= 2
-            const cls = c.clinched ? 'champion' : almost ? 'almost' : 'leading'
-            return (
-              <div key={i} className={`club-champ ${cls}`}>
-                <span className="club-champ-ico" aria-hidden>{c.clinched ? '🏆' : almost ? '🔥' : '📈'}</span>
-                <span className="club-champ-text">
-                  {c.clinched ? (
-                    <><strong>{c.teamName}</strong> is wiskundig <strong>KAMPIOEN</strong> in {c.reeks}! 🎉</>
-                  ) : c.pointsToClinch != null ? (
+    <div className="club-champ-wrap">
+      {champs.map((c, i) => {
+        const almost = c.winsToClinch != null && c.winsToClinch <= 2
+        const cls = c.clinched ? 'champion' : almost ? 'almost' : 'leading'
+        return (
+          <div key={i} className={`club-champ ${cls}`}>
+            <span className="club-champ-ico" aria-hidden>
+              {c.clinched ? '🏆' : almost ? '🔥' : '📈'}
+            </span>
+            <span className="club-champ-text">
+              {c.clinched ? (
+                <>
+                  <strong>{c.teamName}</strong> is wiskundig <strong>KAMPIOEN</strong> in {c.reeks}! 🎉
+                </>
+              ) : c.pointsToClinch != null ? (
+                <>
+                  <strong>{c.teamName}</strong> leidt in {c.reeks} — nog{' '}
+                  <strong>
+                    {c.pointsToClinch} {c.pointsToClinch === 1 ? 'punt' : 'punten'}
+                  </strong>
+                  {c.winsToClinch != null && (
                     <>
-                      <strong>{c.teamName}</strong> leidt in {c.reeks} — nog <strong>{c.pointsToClinch} {c.pointsToClinch === 1 ? 'punt' : 'punten'}</strong>
-                      {c.winsToClinch != null && <> ({c.winsToClinch} {c.winsToClinch === 1 ? 'overwinning' : 'overwinningen'})</>} voor de titel.{almost ? ' Bijna zover!' : ''}
+                      {' '}
+                      ({c.winsToClinch} {c.winsToClinch === 1 ? 'overwinning' : 'overwinningen'})
                     </>
-                  ) : (
-                    <><strong>{c.teamName}</strong> staat aan de leiding in {c.reeks}.</>
-                  )}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      )}
+                  )}{' '}
+                  voor de titel.{almost ? ' Bijna zover!' : ''}
+                </>
+              ) : (
+                <>
+                  <strong>{c.teamName}</strong> staat aan de leiding in {c.reeks}.
+                </>
+              )}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
-      {/* De weekend-Story is leuk, maar geen dagelijks werk: ingeklapt onderaan i.p.v. een grote
-          kaart bovenaan die het menu en de wedstrijden naar beneden duwt. */}
-      <details className="cmenu-extra">
-        <summary>📸 Weekendplan als Instagram-Story</summary>
-        <InstagramWeekendCard />
-      </details>
-    </Shell>
+function WedstrijdKaart({ m, supportersMode, magAantekenen }: { m: Row; supportersMode: boolean; magAantekenen: boolean }) {
+  // Welke knoppen hier horen, hangt van de aantekenmodus af (wedstrijddag-acties.ts); enkel de knoppen die
+  // voor deze gebruiker werken: een coach zet de opstelling van zijn ploeg en volgt verder mee.
+  const alle = clubActies({ supportersMode, side: m.side, live: m.status === 'live', bladOpen: sheetOpenForScoring(m.sheetStatus), claimedByOther: m.claimedByOther })
+  const gefilterd = alle.filter((a) => (a !== 'opstelling' || m.magOpstelling) && ((a !== 'aantekenen' && a !== 'wachtOpScheidsrechter') || magAantekenen || supportersMode))
+  const acties = gefilterd.includes('bekijk') ? gefilterd : [...gefilterd, 'bekijk' as const]
+  const primair = primaireActie(acties)
+  const cls = (a: string) => `btn ${a === primair ? 'btn-primary' : 'btn-ghost'}`
+  return (
+    <div className="club-match">
+      <div className="club-match-info">
+        <span className="club-match-toprow">
+          <span className={`club-role ${m.side}`}>{m.side === 'home' ? 'THUIS' : 'UIT'}</span>
+          <span className="club-match-reeks">{m.reeks}</span>
+          {m.status === 'live' ? (
+            <span className="club-badge live">● LIVE</span>
+          ) : supportersMode ? (
+            <span className="club-badge ready">🎉 Vrije livescore</span>
+          ) : m.ownReady === true ? (
+            <span className="club-badge ready">✓ Klaar</span>
+          ) : m.ownReady === false ? (
+            <span className="club-badge todo">○ Voor te bereiden</span>
+          ) : null}
+        </span>
+        <span className="club-match-teams">
+          {m.home} <span className="club-vs">–</span> {m.away}
+        </span>
+        <span className="club-match-meta">
+          {formatDateBE(new Date(m.date), { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+          {m.location ? <> · 📍 {m.location}</> : null}
+          {m.refereeName ? <> · 🟡 SR: {m.refereeName}</> : null}
+          {m.afgelast ? (
+            <>
+              {' '}
+              · <strong style={{ color: '#e0a23d' }}>⛈️ Afgelast — nieuwe datum volgt</strong>
+            </>
+          ) : null}
+        </span>
+        <span className="club-match-coach">
+          <ClaimButton matchId={m.id} coachName={m.coachName} mine={m.coachMine} takeoverName={m.takeoverName} takeoverMine={m.takeoverMine} />
+        </span>
+      </div>
+      <div className="club-match-actions">
+        {acties.map((a) => {
+          if (a === 'opstelling')
+            return (
+              <Link key={a} href={`/opstelling/${m.id}`} className={cls(a)}>
+                Opstelling
+              </Link>
+            )
+          if (a === 'aantekenen')
+            return (
+              <Link key={a} href={`/scorekeeper/${m.id}`} className={cls(a)}>
+                Aantekenen
+              </Link>
+            )
+          if (a === 'bekijk')
+            return (
+              <Link key={a} href={`/match/${m.id}`} className={cls(a)} title={m.claimedByOther ? `${m.claimedByName ?? 'Iemand anders'} tekent deze wedstrijd al aan.` : undefined}>
+                Bekijk
+              </Link>
+            )
+          return (
+            <span key={a} className="btn btn-ghost is-disabled" title="De scheidsrechter heeft het wedstrijdblad nog niet opengezet om aan te tekenen.">
+              ⏳ Wacht op scheidsrechter
+            </span>
+          )
+        })}
+      </div>
+    </div>
   )
 }

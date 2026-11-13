@@ -87,3 +87,9 @@
   border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
   box-shadow: var(--card-shadow, 0 10px 30px rgba(0, 0, 0, 0.3)), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
+
+/* "Mijn wedstrijden": kopjes per moment, "later" ingeklapt. */
+.rm-groep { margin: 16px 0 8px; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--dim); }
+.rm-later { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.rm-later > summary { cursor: pointer; font-weight: 700; color: var(--dim); }
+.rm-later[open] > summary { margin-bottom: 10px; }

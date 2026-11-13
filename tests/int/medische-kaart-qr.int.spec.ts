@@ -162,6 +162,15 @@ describe('medisch attest met QR', () => {
     expect(await attestBeslissen(payload, ids.staf, { id: rij.id, besluit: 'afkeuren', reden: 'te laat bedacht' })).toMatchObject({ ok: false, status: 409 })
   }, 120_000)
 
+  it('de federatie laadt een stapel op: een kaart zonder QR komt ter nakijken om toe te kennen', async () => {
+    const fed = { id: ids.staf, roles: ['admin'] }
+    const r = await kaartenOpladen(payload, fed as never, [await foto(null, 'Jan Zonder QR.jpg'), await foto(ids.p2, 'bert.jpg')])
+    expect(r[0]).toMatchObject({ ok: true, playerId: null, status: 'nakijken' })
+    expect(r[1]).toMatchObject({ ok: true, playerId: ids.p2 })
+    const rij = (await attestenLijst(payload, 'nakijken')).find((x) => x.blanco && x.opgegeven?.naam === 'Jan Zonder QR')
+    expect(rij).toBeTruthy()
+  }, 120_000)
+
   it('afkeuren met een reden: het lid en de club krijgen een melding', async () => {
     const r = await kaartenOpladen(payload, wie.lid as never, [await foto(null)], { voorLid: ids.p1 })
     expect(r[0]).toMatchObject({ ok: true, status: 'nakijken' })

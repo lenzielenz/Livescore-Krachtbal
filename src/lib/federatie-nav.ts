@@ -105,7 +105,7 @@ export const FED_NAV: FedNavGroup[] = [
     titel: 'Clubs & leden',
     items: [
       { key: 'clubs', label: 'Clubs & logins', hint: 'Club aanmaken, clubbeheerder uitnodigen', href: '/beheer/clubs', icon: 'clubs', zoek: ['uitnodigen', 'beheerder'] },
-      { key: 'attesten', label: 'Medische attesten', hint: 'Attesten nakijken die niet vanzelf goedgekeurd werden; blanco attesten aan een lid koppelen', href: '/beheer/attesten', icon: 'leden', zoek: ['attest', 'medisch', 'keuring', 'blanco', 'arts', 'dokter'] },
+      { key: 'attesten', label: 'Medische kaarten', hint: 'Kaarten opladen, nakijken en aan een lid toekennen', href: '/beheer/attesten', icon: 'leden', zoek: ['medische kaart', 'attest', 'medisch', 'keuring', 'blanco', 'arts', 'dokter', 'opladen', 'toekennen', 'scan'], ook: ['/medische-kaart/opladen'] },
       { key: 'verzekerden', label: 'Verzekerden', hint: 'Wie per seizoen aangesloten en verzekerd is; lijst voor de verzekeraar', href: '/beheer/verzekerden', icon: 'leden', zoek: ['verzekering', 'verzekeraar', 'aansluiting', 'lidmaatschap', 'ethias', 'arena'] },
       { key: 'leden', label: 'Ledenkeuring', hint: 'Aanvragen van clubs goedkeuren of afkeuren; medische kaarten', href: '/beheer/leden', icon: 'leden', zoek: ['keuring', 'spelers', 'registratie', 'kaart', 'herinnering'] },
     ],

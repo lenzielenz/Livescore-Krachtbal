@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { formatDateTimeBE } from '@/lib/datetime'
@@ -15,6 +16,8 @@ export type RefMatch = {
   status: string
   assignedRefId: number | null
   assignedRefName: string | null
+  /** Status van het wedstrijdblad (concept, vrijgegeven, ingediend…), voor "wat moet nog". */
+  bladStatus?: string | null
 }
 
 export type RefOfficial = { id: number; name: string }
@@ -26,17 +29,21 @@ export function RefereeMatches({
   officials,
   myOfficialId,
   isFederation,
+  modus,
 }: {
   matches: RefMatch[]
   officials: RefOfficial[]
   myOfficialId: number | null
   isFederation: boolean
+  /** Vast filter per tabblad van het portaal: mijn wedstrijden, vrije wedstrijden, of alles (met filterknoppen). */
+  modus?: 'mijn' | 'vrij' | 'alle'
 }) {
   const router = useRouter()
   const [busy, setBusy] = useState<number | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const [handoff, setHandoff] = useState<number | null>(null) // matchId waarvoor de doorgeef-keuze open staat
-  const [filter, setFilter] = useState<'all' | 'mine' | 'free'>('all')
+  const [filterKeuze, setFilter] = useState<'all' | 'mine' | 'free'>('all')
+  const filter = modus === 'mijn' ? 'mine' : modus === 'vrij' ? 'free' : filterKeuze
   const [reeksFilter, setReeksFilter] = useState('')
   const [clubFilter, setClubFilter] = useState('')
 
@@ -90,55 +97,23 @@ export function RefereeMatches({
     d ? formatDateTimeBE(new Date(d), { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'
   const statusLabel = (s: string) => (s === 'live' ? 'LIVE' : s === 'finished' ? 'Afgelopen' : 'Gepland')
 
-  return (
-    <section className="wb-card rm">
-      <div className="rm-head">
-        <h2>Wedstrijden</h2>
-        <div className="rm-filters">
-          {(['all', 'free', 'mine'] as const).map((f) => (
-            <button key={f} type="button" className={`rm-filter ${filter === f ? 'on' : ''}`} onClick={() => setFilter(f)}>
-              {f === 'all' ? 'Alle' : f === 'free' ? 'Zonder SR' : 'Van mij'}
-            </button>
-          ))}
-        </div>
-      </div>
-      {(reeksOptions.length > 1 || clubOptions.length > 1) && (
-        <div className="rm-selects">
-          <select
-            className="wb-input rm-fsel"
-            value={reeksFilter}
-            onChange={(e) => setReeksFilter(e.target.value)}
-            aria-label="Filter op reeks"
-          >
-            <option value="">Alle reeksen</option>
-            {reeksOptions.map(([r, n]) => (
-              <option key={r} value={r}>{r} ({n})</option>
-            ))}
-          </select>
-          <select
-            className="wb-input rm-fsel"
-            value={clubFilter}
-            onChange={(e) => setClubFilter(e.target.value)}
-            aria-label="Filter op club"
-          >
-            <option value="">Alle clubs</option>
-            {clubOptions.map(([c, n]) => (
-              <option key={c} value={c}>{c} ({n})</option>
-            ))}
-          </select>
-        </div>
-      )}
-      <p className="wb-sub">
-        Vrije wedstrijden kan je zelf opnemen. Een wedstrijd die je toegewezen kreeg, kan je doorgeven aan een
-        andere scheidsrechter als je niet kan. De federatie kan altijd toewijzen.
-      </p>
-      {msg && <p className="wb-msg" style={{ color: '#e0533d' }}>{msg}</p>}
+  // "Mijn wedstrijden": wat nu moet bovenaan, de rest per moment; later ingeklapt.
+  const groepen: { titel: string; lijst: RefMatch[]; ingeklapt?: boolean }[] =
+    modus === 'mijn'
+      ? (() => {
+          const afwerken = shown.filter((m) => m.status === 'finished' && m.bladStatus !== 'ingediend')
+          const live = shown.filter((m) => m.status === 'live')
+          const komend = shown.filter((m) => m.status === 'scheduled')
+          return [
+            { titel: '✍️ Af te werken', lijst: afwerken },
+            { titel: '● Nu bezig', lijst: live },
+            { titel: 'Komend', lijst: komend.slice(0, 4) },
+            { titel: `Later (${Math.max(0, komend.length - 4)})`, lijst: komend.slice(4), ingeklapt: true },
+          ].filter((g) => g.lijst.length > 0)
+        })()
+      : [{ titel: '', lijst: shown }]
 
-      {shown.length === 0 ? (
-        <p className="wb-sub">Geen wedstrijden in deze selectie.</p>
-      ) : (
-        <ul className="rm-list">
-          {shown.map((m) => {
+  const rij = (m: RefMatch) => {
             const mine = myOfficialId != null && m.assignedRefId === myOfficialId
             const free = m.assignedRefId == null
             const canHandoff = isFederation || mine
@@ -150,8 +125,15 @@ export function RefereeMatches({
                   <span className={`rm-ref ${free ? 'free' : ''}`}>
                     {free ? '⚠️ Geen scheidsrechter' : `🟡 ${m.assignedRefName}${mine ? ' (jij)' : ''}`}
                   </span>
+                  {mine && m.status === 'finished' && m.bladStatus !== 'ingediend' && <span className="rm-ref free">✍️ Blad nog af te tekenen en in te dienen</span>}
                 </div>
                 <div className="rm-actions">
+                  {/* Je eigen wedstrijd: meteen naar het wedstrijdblad (voorbereiden, leiden, aftekenen). */}
+                  {(mine || isFederation) && !free && (
+                    <Link href={`/scheidsrechter/${m.id}`} className={`wb-btn rm-btn${mine ? ' wb-btn-primary' : ''}`}>
+                      {m.status === 'finished' && m.bladStatus !== 'ingediend' ? 'Afwerken →' : 'Open wedstrijdblad →'}
+                    </Link>
+                  )}
                   {/* Vrije wedstrijd: een SR neemt ze zelf; de federatie wijst ze toe. */}
                   {free && myOfficialId != null && (
                     <button type="button" className="wb-btn wb-btn-primary rm-btn" disabled={busy === m.id} onClick={() => act(m.id, 'claim')}>
@@ -182,15 +164,80 @@ export function RefereeMatches({
                     )
                   )}
                   {!free && canHandoff && (
-                    <button type="button" className="wb-link-btn rm-release" disabled={busy === m.id} onClick={() => act(m.id, 'release')}>
-                      vrijgeven
+                    <button type="button" className="wb-link-btn rm-release" title="Je bent niet langer de scheidsrechter van deze wedstrijd; ze wordt weer vrij." disabled={busy === m.id} onClick={() => act(m.id, 'release')}>
+                      afstaan
                     </button>
                   )}
                 </div>
               </li>
             )
-          })}
-        </ul>
+  }
+
+  return (
+    <section className="wb-card rm">
+      <div className="rm-head">
+        <h2>{modus === 'mijn' ? 'Mijn wedstrijden' : modus === 'vrij' ? 'Vrije wedstrijden' : 'Wedstrijden'}</h2>
+        {!modus || modus === 'alle' ? (
+        <div className="rm-filters">
+          {(['all', 'free', 'mine'] as const).map((f) => (
+            <button key={f} type="button" className={`rm-filter ${filter === f ? 'on' : ''}`} onClick={() => setFilter(f)}>
+              {f === 'all' ? 'Alle' : f === 'free' ? 'Zonder SR' : 'Van mij'}
+            </button>
+          ))}
+        </div>
+        ) : null}
+      </div>
+      {modus !== 'mijn' && (reeksOptions.length > 1 || clubOptions.length > 1) && (
+        <div className="rm-selects">
+          <select
+            className="wb-input rm-fsel"
+            value={reeksFilter}
+            onChange={(e) => setReeksFilter(e.target.value)}
+            aria-label="Filter op reeks"
+          >
+            <option value="">Alle reeksen</option>
+            {reeksOptions.map(([r, n]) => (
+              <option key={r} value={r}>{r} ({n})</option>
+            ))}
+          </select>
+          <select
+            className="wb-input rm-fsel"
+            value={clubFilter}
+            onChange={(e) => setClubFilter(e.target.value)}
+            aria-label="Filter op club"
+          >
+            <option value="">Alle clubs</option>
+            {clubOptions.map(([c, n]) => (
+              <option key={c} value={c}>{c} ({n})</option>
+            ))}
+          </select>
+        </div>
+      )}
+      <p className="wb-sub">
+        {modus === 'mijn'
+          ? 'Open het wedstrijdblad om de wedstrijd voor te bereiden, te leiden en af te tekenen. Kan je niet? Geef de wedstrijd door.'
+          : modus === 'vrij'
+            ? 'Wedstrijden zonder scheidsrechter. Neem er zelf een op; de federatie ziet het meteen.'
+            : 'Vrije wedstrijden kan je zelf opnemen. Een wedstrijd die je toegewezen kreeg, kan je doorgeven aan een andere scheidsrechter als je niet kan. De federatie kan altijd toewijzen.'}
+      </p>
+      {msg && <p className="wb-msg" style={{ color: '#e0533d' }}>{msg}</p>}
+
+      {shown.length === 0 ? (
+        <p className="wb-sub">{modus === 'mijn' ? 'Je hebt geen komende wedstrijden. Kijk bij "Vrije wedstrijden" om er een op te nemen.' : modus === 'vrij' ? 'Alle wedstrijden hebben een scheidsrechter. ✓' : 'Geen wedstrijden in deze selectie.'}</p>
+      ) : (
+        groepen.map((g) =>
+          g.ingeklapt ? (
+            <details key={g.titel} className="rm-later">
+              <summary>{g.titel}</summary>
+              <ul className="rm-list">{g.lijst.map(rij)}</ul>
+            </details>
+          ) : (
+            <div key={g.titel || 'alle'}>
+              {g.titel && <h3 className="rm-groep">{g.titel}</h3>}
+              <ul className="rm-list">{g.lijst.map(rij)}</ul>
+            </div>
+          ),
+        )
       )}
     </section>
   )

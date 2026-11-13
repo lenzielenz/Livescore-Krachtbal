@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { KaartenOpladen } from '@/components/KaartenOpladen'
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
 import { attestenLijst } from '@/lib/attest-server'
@@ -27,18 +28,46 @@ export default async function AttestenPage({ searchParams }: { searchParams: Pro
     <>
       <SiteHeader active="federatie" />
       <div className="site site-breed">
-        <h1 className="page-title">🩺 Medische attesten</h1>
+        <h1 className="page-title">🩺 Medische kaarten</h1>
         <p className="acc-page-intro">
-          Attesten die het systeem niet vanzelf kon goedkeuren. Alles juist (QR van het lid, vier hoeken, &quot;geschikt&quot;
-          aangekruist) wordt automatisch goedgekeurd en staat hier niet.{' '}
-          {toon === 'nakijken' ? <Link href="/beheer/attesten?toon=afgekeurd">Recent afgekeurd →</Link> : <Link href="/beheer/attesten">Ter nakijken →</Link>}
-          {' · '}
-          <a href="/api/attest/blanco" target="_blank" rel="noopener">
-            Blanco attest (PDF)
-          </a>
-          {' · '}
-          <Link href="/attest">Publieke link</Link>
+          Hier laad je ingevulde medische kaarten (attesten) op en ken je ze toe. Een kaart met de QR-code van een lid komt vanzelf bij dat lid
+          en is meteen goedgekeurd als alles juist staat. Al de rest komt in de lijst <strong>Ter nakijken</strong> hieronder: daar kies je het lid
+          en keur je goed of af.
         </p>
+
+        {toon === 'nakijken' && (
+          <section className="wb-card" style={{ marginBottom: 18 }}>
+            <h2>📷 Kaarten opladen</h2>
+            <p className="wb-sub">
+              Selecteer een stapel foto&apos;s of scans tegelijk (ook een PDF). Kaarten zonder leesbare QR-code of blanco kaarten komen ter nakijken
+              om toe te kennen.
+            </p>
+            <KaartenOpladen />
+          </section>
+        )}
+
+        <h2 style={{ margin: '0 0 6px' }}>{toon === 'nakijken' ? `Ter nakijken (${lijst.length})` : 'Recent afgekeurd'}</h2>
+        <p className="acc-page-intro">Kaarten die het systeem niet vanzelf kon goedkeuren: blanco, zonder QR-code, of met een onduidelijk vakje.</p>
+        <div className="wb-btn-row" style={{ margin: '0 0 14px' }}>
+          {toon === 'nakijken' ? (
+            <Link className="wb-btn" href="/beheer/attesten?toon=afgekeurd">
+              Recent afgekeurd
+            </Link>
+          ) : (
+            <Link className="wb-btn" href="/beheer/attesten">
+              Ter nakijken
+            </Link>
+          )}
+          <a className="wb-btn" href="/api/attest/blanco" target="_blank" rel="noopener">
+            🖨️ Blanco kaart
+          </a>
+          <Link className="wb-btn" href="/beheer/leden">
+            🖨️ Kaart van een lid (ledenregister)
+          </Link>
+          <Link className="wb-btn" href="/attest">
+            🔗 Publieke link
+          </Link>
+        </div>
         {lijst.length === 0 ? (
           <p className="empty">{toon === 'nakijken' ? 'Niets na te kijken. ✅' : 'Geen afgekeurde attesten.'}</p>
         ) : (

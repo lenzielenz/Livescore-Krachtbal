@@ -221,7 +221,9 @@ export function VoorbehoudPaneel({
       ) : (
         <label className="wb-sub" style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 10 }}>
           <input type="checkbox" checked={rapportVolgt} disabled={bezig || Boolean(vergrendeld)} onChange={(e) => void zetRapportVolgt(e.target.checked)} />
-          Andere onregelmatigheid: zet <strong>zie scheidsrechtersrapport</strong> op het blad (RCVK item 27)
+          <span>
+            Andere onregelmatigheid: zet <strong>zie scheidsrechtersrapport</strong> op het blad (RCVK item 27)
+          </span>
         </label>
       )}
       {lijst('Voorbehoud', rijen.voorbehoud, 'voorbehoud-schrappen')}
