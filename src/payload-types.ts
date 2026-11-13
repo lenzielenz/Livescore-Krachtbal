@@ -77,6 +77,8 @@ export interface Config {
     'aftrap-wijzigingen': AftrapWijzigingen;
     'boete-soorten': BoeteSoorten;
     boetes: Boete;
+    facturen: Facturen;
+    betalingen: Betalingen;
     inschrijvingsrondes: Inschrijvingsronde;
     inschrijvingen: Inschrijvingen;
     verplaatsingsaanvragen: Verplaatsingsaanvragen;
@@ -149,6 +151,8 @@ export interface Config {
     'aftrap-wijzigingen': AftrapWijzigingenSelect<false> | AftrapWijzigingenSelect<true>;
     'boete-soorten': BoeteSoortenSelect<false> | BoeteSoortenSelect<true>;
     boetes: BoetesSelect<false> | BoetesSelect<true>;
+    facturen: FacturenSelect<false> | FacturenSelect<true>;
+    betalingen: BetalingenSelect<false> | BetalingenSelect<true>;
     inschrijvingsrondes: InschrijvingsrondesSelect<false> | InschrijvingsrondesSelect<true>;
     inschrijvingen: InschrijvingenSelect<false> | InschrijvingenSelect<true>;
     verplaatsingsaanvragen: VerplaatsingsaanvragenSelect<false> | VerplaatsingsaanvragenSelect<true>;
@@ -1368,6 +1372,61 @@ export interface Boete {
   betaaldOp?: string | null;
   clubOpmerking?: string | null;
   federatieOpmerking?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "facturen".
+ */
+export interface Facturen {
+  id: number;
+  club: number | Club;
+  status?: ('concept' | 'verstuurd' | 'geannuleerd') | null;
+  /**
+   * Doorlopend, bij het versturen.
+   */
+  nummer?: string | null;
+  jaar?: number | null;
+  volgnr?: number | null;
+  ogm?: string | null;
+  seizoen?: string | null;
+  datum?: string | null;
+  vervaldatum?: string | null;
+  lijnen?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  totaal?: number | null;
+  opmerking?: string | null;
+  gemaaktDoor?: (number | null) | User;
+  verstuurdOp?: string | null;
+  geannuleerdOp?: string | null;
+  annuleerReden?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "betalingen".
+ */
+export interface Betalingen {
+  id: number;
+  factuur: number | Facturen;
+  club?: (number | null) | Club;
+  bedrag: number;
+  datum: string;
+  bron?: ('manueel' | 'bank' | 'online') | null;
+  sleutel?: string | null;
+  mededeling?: string | null;
+  tegenpartij?: string | null;
+  opmerking?: string | null;
+  geregistreerdDoor?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -3023,6 +3082,14 @@ export interface PayloadLockedDocument {
         value: number | Boete;
       } | null)
     | ({
+        relationTo: 'facturen';
+        value: number | Facturen;
+      } | null)
+    | ({
+        relationTo: 'betalingen';
+        value: number | Betalingen;
+      } | null)
+    | ({
         relationTo: 'inschrijvingsrondes';
         value: number | Inschrijvingsronde;
       } | null)
@@ -3514,6 +3581,48 @@ export interface BoetesSelect<T extends boolean = true> {
   betaaldOp?: T;
   clubOpmerking?: T;
   federatieOpmerking?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "facturen_select".
+ */
+export interface FacturenSelect<T extends boolean = true> {
+  club?: T;
+  status?: T;
+  nummer?: T;
+  jaar?: T;
+  volgnr?: T;
+  ogm?: T;
+  seizoen?: T;
+  datum?: T;
+  vervaldatum?: T;
+  lijnen?: T;
+  totaal?: T;
+  opmerking?: T;
+  gemaaktDoor?: T;
+  verstuurdOp?: T;
+  geannuleerdOp?: T;
+  annuleerReden?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "betalingen_select".
+ */
+export interface BetalingenSelect<T extends boolean = true> {
+  factuur?: T;
+  club?: T;
+  bedrag?: T;
+  datum?: T;
+  bron?: T;
+  sleutel?: T;
+  mededeling?: T;
+  tegenpartij?: T;
+  opmerking?: T;
+  geregistreerdDoor?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -4870,6 +4979,18 @@ export interface Setting {
    * Geldt voor de kwitantie en het forfait-onkostenblad. Standaard € 0,4452.
    */
   kmTarief?: number | null;
+  factuurNaam?: string | null;
+  factuurAdres?: string | null;
+  factuurOndernemingsnummer?: string | null;
+  factuurIban?: string | null;
+  factuurBic?: string | null;
+  /**
+   * Bv. de vrijstelling die op de factuur moet staan. Laat de boekhouder dit invullen.
+   */
+  factuurBtwVermelding?: string | null;
+  betaaltermijnDagen?: number | null;
+  lidgeldSpeler?: number | null;
+  lidgeldLid?: number | null;
   /**
    * Het forfait-onkostenblad van de scheidsrechter (€13 + km).
    */
@@ -4926,6 +5047,15 @@ export interface SettingsSelect<T extends boolean = true> {
   knipjesDrempel?: T;
   scheidsrechterKostenBetaler?: T;
   kmTarief?: T;
+  factuurNaam?: T;
+  factuurAdres?: T;
+  factuurOndernemingsnummer?: T;
+  factuurIban?: T;
+  factuurBic?: T;
+  factuurBtwVermelding?: T;
+  betaaltermijnDagen?: T;
+  lidgeldSpeler?: T;
+  lidgeldLid?: T;
   forfaitKostenBetaler?: T;
   updatedAt?: T;
   createdAt?: T;

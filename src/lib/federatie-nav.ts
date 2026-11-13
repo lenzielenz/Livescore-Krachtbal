@@ -95,6 +95,7 @@ export const FED_NAV: FedNavGroup[] = [
     titel: 'Tucht & geld',
     items: [
       { key: 'klachten', label: 'Klachten', hint: 'Klachten van clubs over een blad: heropenen of afwijzen', href: '/beheer/klachten', icon: 'klachten', zoek: ['protest'] },
+      { key: 'facturen', label: 'Facturen & betalingen', hint: 'Facturen aan de clubs opmaken en versturen; bankafschrift inlezen; wat open staat', href: '/beheer/facturen', icon: 'boetes', zoek: ['factuur', 'betaling', 'lidgeld', 'aansluiting', 'bank', 'mededeling', 'ogm', 'boekhouding', 'twizzit'] },
       { key: 'boetes', label: 'Boetes', hint: 'Voorstellen beoordelen, opleggen en betalingen bevestigen', href: '/beheer/boetes', icon: 'boetes', zoek: ['forfait', 'betaling', 'sanctie'] },
       { key: 'knipjes', label: 'Knipjes', hint: 'Sancties en schorsingen', href: '/knipjes', icon: 'knipjes', zoek: ['schorsing', 'sanctie'] },
     ],

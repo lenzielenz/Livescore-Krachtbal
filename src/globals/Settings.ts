@@ -128,6 +128,29 @@ export const Settings: GlobalConfig = {
       admin: { step: 0.0001, description: 'Geldt voor de kwitantie en het forfait-onkostenblad. Standaard € 0,4452.' },
     },
     {
+      // Facturatie aan de clubs (lib/facturatie-server.ts): wat er op elke factuur staat en de tarieven van de
+      // aansluitingen. Leeg/0 = die lijn komt niet op de factuur.
+      type: 'collapsible',
+      label: 'Facturatie aan de clubs',
+      admin: { initCollapsed: true },
+      fields: [
+        { name: 'factuurNaam', label: 'Naam op de factuur', type: 'text', defaultValue: 'KVKBF vzw' },
+        { name: 'factuurAdres', label: 'Adres', type: 'textarea' },
+        { name: 'factuurOndernemingsnummer', label: 'Ondernemingsnummer', type: 'text' },
+        { name: 'factuurIban', label: 'IBAN (rekening voor de betalingen)', type: 'text' },
+        { name: 'factuurBic', label: 'BIC', type: 'text' },
+        {
+          name: 'factuurBtwVermelding',
+          label: 'Btw-vermelding',
+          type: 'text',
+          admin: { description: 'Bv. de vrijstelling die op de factuur moet staan. Laat de boekhouder dit invullen.' },
+        },
+        { name: 'betaaltermijnDagen', label: 'Betaaltermijn (dagen)', type: 'number', defaultValue: 30, min: 0, max: 365 },
+        { name: 'lidgeldSpeler', label: 'Aansluiting per speler per seizoen (€)', type: 'number', defaultValue: 0, min: 0 },
+        { name: 'lidgeldLid', label: 'Aansluiting per gewoon lid per seizoen (€)', type: 'number', defaultValue: 0, min: 0 },
+      ],
+    },
+    {
       name: 'forfaitKostenBetaler',
       label: 'Kosten bij forfait betaald door',
       type: 'select',

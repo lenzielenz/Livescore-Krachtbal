@@ -15,7 +15,7 @@ type PgClient = { query: (q: string, params?: unknown[]) => Promise<unknown>; re
 type PgPool = { connect: () => Promise<PgClient> }
 
 // classid scheidt de naamruimtes zodat match-id 5 en tornooiwedstrijd-id 5 niet botsen.
-const CLASS = { match: 1, tournamentMatch: 2 } as const
+const CLASS = { match: 1, tournamentMatch: 2, factuurnummer: 3 } as const
 
 // Elke slot-houder bezet een verbinding van de pool ÉN doet daarbinnen nog queries (via andere
 // verbindingen). Liet je evenveel acties tegelijk toe als er verbindingen zijn, dan houden ze die

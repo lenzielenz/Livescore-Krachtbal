@@ -1,0 +1,55 @@
+/* Facturen (/beheer/facturen en /club/facturen). */
+.fa { display: flex; flex-direction: column; gap: 14px; }
+.fa-tegels { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.fa-tegel { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: var(--r-card, 14px); border: 1px solid var(--line); background: var(--panel); }
+.fa-tegel span, .fa-tegel small { color: var(--dim); font-size: 0.82rem; }
+.fa-tegel strong { font-size: 1.35rem; }
+.fa-tegel-rood { border-color: color-mix(in srgb, #e0533d 55%, var(--line)); }
+.fa-tegel-rood strong { color: #ff8a75; }
+.fa-blok h2 { margin: 0 0 4px; }
+.fa-kop { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.fa-vinken { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 12px; }
+.fa-lijst { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.fa-concept { padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); display: flex; flex-direction: column; gap: 8px; }
+.fa-totaal { font-weight: 800; font-size: 1.1rem; }
+.fa-tabel { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.fa-tabel td, .fa-tabel th { padding: 5px 6px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.fa-tabel th { color: var(--dim); font-weight: 600; font-size: 0.8rem; }
+.fa-r { text-align: right !important; white-space: nowrap; }
+.fa-dim { color: var(--dim); font-size: 0.86rem; margin: 0; }
+.fa-x { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 0.95rem; padding: 2px 6px; }
+.fa-x:hover { color: #ff8a75; }
+.fa-rij { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.fa-rij input, .fa-filters input, .fa-opm { min-height: 38px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--txt); padding: 0 10px; font: inherit; flex: 1; min-width: 160px; }
+.fa-opm { padding: 8px 10px; width: 100%; }
+.fa-rij input.fa-klein { flex: 0 0 90px; min-width: 0; }
+.fa-knoppen { display: flex; flex-wrap: wrap; gap: 8px; }
+.fa-rood { border-color: #e0533d !important; color: #ff8a75 !important; }
+.fa-let { padding: 10px 14px; border-radius: 10px; background: color-mix(in srgb, #d39b2a 15%, transparent); border: 1px solid color-mix(in srgb, #d39b2a 45%, var(--line)); }
+.fa-let-klein { color: #e2b04a; }
+.fa-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.fa-filters button { border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--txt); padding: 5px 12px; font: inherit; font-size: 0.85rem; cursor: pointer; }
+.fa-filters button[aria-pressed='true'] { border-color: var(--accent); color: var(--accent); }
+.fa-factuur { border-radius: 12px; border: 1px solid var(--line); background: var(--bg); overflow: hidden; }
+.fa-regel { width: 100%; display: grid; grid-template-columns: 90px 1fr auto auto 150px; gap: 10px; align-items: center; padding: 10px 12px; background: none; border: none; color: var(--txt); font: inherit; text-align: left; cursor: pointer; }
+@media (max-width: 680px) { .fa-regel { grid-template-columns: 1fr auto; } .fa-regel .fa-dim, .fa-regel .fa-nr { display: none; } }
+.fa-nr { font-weight: 700; font-variant-numeric: tabular-nums; }
+.fa-club { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fa-stand { justify-self: end; padding: 3px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; border: 1px solid var(--line); }
+.fa-stand-betaald { background: color-mix(in srgb, #2e9d57 20%, transparent); border-color: #2e9d57; color: #6fdc96; }
+.fa-stand-open { background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: var(--accent); }
+.fa-stand-deels { background: color-mix(in srgb, #d39b2a 18%, transparent); border-color: #d39b2a; color: #e8bd62; }
+.fa-stand-vervallen { background: color-mix(in srgb, #e0533d 20%, transparent); border-color: #e0533d; color: #ff8a75; }
+.fa-stand-geannuleerd { color: var(--dim); text-decoration: line-through; }
+.fa-detail { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+.fa-betalingen { margin: 0; padding-left: 18px; font-size: 0.9rem; }
+.fa-bank { margin: 8px 0 12px; }
+.fa-bank-al-geboekt { opacity: 0.55; }
+.fa-bank-geen-factuur td { color: var(--dim); }
+
+/* Club: grote betaalkaart */
+.fc-kaart { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; padding: 16px; border-radius: var(--r-card-lg, 16px); border: 1px solid var(--line); background: var(--panel); }
+@media (max-width: 620px) { .fc-kaart { grid-template-columns: 1fr; } }
+.fc-kaart h3 { margin: 0; }
+.fc-mededeling { font-size: 1.15rem; font-weight: 800; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+.fc-qr { width: 140px; height: 140px; border-radius: 10px; background: #fff; padding: 6px; }
