@@ -402,6 +402,11 @@ function Factuur({ r, vandaag, onKlaar }: { r: FactuurRij; vandaag: string; onKl
             <a className="wb-btn" href={`/api/facturen/${r.id}/pdf`} target="_blank" rel="noopener">
               PDF
             </a>
+            {r.status === 'verstuurd' && (
+              <a className="wb-btn" href={`/api/facturen/${r.id}/ubl`} title="UBL 2.1 volgens Peppol BIS Billing 3.0">
+                e-factuur (Peppol)
+              </a>
+            )}
           </div>
           {r.status === 'verstuurd' && r.beeld.open > 0 && (
             <div className="fa-rij">

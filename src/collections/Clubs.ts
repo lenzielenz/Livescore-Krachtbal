@@ -192,6 +192,28 @@ export const Clubs: CollectionConfig = {
       admin: { hidden: true },
     },
     {
+      // Facturatie (lib/facturatie-server.ts, lib/peppol.ts): op de factuur en voor de e-factuur via Peppol.
+      type: 'collapsible',
+      label: 'Facturatie',
+      admin: { initCollapsed: true },
+      fields: [
+        {
+          name: 'ondernemingsnummer',
+          label: 'Ondernemingsnummer (vzw)',
+          type: 'text',
+          admin: { description: 'Bv. 0412.345.678. Nodig voor de e-factuur via Peppol (de club is er zo te vinden).' },
+        },
+        { name: 'factuurStraat', label: 'Factuuradres: straat en nummer', type: 'text' },
+        {
+          type: 'row',
+          fields: [
+            { name: 'factuurPostcode', label: 'Postcode', type: 'text' },
+            { name: 'factuurGemeente', label: 'Gemeente', type: 'text' },
+          ],
+        },
+      ],
+    },
+    {
       type: 'collapsible',
       label: 'Accommodatie & contact',
       admin: { initCollapsed: true },

@@ -79,6 +79,8 @@ export interface Config {
     boetes: Boete;
     facturen: Facturen;
     betalingen: Betalingen;
+    lidmaatschappen: Lidmaatschappen;
+    'lid-documenten': LidDocumenten;
     inschrijvingsrondes: Inschrijvingsronde;
     inschrijvingen: Inschrijvingen;
     verplaatsingsaanvragen: Verplaatsingsaanvragen;
@@ -153,6 +155,8 @@ export interface Config {
     boetes: BoetesSelect<false> | BoetesSelect<true>;
     facturen: FacturenSelect<false> | FacturenSelect<true>;
     betalingen: BetalingenSelect<false> | BetalingenSelect<true>;
+    lidmaatschappen: LidmaatschappenSelect<false> | LidmaatschappenSelect<true>;
+    'lid-documenten': LidDocumentenSelect<false> | LidDocumentenSelect<true>;
     inschrijvingsrondes: InschrijvingsrondesSelect<false> | InschrijvingsrondesSelect<true>;
     inschrijvingen: InschrijvingenSelect<false> | InschrijvingenSelect<true>;
     verplaatsingsaanvragen: VerplaatsingsaanvragenSelect<false> | VerplaatsingsaanvragenSelect<true>;
@@ -280,6 +284,13 @@ export interface Club {
   logoOffsetY?: number | null;
   colorPrimary?: string | null;
   colorSecondary?: string | null;
+  /**
+   * Bv. 0412.345.678. Nodig voor de e-factuur via Peppol (de club is er zo te vinden).
+   */
+  ondernemingsnummer?: string | null;
+  factuurStraat?: string | null;
+  factuurPostcode?: string | null;
+  factuurGemeente?: string | null;
   /**
    * Naam stadion, volledig adres (straat + nr + gemeente), type terrein (bv. kunstgras). Dit adres bepaalt de "Route"-link naar Google Maps op de wedstrijdpagina — vul een volledig adres in als je wil dat die link naar het juiste plein wijst, niet naar het centrum van de gemeente.
    */
@@ -689,6 +700,22 @@ export interface Player {
    * Voor jeugd: de ouder ziet het dossier van het kind in zijn eigen login.
    */
   ouderEmail?: string | null;
+  straat?: string | null;
+  postcode?: string | null;
+  gemeente?: string | null;
+  land?: string | null;
+  telefoon?: string | null;
+  nationaliteit?: string | null;
+  noodcontactNaam?: string | null;
+  noodcontactTelefoon?: string | null;
+  /**
+   * Beeldmateriaal van wedstrijden en activiteiten mag gepubliceerd worden.
+   */
+  toestemmingFoto?: boolean | null;
+  toestemmingNieuws?: boolean | null;
+  toestemmingOp?: string | null;
+  lidSinds?: string | null;
+  ficheBijgewerktOp?: string | null;
   /**
    * Beide ouders zien het dossier en kunnen het medisch attest opladen.
    */
@@ -1429,6 +1456,53 @@ export interface Betalingen {
   geregistreerdDoor?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lidmaatschappen".
+ */
+export interface Lidmaatschappen {
+  id: number;
+  player?: (number | null) | Player;
+  club?: (number | null) | Club;
+  seizoen: string;
+  soort?: ('speler' | 'lid') | null;
+  vanaf: string;
+  /**
+   * Leeg = nog aangesloten.
+   */
+  tot?: string | null;
+  sleutel?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lid-documenten".
+ */
+export interface LidDocumenten {
+  id: number;
+  player?: (number | null) | Player;
+  club?: (number | null) | Club;
+  soort?: ('identiteit' | 'mutualiteit' | 'toestemming' | 'verzekering' | 'ander') | null;
+  titel: string;
+  opmerking?: string | null;
+  /**
+   * Uit: enkel de club en de federatie zien het (bv. een interne nota).
+   */
+  zichtbaarVoorLid?: boolean | null;
+  geuploadDoor?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -3090,6 +3164,14 @@ export interface PayloadLockedDocument {
         value: number | Betalingen;
       } | null)
     | ({
+        relationTo: 'lidmaatschappen';
+        value: number | Lidmaatschappen;
+      } | null)
+    | ({
+        relationTo: 'lid-documenten';
+        value: number | LidDocumenten;
+      } | null)
+    | ({
         relationTo: 'inschrijvingsrondes';
         value: number | Inschrijvingsronde;
       } | null)
@@ -3366,6 +3448,10 @@ export interface ClubsSelect<T extends boolean = true> {
   logoOffsetY?: T;
   colorPrimary?: T;
   colorSecondary?: T;
+  ondernemingsnummer?: T;
+  factuurStraat?: T;
+  factuurPostcode?: T;
+  factuurGemeente?: T;
   accommodatie?: T;
   plaats?: T;
   lat?: T;
@@ -3425,6 +3511,19 @@ export interface PlayersSelect<T extends boolean = true> {
   geslacht?: T;
   email?: T;
   ouderEmail?: T;
+  straat?: T;
+  postcode?: T;
+  gemeente?: T;
+  land?: T;
+  telefoon?: T;
+  nationaliteit?: T;
+  noodcontactNaam?: T;
+  noodcontactTelefoon?: T;
+  toestemmingFoto?: T;
+  toestemmingNieuws?: T;
+  toestemmingOp?: T;
+  lidSinds?: T;
+  ficheBijgewerktOp?: T;
   ouder2Email?: T;
   soortLid?: T;
   vergunningsnummer?: T;
@@ -3625,6 +3724,45 @@ export interface BetalingenSelect<T extends boolean = true> {
   geregistreerdDoor?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lidmaatschappen_select".
+ */
+export interface LidmaatschappenSelect<T extends boolean = true> {
+  player?: T;
+  club?: T;
+  seizoen?: T;
+  soort?: T;
+  vanaf?: T;
+  tot?: T;
+  sleutel?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lid-documenten_select".
+ */
+export interface LidDocumentenSelect<T extends boolean = true> {
+  player?: T;
+  club?: T;
+  soort?: T;
+  titel?: T;
+  opmerking?: T;
+  zichtbaarVoorLid?: T;
+  geuploadDoor?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -4984,6 +5122,8 @@ export interface Setting {
   factuurOndernemingsnummer?: string | null;
   factuurIban?: string | null;
   factuurBic?: string | null;
+  factuurBtwRegime?: ('niet-onderworpen' | 'vrijgesteld') | null;
+  factuurBtwNummer?: string | null;
   /**
    * Bv. de vrijstelling die op de factuur moet staan. Laat de boekhouder dit invullen.
    */
@@ -5052,6 +5192,8 @@ export interface SettingsSelect<T extends boolean = true> {
   factuurOndernemingsnummer?: T;
   factuurIban?: T;
   factuurBic?: T;
+  factuurBtwRegime?: T;
+  factuurBtwNummer?: T;
   factuurBtwVermelding?: T;
   betaaltermijnDagen?: T;
   lidgeldSpeler?: T;

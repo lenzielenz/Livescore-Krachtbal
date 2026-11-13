@@ -596,3 +596,47 @@ export async function factuurPdfGegevens(payload: Payload, id: number): Promise<
     geannuleerd: rij.status === 'geannuleerd',
   }
 }
+
+// ── E-factuur (Peppol BIS 3.0, lib/peppol.ts) ─────────────────────────────────────────────────────────
+
+/** Een vrij adres ("Straat 1\n9000 Gent") in straat, postcode en gemeente. */
+export function adresDelen(adres: string): { straat: string | null; postcode: string | null; gemeente: string | null } {
+  const regels = adres.split(/\r?\n/).map((r) => r.trim()).filter(Boolean)
+  const pc = regels.map((r) => /^(\d{4})\s+(.+)$/.exec(r)).find(Boolean)
+  return { straat: regels[0] && !/^\d{4}\s/.test(regels[0]) ? regels[0] : null, postcode: pc?.[1] ?? null, gemeente: pc?.[2] ?? null }
+}
+
+export async function factuurUbl(payload: Payload, id: number): Promise<{ ok: true; xml: string; nummer: string } | Fout> {
+  const [rij] = await facturenLijst(payload, { id: { equals: id } }, new Date(), 1)
+  if (!rij || rij.status !== 'verstuurd' || !rij.nummer || !rij.datum || !rij.vervaldatum || !rij.ogm) return fout(409, 'Enkel een verstuurde factuur heeft een e-factuur.')
+  const s = ((await payload.findGlobal({ slug: 'settings', depth: 0 }).catch(() => null)) ?? {}) as Record<string, unknown>
+  const inst = await factuurInstellingen(payload)
+  const club = (await payload.findByID({ collection: 'clubs', id: rij.club.id, depth: 0, overrideAccess: true }).catch(() => null)) as Record<string, unknown> | null
+  const { peppolUbl } = await import('./peppol')
+  const r = peppolUbl({
+    nummer: rij.nummer,
+    datum: rij.datum,
+    vervaldatum: rij.vervaldatum,
+    ogm: rij.ogm,
+    lijnen: rij.lijnen,
+    opmerking: rij.opmerking,
+    verkoper: {
+      naam: inst.naam,
+      ondernemingsnummer: inst.ondernemingsnummer,
+      ...adresDelen(inst.adres),
+      iban: inst.iban,
+      bic: inst.bic,
+      btwRegime: s.factuurBtwRegime === 'vrijgesteld' ? 'vrijgesteld' : 'niet-onderworpen',
+      btwNummer: (s.factuurBtwNummer as string | null) ?? null,
+      btwVermelding: inst.btwVermelding,
+    },
+    koper: {
+      naam: rij.club.naam,
+      ondernemingsnummer: String(club?.ondernemingsnummer ?? ''),
+      straat: (club?.factuurStraat as string | null) ?? null,
+      postcode: (club?.factuurPostcode as string | null) ?? null,
+      gemeente: (club?.factuurGemeente as string | null) ?? (club?.plaats as string | null) ?? null,
+    },
+  })
+  return r.ok ? { ok: true, xml: r.xml, nummer: rij.nummer } : fout(400, r.error)
+}

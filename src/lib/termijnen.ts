@@ -9,6 +9,7 @@ import { ONGEVAL_TERMIJN_DAGEN } from './federatie-aanvragen'
 import { aanleidingenVanBlad, scheidsrechterAccounts } from './sr-rapport'
 import { isWerkdag } from './voorbehoud'
 import { vervallenFacturen } from './facturatie-server'
+import { lidmaatschappenBijwerken } from './lidmaatschap'
 import { formatEuro } from './vergoeding'
 
 // De dagelijkse ronde langs de termijnen van het reglement (aangeroepen door /api/cron/recap, elke
@@ -145,6 +146,8 @@ export async function dagelijkseTermijnen(payload: Payload, nu: Date = new Date(
 
   uit.keuring = await keuringHerinneringen(payload, nu)
   uit.facturen = await factuurHerinneringen(payload, nu).catch(() => 0)
+  // Wie vandaag aangesloten is, in de lidmaatschappen (verzekerdenlijst) van dit seizoen.
+  await lidmaatschappenBijwerken(payload, nu).catch(() => null)
   return uit
 }
 
