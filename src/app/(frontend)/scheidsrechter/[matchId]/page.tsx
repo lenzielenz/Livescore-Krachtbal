@@ -26,6 +26,8 @@ import { SpelerControle, type ControleRij } from './SpelerControle'
 import { VoorbehoudPaneel, type BladRij } from './VoorbehoudPaneel'
 import '../../wedstrijdblad.css'
 import { formatDateTimeBE } from '@/lib/datetime'
+import { formatKmTarief } from '@/lib/vergoeding'
+import { kmTarief } from '@/lib/vergoeding-data'
 import { aanleidingenVanBlad, rapportenVanWedstrijd } from '@/lib/sr-rapport'
 
 export const dynamic = 'force-dynamic'
@@ -232,6 +234,7 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
         }}
         officialsHint={match.reeks ? vereisteOfficialsTekst(match.reeks as Reeks) : null}
         isFederation={isFederation}
+        kmTariefTekst={formatKmTarief(await kmTarief(payload))}
         vrijgaveCode={isFederation ? ((sheet?.vrijgaveCode as string | undefined) ?? null) : null}
         backupRefereeName={backupRefereeName}
         andereTafel={

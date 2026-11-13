@@ -3,8 +3,7 @@ import type { Payload } from 'payload'
 import { randomBytes } from 'node:crypto'
 
 import { stuurMail, uitnodigingHtml } from './mail'
-import type { AttestLezing } from './medische-kaart-lezen'
-import { scanKaart } from './medische-kaart-scan'
+import { attestMetRegistratieGoedkeuren } from './attest-server'
 import { accountsVanSpeler, clubStaf, meld } from './meldingen'
 import { zorgVoorOuderLogin } from './ouders'
 import {
@@ -76,6 +75,7 @@ export type LidGegevens = {
   geslacht: string
   email?: string | null
   ouderEmail?: string | null
+  ouder2Email?: string | null
   soortLid: string
   shirtNumber?: number | null
   medischeKeuringOp?: string | null
@@ -101,6 +101,8 @@ export async function lidOpslaan(payload: Payload, clubId: number | string, g: L
   if (email && !geldigEmail(email)) return { ok: false, status: 400, error: 'Dat e-mailadres klopt niet.' }
   const ouderEmail = (g.ouderEmail ?? '').trim().toLowerCase()
   if (ouderEmail && !geldigEmail(ouderEmail)) return { ok: false, status: 400, error: 'Het e-mailadres van de ouder klopt niet.' }
+  const ouder2Email = (g.ouder2Email ?? '').trim().toLowerCase()
+  if (ouder2Email && !geldigEmail(ouder2Email)) return { ok: false, status: 400, error: 'Het e-mailadres van de tweede ouder klopt niet.' }
   if (!email && emailVerplicht(g.birthDate, await emailVanaf(payload))) {
     return { ok: false, status: 400, error: `Een e-mailadres is verplicht vanaf ${await emailVanaf(payload)} jaar.` }
   }
@@ -157,6 +159,7 @@ export async function lidOpslaan(payload: Payload, clubId: number | string, g: L
     geslacht: g.geslacht as 'm' | 'v',
     email: email || null,
     ouderEmail: ouderEmail || null,
+    ouder2Email: ouder2Email || null,
     soortLid: g.soortLid as 'speler' | 'lid',
     shirtNumber,
     medischeKeuringOp: g.medischeKeuringOp || null,
@@ -175,7 +178,7 @@ export async function lidOpslaan(payload: Payload, clubId: number | string, g: L
   }
   // De ouder krijgt meteen toegang (niet pas na goedkeuring): hij voert vaak zelf de keuring in, en
   // die is nodig om in te dienen. Een gewijzigd adres haalt de vorige ouder eraf.
-  if (ouderEmail || String(bestaand?.ouderEmail ?? '')) await zorgVoorOuderLogin(payload, id)
+  if (ouderEmail || ouder2Email || String(bestaand?.ouderEmail ?? '') || String(bestaand?.ouder2Email ?? '')) await zorgVoorOuderLogin(payload, id)
   return { ok: true, id }
 }
 
@@ -281,6 +284,8 @@ export async function registratiesBeoordelen(
             ...(p.vergunningsstatus === 'aangevraagd' ? { vergunningsstatus: 'geen' as const } : {}),
           }
     await payload.update({ collection: 'players', id: p.id, data, overrideAccess: true })
+    // De federatie keurde de registratie goed, met het attest dat erbij lag: dat attest is dan ook goedgekeurd.
+    if (b.besluit === 'goedkeuren') await attestMetRegistratieGoedkeuren(payload, p.id, Number(beoordelaarId))
     verwerkt.push(p.id)
     const club = relId(p.club)
     const naam = String(p.name ?? '')
@@ -351,85 +356,6 @@ export async function zorgVoorLogin(payload: Payload, playerId: number): Promise
   return { status: 'aangemaakt', userId: Number(user.id), gemaild }
 }
 
-export const ATTEST_MAX_BYTES = 8 * 1024 * 1024
-export const ATTEST_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp'])
-
-/** Controleert een opgeladen attest; geeft de fout terug of null. */
-export function attestFout(bestand: unknown): string | null {
-  if (!(bestand instanceof File)) return 'Kies een bestand.'
-  if (!ATTEST_TYPES.has(bestand.type)) return 'Enkel een PDF of een foto (JPG, PNG, WebP).'
-  if (bestand.size > ATTEST_MAX_BYTES) return 'Het bestand is groter dan 8 MB.'
-  return null
-}
-
-/**
- * Het doktersattest bij een speler bewaren (door de club, een ouder of het lid zelf). Een nieuw attest
- * vervangt het vorige; het oude bestand verdwijnt mee (medisch gegeven: niet langer bewaren dan nodig).
- */
-export async function attestOpslaan(
-  payload: Payload,
-  o: {
-    playerId: number
-    clubId: number | null
-    userId: number
-    bestand: File
-    vorige: number | null
-    /** Al gescand (lib/medische-kaart-server.ts)? Anders leest deze functie de QR zelf. */
-    herkendViaQr?: boolean
-    /** Wat er op de vakjes gelezen werd (bij een eigen scan vult deze functie het zelf in). */
-    lezing?: AttestLezing | null
-  },
-): Promise<number> {
-  const ext = o.bestand.type === 'application/pdf' ? 'pdf' : o.bestand.type.split('/')[1]
-  const data = Buffer.from(await o.bestand.arrayBuffer())
-  // De medische kaart draagt een QR (lib/medische-kaart-code.ts): staat er een op de foto, dan moet het
-  // de kaart van dít lid zijn. Een kaart van een ander lid bij het verkeerde kind opladen kan zo niet.
-  let viaQr = o.herkendViaQr
-  let lezing = o.lezing ?? null
-  if (viaQr === undefined) {
-    const scan = await scanKaart(data, o.bestand.type)
-    if (scan && scan.playerId !== o.playerId) {
-      throw new Error('Dit is de medische kaart van een ander lid (zie de QR-code). Laad ze op bij dat lid, of via "Kaarten opladen".')
-    }
-    viaQr = scan != null
-    lezing = scan?.lezing ?? null
-    if (lezing) await lezingToepassen(payload, o.playerId, lezing)
-  }
-  const attest = await payload.create({
-    collection: 'medische-attesten',
-    data: { player: o.playerId, club: o.clubId, geuploadDoor: o.userId, herkendViaQr: viaQr, lezing: lezing as never },
-    // Geen originele bestandsnaam: die bevat vaak de naam van het kind of de dokter.
-    file: {
-      data,
-      mimetype: o.bestand.type,
-      name: `attest-${o.playerId}-${Date.now()}.${ext}`,
-      size: o.bestand.size,
-    },
-    overrideAccess: true,
-  })
-  await payload.update({ collection: 'players', id: o.playerId, data: { medischAttestBestand: attest.id }, overrideAccess: true })
-  if (o.vorige != null) await payload.delete({ collection: 'medische-attesten', id: o.vorige, overrideAccess: true }).catch(() => null)
-  return Number(attest.id)
-}
-
-/**
- * Wat het systeem op het medisch attest las, toepassen (lib/medische-kaart-lezen.ts). Enkel wat de arts duidelijk
- * aankruiste en enkel bij een uitlijning op de vier hoekmerken: dan staat het doktersverbod om hoger te spelen
- * meteen in het dossier. Een verbod wordt nooit vanzelf opgeheven (dat beslist de federatie). Geeft wat de
- * uploader moet weten.
- */
-export async function lezingToepassen(payload: Payload, playerId: number, lezing: AttestLezing): Promise<{ geschikt: boolean | null; meldingen: string[] }> {
-  const zeker = lezing.uitlijning === 'merken'
-  const g = zeker ? lezing.vakjes.geschikt.aangekruist : null
-  const h = zeker ? lezing.vakjes.nietHoger.aangekruist : null
-  const meldingen: string[] = []
-  if (g === false) meldingen.push('Het vakje "geschikt" is niet aangekruist: de keuring telt niet. Kijk het attest na.')
-  else if (g === null) meldingen.push('Het vakje "geschikt" kon niet duidelijk gelezen worden: kijk het attest na.')
-  if (h === true) {
-    await payload.update({ collection: 'players', id: playerId, data: { hogerSpelenVerbod: true }, overrideAccess: true })
-    meldingen.push('De arts kruiste "mag niet 1 categorie hoger spelen" aan: het doktersverbod staat nu in het dossier.')
-  } else if (h === null) {
-    meldingen.push('Het vakje "mag niet hoger spelen" kon niet duidelijk gelezen worden: de federatie kijkt het na.')
-  }
-  return { geschikt: g, meldingen }
-}
+// Het attest zelf (opslaan, beoordelen, lezen) woont in lib/attest-server.ts; hier opnieuw uitgevoerd voor de
+// bestaande import-paden.
+export { ATTEST_MAX_BYTES, ATTEST_TYPES, attestFout, attestOpslaan, lezingToepassen } from './attest-server'

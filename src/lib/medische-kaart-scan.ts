@@ -14,7 +14,14 @@ import { type AttestLezing, leesAttest } from './medische-kaart-lezen'
 // heeft de volle resolutie nodig; een grote, wazige leest beter verkleind), telkens ook met versterkt
 // contrast. PDF's: de ingebedde beelden (een scan is meestal één JPEG per blad) zo uithalen.
 
-export type ScanUitkomst = { playerId: number; tekst: string; lezing: AttestLezing | null } | null
+/**
+ * `playerId`: het lid uit de QR van een persoonlijk attest. `blanco`: de QR van het blanco attest (geen lid; de
+ * vakjes worden wel gelezen, want het blad is hetzelfde). Null: geen QR van ons gevonden.
+ */
+export type ScanUitkomst = { playerId: number | null; blanco: boolean; tekst: string; lezing: AttestLezing | null } | null
+
+/** De QR van het blanco attest wijst naar de publieke oplaadpagina: `${basis}/attest`. */
+export const isBlancoQr = (tekst: string): boolean => /^https?:\/\/[^\s]+\/attest(?:[/?#]|$)/i.test(tekst.trim())
 
 const BREEDTES = [1400, 2200, 900]
 /** Op dit formaat lezen we de aankruisvakjes (een vakje van 8 mm is dan ±60 px breed). */
@@ -62,7 +69,8 @@ async function leesBeeld(invoer: Buffer): Promise<ScanUitkomst> {
         const qr = jsQR(new Uint8ClampedArray(data.buffer, data.byteOffset, data.length), info.width, info.height, { inversionAttempts: 'attemptBoth' })
         if (qr?.data) {
           const playerId = leesKaartCode(qr.data)
-          if (playerId != null) return { playerId, tekst: qr.data, lezing: await leesVakjes(basis, info.width, qr.location, qr.version) }
+          const blanco = playerId == null && isBlancoQr(qr.data)
+          if (playerId != null || blanco) return { playerId, blanco, tekst: qr.data, lezing: await leesVakjes(basis, info.width, qr.location, qr.version) }
         }
       } catch {
         /* volgende poging */

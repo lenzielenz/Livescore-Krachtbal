@@ -9,8 +9,11 @@
 //    ongeveer vierkant zwart vlak van de verwachte grootte is een kandidaat. Per hoek nemen we de kandidaat die het
 //    dichtst bij de voorspelling ligt. Met de vier merken rekenen we de uitlijning opnieuw uit over het hele blad
 //    (nauwkeurig tot in de onderste hoeken, ook bij een scheve foto).
-// 3. In elk aankruisvakje meten we hoeveel inkt er staat, tegenover het papier net naast het vakje (schaduw op
-//    een foto maakt het papier grijs; een vaste drempel zou dat als inkt lezen).
+// 3. Elk vakje zoeken we nog eens lokaal op aan zijn gedrukte kader (tot 4 mm naast de voorspelling): een blad
+//    dat niet plat ligt — bol, gevouwen, in de hand — verschuift de vakjes. Vinden we het kader niet, dan zeggen
+//    we niets over het vakje (twijfel).
+// 4. In elk vakje meten we hoeveel inkt er staat, tegenover het papier net naast het vakje (schaduw op een foto
+//    maakt het papier grijs; een vaste drempel zou dat als inkt lezen).
 //
 // Wat we niet zeker weten, zeggen we: `aangekruist: null` = twijfel, een mens kijkt na.
 
@@ -171,19 +174,82 @@ export function merkKandidaten(g: Grijs, drempel: number, zMin: number, zMax: nu
   return uit
 }
 
+/** Hoe donker is dit punt (0 = papier, 1 = zwart), tegenover het papier `wit`. */
+const donkerte = (g: Grijs, p: Punt, wit: number) => Math.max(0, Math.min(1, (wit - pix(g, p.x, p.y)) / Math.max(wit, 1)))
+
+/**
+ * Zoekt het gedrukte kader van een vakje rond de voorspelde plaats (tot `zoek` mm ernaast): een blad dat niet
+ * plat ligt (bol, een vouw) verschuift de vakjes een paar mm tegenover wat de vier hoeken voorspellen. Geeft de
+ * beste verschuiving (mm) en hoe zeker het kader gevonden is (fractie van de rand die donker is).
+ */
+function zoekKader(g: Grijs, H: number[], r: Rect, wit: number, drempel: number, zoek = 4): { dx: number; dy: number; rand: number } {
+  // Punten op de rand van het vakje (in mm, relatief tegenover linksboven), met de richting loodrecht op de rand.
+  // De lijn is dun (±0,4 mm); op een bol of gevouwen blad loopt ze lokaal wat schuin. Daarom kijken we per punt
+  // ook tot 0,45 mm ernaast en tellen we het donkerste.
+  const rand: { p: Punt; n: Punt }[] = []
+  const n = 14
+  for (let i = 0; i < n; i++) {
+    const t = (i + 0.5) / n
+    rand.push(
+      { p: { x: t * r.b, y: 0 }, n: { x: 0, y: 1 } },
+      { p: { x: t * r.b, y: r.h }, n: { x: 0, y: 1 } },
+      { p: { x: 0, y: t * r.h }, n: { x: 1, y: 0 } },
+      { p: { x: r.b, y: t * r.h }, n: { x: 1, y: 0 } },
+    )
+  }
+  const NAAST = [0, -0.15, 0.15, -0.3, 0.3, -0.45, 0.45]
+  const donkerst = (dx: number, dy: number, e: { p: Punt; n: Punt }) => {
+    let d = 0
+    for (const o of NAAST) d = Math.max(d, donkerte(g, afbeelden(H, { x: r.x + dx + e.p.x + o * e.n.x, y: r.y + dy + e.p.y + o * e.n.y }), wit))
+    return d
+  }
+  const score = (dx: number, dy: number) => {
+    let som = 0
+    for (const e of rand) som += donkerst(dx, dy, e)
+    return som / rand.length
+  }
+  let best = { dx: 0, dy: 0, s: score(0, 0) }
+  // Grof (0,5 mm), dan fijn (0,1 mm) rond het beste punt.
+  for (let dy = -zoek; dy <= zoek; dy += 0.5) {
+    for (let dx = -zoek; dx <= zoek; dx += 0.5) {
+      const s = score(dx, dy)
+      if (s > best.s) best = { dx, dy, s }
+    }
+  }
+  const grof = best
+  for (let dy = grof.dy - 0.5; dy <= grof.dy + 0.5; dy += 0.1) {
+    for (let dx = grof.dx - 0.5; dx <= grof.dx + 0.5; dx += 0.1) {
+      const s = score(dx, dy)
+      if (s > best.s) best = { dx, dy, s }
+    }
+  }
+  // Hoeveel van de rand is echt inkt op de gevonden plaats?
+  const grens = (wit - drempel) / Math.max(wit, 1)
+  let raak = 0
+  for (const e of rand) if (donkerst(best.dx, best.dy, e) > grens) raak++
+  return { dx: best.dx, dy: best.dy, rand: raak / rand.length }
+}
+
 /** Hoeveel inkt er binnen in een vakje staat, tegenover het papier net naast het vakje. */
-function leesVak(g: Grijs, H: number[], r: Rect): VakLezing {
+function leesVak(g: Grijs, H: number[], r0: Rect): VakLezing & { rand: number } {
   const N = 22
   const papier: number[] = []
   // Papier: een strook 2,5–3 mm buiten het vakje (links, boven en onder; rechts staat de tekst).
-  for (let i = 0; i < 40; i++) {
-    const t = i / 39
-    papier.push(pix(g, ...xy(afbeelden(H, { x: r.x - 3, y: r.y + t * r.h }))))
-    papier.push(pix(g, ...xy(afbeelden(H, { x: r.x + t * r.b, y: r.y - 2.5 }))))
-    papier.push(pix(g, ...xy(afbeelden(H, { x: r.x + t * r.b, y: r.y + r.h + 2.5 }))))
+  const strook = (r: Rect) => {
+    papier.length = 0
+    for (let i = 0; i < 40; i++) {
+      const t = i / 39
+      papier.push(pix(g, ...xy(afbeelden(H, { x: r.x - 3, y: r.y + t * r.h }))))
+      papier.push(pix(g, ...xy(afbeelden(H, { x: r.x + t * r.b, y: r.y - 2.5 }))))
+      papier.push(pix(g, ...xy(afbeelden(H, { x: r.x + t * r.b, y: r.y + r.h + 2.5 }))))
+    }
+    papier.sort((a, b) => a - b)
+    return papier[Math.floor(papier.length * 0.6)]!
   }
-  papier.sort((a, b) => a - b)
-  const wit = papier[Math.floor(papier.length * 0.6)]!
+  let wit = strook(r0)
+  const k = zoekKader(g, H, r0, wit, wit * 0.62)
+  const r = { ...r0, x: r0.x + k.dx, y: r0.y + k.dy }
+  wit = strook(r)
   const drempel = wit * 0.62
   let donker = 0
   const m = VAKJE_BINNENRAND
@@ -194,7 +260,13 @@ function leesVak(g: Grijs, H: number[], r: Rect): VakLezing {
     }
   }
   const inkt = donker / (N * N)
-  return { aangekruist: inkt >= INKT_JA ? true : inkt <= INKT_NEE ? false : null, inkt: Math.round(inkt * 1000) / 1000 }
+  // Geen duidelijk kader gevonden: dan weten we ook niet zeker wat erin staat.
+  const zeker = k.rand >= 0.6
+  return {
+    aangekruist: !zeker ? null : inkt >= INKT_JA ? true : inkt <= INKT_NEE ? false : null,
+    inkt: Math.round(inkt * 1000) / 1000,
+    rand: Math.round(k.rand * 100) / 100,
+  }
 }
 const xy = (p: Punt): [number, number] => [p.x, p.y]
 
@@ -231,15 +303,26 @@ export function leesAttest(g: Grijs, qr: QrLigging): AttestLezing | null {
     gevonden.push(best)
   }
   const fijn = gevonden.length === 4 ? homografie(MERKEN.map(midden), gevonden) : null
-  // Controle: de QR moet met de fijne uitlijning op zijn plaats vallen; zo niet, vertrouwen we de merken niet.
-  const klopt = fijn && qrHoeken(qr.versie).every((p, i) => {
-    const q = afbeelden(fijn, p)
-    const echt = [qr.linksboven, qr.rechtsboven, qr.linksonder, qr.rechtsonder][i]!
-    return Math.hypot(q.x - echt.x, q.y - echt.y) < 3 * pxPerMm
-  })
-  const H = klopt ? fijn! : ruw
+  // Controle: de QR moet met de fijne uitlijning op zijn plaats vallen. Binnen 3 mm: de merken kloppen. Tot 10 mm
+  // ernaast: het blad ligt niet plat (de QR zit in het midden, waar een bol blad het meest afwijkt) — dan
+  // vertrouwen we de merken enkel als het kader van beide vakjes daarna ook echt gevonden wordt.
+  const afwijking = fijn
+    ? Math.max(
+        ...qrHoeken(qr.versie).map((p, i) => {
+          const q = afbeelden(fijn, p)
+          const echt = [qr.linksboven, qr.rechtsboven, qr.linksonder, qr.rechtsonder][i]!
+          return Math.hypot(q.x - echt.x, q.y - echt.y) / pxPerMm
+        }),
+      )
+    : Infinity
+  const H = afwijking < 10 ? fijn! : ruw
+  const geschikt = leesVak(g, H, VAKJES.geschikt)
+  const nietHoger = leesVak(g, H, VAKJES.nietHoger)
+  const kaders = geschikt.rand >= 0.6 && nietHoger.rand >= 0.6
+  const merken = afwijking < 3 || (afwijking < 10 && kaders)
+  const zonderRand = (v: VakLezing & { rand: number }): VakLezing => ({ aangekruist: v.aangekruist, inkt: v.inkt })
   return {
-    uitlijning: klopt ? 'merken' : 'qr',
-    vakjes: { geschikt: leesVak(g, H, VAKJES.geschikt), nietHoger: leesVak(g, H, VAKJES.nietHoger) },
+    uitlijning: merken ? 'merken' : 'qr',
+    vakjes: { geschikt: zonderRand(geschikt), nietHoger: zonderRand(nietHoger) },
   }
 }

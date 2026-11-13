@@ -91,9 +91,9 @@ export default async function LidDossierPage({ params }: { params: Promise<{ id:
               <dd>
                 {lid.email || '—'} {lid.login ? '· heeft een login' : ''}
               </dd>
-              <dt>Ouder</dt>
+              <dt>Ouders</dt>
               <dd>
-                {lid.ouderEmail || '—'} {lid.ouderLogin ? '· heeft een login' : ''}
+                {[lid.ouderEmail, lid.ouder2Email].filter(Boolean).join(' · ') || '—'} {lid.ouderLogin ? '· heeft een login' : ''}
               </dd>
             </dl>
           </section>

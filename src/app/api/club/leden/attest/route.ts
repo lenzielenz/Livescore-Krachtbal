@@ -38,14 +38,9 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Dit lid ligt bij de federatie ter goedkeuring.' }, { status: 409 })
     }
 
-    const attestId = await attestOpslaan(payload, {
-      playerId,
-      clubId: Number(clubId),
-      userId: Number(user.id),
-      bestand: bestand as File,
-      vorige: relId(speler.medischAttestBestand),
-    })
-    return Response.json({ ok: true, attestId })
+    // Alles juist (QR van het lid, vakjes duidelijk) → goedgekeurd; anders kijkt de federatie het na (lib/attest.ts).
+    const uit = await attestOpslaan(payload, { playerId, bestand: bestand as File, userId: Number(user.id), via: 'club' })
+    return Response.json({ ok: true, attestId: uit.attestId, status: uit.status, reden: uit.reden, meldingen: uit.meldingen })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }

@@ -6,7 +6,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { boeteLijst, OPEN_STATUSSEN, scheidsrechterskosten } from '@/lib/boetes'
 import { formatDateBE } from '@/lib/datetime'
 import { getPayloadClient } from '@/lib/payload-client'
-import { formatEuro } from '@/lib/vergoeding'
+import { formatEuro, formatKmTarief } from '@/lib/vergoeding'
 import { ClubBoetes } from './ClubBoetes'
 import '../../beheer/federatie-tools.css'
 import '../../wedstrijdblad.css'
@@ -54,8 +54,8 @@ export default async function ClubBoetesPage() {
         ) : (
           <>
             <p className="od-dim">
-              {kosten.betaler ? `Gefloten wedstrijden: betaald door ${BETALER[kosten.betaler] ?? kosten.betaler} (€13 + km × €0,4327). ` : ''}
-              {kosten.forfaitBetaler === 'forfaitploeg' ? 'Bij forfait: de ploeg die forfait gaf (€13 + km × €0,4259).' : ''}
+              {kosten.betaler ? `Gefloten wedstrijden: betaald door ${BETALER[kosten.betaler] ?? kosten.betaler} (€13 + km × ${formatKmTarief(kosten.perKm)}). ` : ''}
+              {kosten.forfaitBetaler === 'forfaitploeg' ? 'Bij forfait: de ploeg die forfait gaf (€13 + km × ' + formatKmTarief(kosten.perKm) + ').' : ''}
             </p>
             {kosten.rijen.length === 0 ? (
               <p className="empty">Nog geen kosten voor jouw club.</p>

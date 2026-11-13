@@ -120,6 +120,7 @@ export default async function ClubLedenPage() {
       email: String(p.email ?? ''),
       login: loginVan.get(Number(p.id)) ?? null,
       ouderEmail: String(p.ouderEmail ?? ''),
+      ouder2Email: String(p.ouder2Email ?? ''),
       ouder: ouderVan.get(Number(p.id)) ?? null,
       kaartOpen: kaartOpen.has(Number(p.id)),
       knipjes: knipjesTekst(vast?.get(Number(p.id))),

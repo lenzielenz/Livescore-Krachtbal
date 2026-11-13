@@ -22,7 +22,7 @@ export type SelectablePlayerInput = {
   soortLid?: string | null
   /** Geblokkeerd door administratieve knipjes (fase 8). */
   knipjesGeblokkeerd?: boolean
-  /** Datum van de medische keuring; ze geldt 365 dagen (lib/leden-register.ts). */
+  /** Datum van de medische keuring; ze geldt het seizoen waarin ze valt (lib/registratie.ts). */
   medischeKeuringOp?: string | Date | null
   /** Wat een verlopen keuring doet (Settings.keuringVerlopen); standaard waarschuwen. */
   keuringBeleid?: 'waarschuwen' | 'blokkeren' | null
@@ -68,7 +68,7 @@ export function playerSelectability(
     )
   }
 
-  // Medische keuring verlopen (365 dagen): waarschuwen of blokkeren, naar keuze van de federatie.
+  // Medische keuring verlopen (ze geldt één competitieseizoen): waarschuwen of blokkeren, naar keuze van de federatie.
   // Zonder keuringsdatum geen oordeel hier: dat zijn oudere leden, het register toont ze apart.
   if (player.soortLid !== 'lid' && keuringStand({ ...player, actief: true }, nu) === 'verlopen') {
     level = worst(level, player.keuringBeleid === 'blokkeren' ? 'block' : 'warn')

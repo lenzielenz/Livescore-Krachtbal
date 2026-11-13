@@ -686,6 +686,10 @@ export interface Player {
    */
   ouderEmail?: string | null;
   /**
+   * Beide ouders zien het dossier en kunnen het medisch attest opladen.
+   */
+  ouder2Email?: string | null;
+  /**
    * Een gewoon lid speelt geen wedstrijden en heeft geen vergunning nodig.
    */
   soortLid?: ('speler' | 'lid') | null;
@@ -712,13 +716,30 @@ export interface Player {
   createdAt: string;
 }
 /**
- * Doktersattesten bij de spelersregistratie. Zichtbaar via het veld "Attest" op de speler.
+ * Medische attesten. Wat niet vanzelf goedgekeurd werd, staat op /beheer/attesten ter nakijken.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "medische-attesten".
  */
 export interface MedischeAttesten {
   id: number;
+  status?: ('goedgekeurd' | 'nakijken' | 'afgekeurd') | null;
+  reden?: string | null;
+  via?: ('federatie' | 'club' | 'lid' | 'publiek') | null;
+  blanco?: boolean | null;
+  keuringOp?: string | null;
+  opgegeven?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  afkeurReden?: string | null;
+  beoordeeldDoor?: (number | null) | User;
+  beoordeeldOp?: string | null;
   player?: (number | null) | Player;
   club?: (number | null) | Club;
   geuploadDoor?: (number | null) | User;
@@ -1747,7 +1768,7 @@ export interface Matchsheet {
     tijdstip?: string | null;
   };
   /**
-   * Aantal km voor deze wedstrijd — telt mee op de kwitantie (€0,4327/km).
+   * Aantal km voor deze wedstrijd — telt mee op de kwitantie (km-tarief uit de instellingen).
    */
   refereeKm?: number | null;
   forfait?: {
@@ -1767,7 +1788,7 @@ export interface Matchsheet {
      */
     aantalAutos?: number | null;
     /**
-     * Telt mee op het forfait-onkostenblad (€0,4259/km).
+     * Telt mee op het forfait-onkostenblad (km-tarief uit de instellingen).
      */
     km?: number | null;
   };
@@ -3337,6 +3358,7 @@ export interface PlayersSelect<T extends boolean = true> {
   geslacht?: T;
   email?: T;
   ouderEmail?: T;
+  ouder2Email?: T;
   soortLid?: T;
   vergunningsnummer?: T;
   medischeKeuringOp?: T;
@@ -3356,6 +3378,15 @@ export interface PlayersSelect<T extends boolean = true> {
  * via the `definition` "medische-attesten_select".
  */
 export interface MedischeAttestenSelect<T extends boolean = true> {
+  status?: T;
+  reden?: T;
+  via?: T;
+  blanco?: T;
+  keuringOp?: T;
+  opgegeven?: T;
+  afkeurReden?: T;
+  beoordeeldDoor?: T;
+  beoordeeldOp?: T;
   player?: T;
   club?: T;
   geuploadDoor?: T;
@@ -4824,7 +4855,7 @@ export interface Setting {
    */
   emailVerplichtVanaf?: number | null;
   /**
-   * Een keuring geldt 365 dagen. Het ledenregister toont hoeveel spelers blokkeren zou raken.
+   * Een keuring geldt het competitieseizoen waarin ze valt (tot 30 juni). Het ledenregister toont hoeveel spelers blokkeren zou raken.
    */
   keuringVerlopen?: ('waarschuwen' | 'blokkeren') | null;
   /**
@@ -4835,6 +4866,10 @@ export interface Setting {
    * Bepaalt wat elke club ziet onder "Scheidsrechterskosten" op haar boete-overzicht.
    */
   scheidsrechterKostenBetaler?: ('federatie' | 'thuisclub' | 'gedeeld') | null;
+  /**
+   * Geldt voor de kwitantie en het forfait-onkostenblad. Standaard € 0,4452.
+   */
+  kmTarief?: number | null;
   /**
    * Het forfait-onkostenblad van de scheidsrechter (€13 + km).
    */
@@ -4890,6 +4925,7 @@ export interface SettingsSelect<T extends boolean = true> {
   keuringVerlopen?: T;
   knipjesDrempel?: T;
   scheidsrechterKostenBetaler?: T;
+  kmTarief?: T;
   forfaitKostenBetaler?: T;
   updatedAt?: T;
   createdAt?: T;

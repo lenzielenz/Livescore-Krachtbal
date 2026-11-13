@@ -4,7 +4,8 @@ import { relId } from '@/lib/meldingen'
 import { getPayloadClient } from '@/lib/payload-client'
 import { attestFout } from '@/lib/registratie-server'
 
-// De medische keuring invoeren vanuit "Mijn profiel" (multipart): datum + ingevuld attest.
+// Het medisch attest opladen vanuit "Mijn profiel" (multipart): ingevuld attest + (optioneel) datum van de keuring.
+// Antwoord: { ok, status: goedgekeurd|nakijken, reden, meldingen } (lib/attest.ts).
 //   playerId leeg → voor jezelf (je account is gekoppeld aan je dossier)
 //   playerId      → als ouder voor je kind (lib/ouders.ts)
 export async function POST(req: Request) {
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
   }
   try {
     const r = await keuringInvoeren(payload, user, playerId, { datum: String(form.get('datum') ?? ''), bestand: heeftBestand ? (bestand as File) : null })
-    return r.ok ? Response.json({ ok: true }) : Response.json({ error: r.error }, { status: r.status })
+    return r.ok ? Response.json({ ok: true, status: r.status, reden: r.reden, meldingen: r.meldingen }) : Response.json({ error: r.error }, { status: r.status })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }

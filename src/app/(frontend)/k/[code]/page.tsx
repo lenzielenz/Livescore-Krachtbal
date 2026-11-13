@@ -1,62 +1,76 @@
 import Link from 'next/link'
 
-import { KaartenOpladen } from '@/components/KaartenOpladen'
+import { AttestBezorgen } from '@/components/AttestBezorgen'
 import { SiteHeader } from '@/components/SiteHeader'
+import { korteNaam } from '@/lib/attest'
 import { getAuthUser } from '@/lib/auth-user'
 import { formatDateBE } from '@/lib/datetime'
-import { leesKaartCode } from '@/lib/medische-kaart-code'
-import { kaartRol, magKaartAfdrukken } from '@/lib/medische-kaart-server'
+import { kaartCode, leesKaartCode } from '@/lib/medische-kaart-code'
+import { kaartRol } from '@/lib/medische-kaart-server'
 import { getPayloadClient } from '@/lib/payload-client'
-import '@/components/kaarten-opladen.css'
+import { keuringGeldig } from '@/lib/registratie'
+import '@/components/attest-bezorgen.css'
+import '../../attest/attest.css'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Medische kaart', robots: { index: false } }
+export const metadata = { title: 'Medisch attest', robots: { index: false } }
 
-// Hier komt wie de QR op een medische kaart scant (lib/medische-kaart-code.ts). Wie dat lid mag (het lid,
-// een ouder, de club, de federatie) laadt meteen de foto van de ingevulde kaart op. Iedereen anders ziet
-// niets over het lid: de code verklapt geen naam.
+// Hier komt wie de QR op een medisch attest scant (lib/medische-kaart-code.ts). Iedereen kan het ingevulde
+// attest meteen bezorgen — zonder login: de code wijst het lid aan, het systeem leest de vakjes en zegt of het
+// in orde is. Wie zonder login komt, ziet enkel "Kaat K."; wie het lid mag (het lid, een ouder, de club, de
+// federatie), ziet de keuring en kan het attest opnieuw afdrukken.
 export default async function KaartPagina({ params }: { params: Promise<{ code: string }> }) {
-  const { code } = await params
-  const playerId = leesKaartCode(decodeURIComponent(code))
-  const me = await getAuthUser()
+  const { code: rauw } = await params
+  const playerId = leesKaartCode(decodeURIComponent(rauw))
   const payload = await getPayloadClient()
   const speler = playerId != null ? await payload.findByID({ collection: 'players', id: playerId, depth: 0, overrideAccess: true }).catch(() => null) : null
+  const me = await getAuthUser()
   const rol = me && speler ? await kaartRol(payload, me, speler as never) : null
-  const afdrukken = rol && playerId != null ? await magKaartAfdrukken(payload, me, playerId) : false
+  const code = playerId != null ? kaartCode(playerId) : ''
+  const keuring = speler?.medischeKeuringOp ? String(speler.medischeKeuringOp) : null
 
   return (
     <>
       <SiteHeader />
-      <div className="site kq">
-        <h1 className="page-title">🩺 Medische kaart</h1>
+      <div className="site at">
+        <header className="at-held">
+          <p className="at-boven">Krachtbal · medisch attest</p>
+          <h1>Attest bezorgen</h1>
+        </header>
         {!speler ? (
-          <p className="wb-sub">Deze code is geen geldige medische kaart. Kijk of je de hele QR-code scande.</p>
-        ) : !me ? (
-          <section className="wb-card">
-            <p>Dit is een medische kaart voor krachtbal. Log in om de ingevulde kaart op te laden — als lid, ouder of clubverantwoordelijke.</p>
-            <div className="kq-acties">
-              <Link className="wb-btn wb-btn-primary" href={`/inloggen?next=${encodeURIComponent(`/k/${code}`)}`}>
-                Inloggen
-              </Link>
+          <section className="at-lid">
+            <span aria-hidden>⚠️</span>
+            <div>
+              <strong>Deze code hoort niet bij een lid</strong>
+              <p>
+                Kijk of je de hele QR-code scande. Je kan het attest ook bezorgen via de <Link href="/attest">algemene link</Link>.
+              </p>
             </div>
           </section>
-        ) : !rol ? (
-          <p className="wb-sub">Deze kaart hoort bij een lid waarvoor jouw account niets kan doen. Laat de kaart opladen door het lid, een ouder of de club.</p>
         ) : (
-          <section className="wb-card">
-            <h2>{String(speler.name ?? '')}</h2>
-            <p className="wb-sub">
-              {speler.medischeKeuringOp ? `Laatste keuring: ${formatDateBE(String(speler.medischeKeuringOp))}` : 'Nog geen keuring geregistreerd.'}
-            </p>
-            {afdrukken && (
-              <div className="kq-acties">
+          <>
+            <section className="at-lid">
+              <span aria-hidden>🩺</span>
+              <div>
+                <strong>Medisch attest van {rol ? String(speler.name ?? '') : korteNaam(speler.voornaam, speler.name)}</strong>
+                <p>
+                  {rol
+                    ? keuring
+                      ? `Laatste keuring: ${formatDateBE(keuring)} — ${keuringGeldig(keuring) ? 'geldig dit seizoen' : 'verlopen'}.`
+                      : 'Nog geen keuring geregistreerd.'
+                    : 'Neem een foto van het ingevulde attest of laad een scan op. Inloggen is niet nodig.'}
+                </p>
+              </div>
+            </section>
+            {rol && (
+              <div className="at-acties">
                 <a className="wb-btn" href={`/api/medische-kaart/pdf?ids=${playerId}`} target="_blank" rel="noopener">
-                  🖨️ Lege kaart afdrukken
+                  🖨️ Attest opnieuw afdrukken
                 </a>
               </div>
             )}
-            <KaartenOpladen voorLid={playerId!} naam={String(speler.voornaam || speler.name || '')} />
-          </section>
+            <AttestBezorgen code={code} naam={korteNaam(speler.voornaam, speler.name)} />
+          </>
         )}
       </div>
     </>

@@ -51,3 +51,47 @@ describe('het attest lezen uit een gsm-foto', () => {
     expect(r!.lezing!.vakjes.geschikt.inkt).toBeLessThan(0.03)
   }, 60_000)
 })
+
+describe("foto's uit het echte leven: scan, gsm, WhatsApp", () => {
+  it('via WhatsApp doorgestuurd (1600 px, twee keer zwaar gecomprimeerd): QR en vakjes gelezen', async () => {
+    const r = await scanKaart(await foto({ geschikt: true, nietHoger: false, hoek: 5, whatsapp: true }), 'image/jpeg')
+    expect(r?.playerId).toBe(4242)
+    expect([r?.lezing?.uitlijning, r?.lezing?.vakjes.geschikt.aangekruist, r?.lezing?.vakjes.nietHoger.aangekruist]).toEqual(['merken', true, false])
+  }, 60_000)
+
+  it('blad ligt niet plat (golft 3 mm) en de gsm hangt schuin', async () => {
+    const r = await scanKaart(await foto({ geschikt: true, nietHoger: true, hoek: -3, bol: 3, schuin: 0.06 }), 'image/jpeg')
+    expect(r?.playerId).toBe(4242)
+    expect([r?.lezing?.vakjes.geschikt.aangekruist, r?.lezing?.vakjes.nietHoger.aangekruist]).toEqual([true, true])
+  }, 60_000)
+
+  it('zwak licht met ruis en schaduw, en dan nog via WhatsApp', async () => {
+    const r = await scanKaart(await foto({ geschikt: true, nietHoger: false, hoek: 7, donker: true, schaduw: true, whatsapp: true }), 'image/jpeg')
+    expect(r?.playerId).toBe(4242)
+    expect([r?.lezing?.vakjes.geschikt.aangekruist, r?.lezing?.vakjes.nietHoger.aangekruist]).toEqual([true, false])
+  }, 60_000)
+
+  it('een leeg vakje blijft leeg, ook bij slecht licht en compressie (geen valse kruisjes)', async () => {
+    const r = await scanKaart(await foto({ geschikt: false, nietHoger: false, hoek: -6, donker: true, whatsapp: true, bol: 2 }), 'image/jpeg')
+    expect([r?.lezing?.vakjes.geschikt.aangekruist, r?.lezing?.vakjes.nietHoger.aangekruist]).not.toContain(true)
+  }, 60_000)
+
+  it('een blad dat 1 cm bol ligt: elk vakje wordt opgezocht aan zijn kader', async () => {
+    const vol = await scanKaart(await foto({ geschikt: true, nietHoger: false, hoek: -3, bol: 10, schuin: 0.05 }), 'image/jpeg')
+    expect([vol?.lezing?.uitlijning, vol?.lezing?.vakjes.geschikt.aangekruist, vol?.lezing?.vakjes.nietHoger.aangekruist]).toEqual(['merken', true, false])
+    const leeg = await scanKaart(await foto({ geschikt: false, nietHoger: false, hoek: 2, bol: 10 }), 'image/jpeg')
+    expect([leeg?.lezing?.vakjes.geschikt.aangekruist, leeg?.lezing?.vakjes.nietHoger.aangekruist]).toEqual([false, false])
+  }, 60_000)
+
+  it('te wazig én te donker: geen gok maar twijfel (dan kijkt de federatie het na)', async () => {
+    const r = await scanKaart(await foto({ geschikt: true, nietHoger: false, hoek: -3, blur: 4, donker: true, whatsapp: true }), 'image/jpeg')
+    expect(r?.lezing?.vakjes.geschikt.aangekruist).not.toBe(false)
+    expect(r?.lezing?.vakjes.nietHoger.aangekruist).not.toBe(true)
+  }, 60_000)
+
+  it('het blanco attest: herkend als blanco, zonder lid, en de vakjes worden gelezen', async () => {
+    const r = await scanKaart(await foto({ geschikt: true, nietHoger: false, hoek: 4, blanco: true }), 'image/jpeg')
+    expect([r?.playerId, r?.blanco, r?.lezing?.uitlijning, r?.lezing?.vakjes.geschikt.aangekruist]).toEqual([null, true, 'merken', true])
+  }, 60_000)
+})
+

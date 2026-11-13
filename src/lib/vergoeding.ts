@@ -1,18 +1,26 @@
-// Scheidsrechter-vergoedingen — bedragen rechtstreeks van de officiële KVKBF-formulieren.
+// Scheidsrechter-vergoedingen — bedragen van de officiële KVKBF-formulieren.
 // Eén bron van waarheid voor de kwitantie (formulier_2) en het forfait-onkostenblad (formulier_3).
 //
-// LET OP: de km-vergoeding verschilt bewust per formulier (zo staat het gedrukt):
-//   - Kwitantie scheidsrechter: € 0,4327 / km
-//   - Onkostenblad forfait:     € 0,4259 / km
+// De km-vergoeding is één tarief voor beide (formulier_2 van de federatie: € 0,4452 / km). De federatie past
+// het aan in de instellingen (Settings.kmTarief); lees het met `kmTarief(payload)` (lib/vergoeding-data.ts)
+// en geef het mee. Zonder instelling geldt KM_TARIEF_STANDAARD.
 
 /** Wedstrijdvergoeding per wedstrijd (beide formulieren). */
 export const VERGOEDING_PER_WEDSTRIJD = 13
 
-/** Km-vergoeding op de kwitantie (formulier_2). */
-export const KWITANTIE_PER_KM = 0.4327
+/** Km-vergoeding als de federatie niets instelde (formulier_2, seizoen 2026-2027). */
+export const KM_TARIEF_STANDAARD = 0.4452
 
-/** Km-vergoeding op het forfait-onkostenblad (formulier_3). */
-export const FORFAIT_PER_KM = 0.4259
+/** Een bruikbaar km-tarief: een getal tussen 0 en 5 euro, anders het standaardtarief. */
+export function geldigKmTarief(v: unknown): number {
+  const n = typeof v === 'number' ? v : Number(v)
+  return Number.isFinite(n) && n > 0 && n < 5 ? n : KM_TARIEF_STANDAARD
+}
+
+/** "€0,4452" — het tarief met vier decimalen, zoals op het formulier. */
+export function formatKmTarief(perKm: number): string {
+  return `€${perKm.toFixed(4).replace('.', ',')}`
+}
 
 /** Maximaal aantal auto's dat op het forfait-onkostenblad vergoed wordt. */
 export const FORFAIT_MAX_AUTOS = 2
@@ -27,6 +35,8 @@ export type VergoedingBerekening = {
   wedstrijdvergoeding: number
   kmVergoeding: number
   totaal: number
+  /** Het gebruikte km-tarief (€/km). */
+  perKm: number
 }
 
 function bereken(aantalWedstrijden: number, km: number, perKm: number): VergoedingBerekening {
@@ -40,17 +50,18 @@ function bereken(aantalWedstrijden: number, km: number, perKm: number): Vergoedi
     wedstrijdvergoeding,
     kmVergoeding,
     totaal: round2(wedstrijdvergoeding + kmVergoeding),
+    perKm,
   }
 }
 
-/** Kwitantie scheidsrechter: aantal wedstrijden × €13 + km × €0,4327. */
-export function berekenKwitantie(aantalWedstrijden: number, km: number): VergoedingBerekening {
-  return bereken(aantalWedstrijden, km, KWITANTIE_PER_KM)
+/** Kwitantie scheidsrechter: aantal wedstrijden × €13 + km × km-tarief. */
+export function berekenKwitantie(aantalWedstrijden: number, km: number, perKm: number = KM_TARIEF_STANDAARD): VergoedingBerekening {
+  return bereken(aantalWedstrijden, km, geldigKmTarief(perKm))
 }
 
-/** Forfait-onkostenblad: aantal wedstrijden × €13 + km × €0,4259. */
-export function berekenForfait(aantalWedstrijden: number, km: number): VergoedingBerekening {
-  return bereken(aantalWedstrijden, km, FORFAIT_PER_KM)
+/** Forfait-onkostenblad: aantal wedstrijden × €13 + km × km-tarief (hetzelfde tarief). */
+export function berekenForfait(aantalWedstrijden: number, km: number, perKm: number = KM_TARIEF_STANDAARD): VergoedingBerekening {
+  return bereken(aantalWedstrijden, km, geldigKmTarief(perKm))
 }
 
 const euroFmt = new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR' })

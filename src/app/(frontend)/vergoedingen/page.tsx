@@ -4,6 +4,9 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { hasRole, isFederationLevel } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
+import { formatKmTarief } from '@/lib/vergoeding'
+import { kmTarief } from '@/lib/vergoeding-data'
+import { KmTarief } from './KmTarief'
 import { KwitantieForm } from './KwitantieForm'
 import '../wedstrijdblad.css'
 
@@ -36,6 +39,7 @@ export default async function VergoedingenPage() {
     .catch(() => ({ docs: [] as { id: number; name: string }[] }))
 
   const list = officials.docs.map((o) => ({ id: o.id as number, name: o.name as string }))
+  const perKm = await kmTarief(payload)
 
   return (
     <>
@@ -46,7 +50,8 @@ export default async function VergoedingenPage() {
         De kwitantie bundelt alle wedstrijden van een scheidsrechter in de gekozen periode. Het
         forfait-onkostenblad (per wedstrijd) genereer je vanaf het scheidsrechterscherm van die wedstrijd.
       </p>
-      <KwitantieForm officials={list} />
+      <KwitantieForm officials={list} kmTariefTekst={formatKmTarief(perKm)} />
+      {isFederationLevel(me) && <div style={{ marginTop: 16 }}><KmTarief begin={perKm} /></div>}
       </div>
     </>
   )

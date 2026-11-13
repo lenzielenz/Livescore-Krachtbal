@@ -23,8 +23,25 @@ export const GESLACHT_OPTIONS: { label: string; value: Geslacht }[] = [
   { label: 'Vrouw', value: 'v' },
 ]
 
-/** Een medische keuring geldt één seizoen; ouder dan dit = verlopen. */
-export const KEURING_GELDIG_DAGEN = 365
+import { brusselsParts } from './datetime'
+
+/**
+ * Een medische keuring geldt voor het competitieseizoen waarin ze valt (zoals het officiële attest: "voor de
+ * competitie 2026-2027"). Het seizoen begint op 1 juli, Belgische tijd (lib/seasons.ts): een keuring van
+ * 20 augustus 2026 geldt tot en met 30 juni 2027; een keuring van 10 juni 2026 tot en met 30 juni 2026.
+ */
+export function seizoenStartJaar(d: Date): number {
+  const { year, month } = brusselsParts(d)
+  return month >= 7 ? year : year - 1
+}
+
+/** 1 juli 00:00 Belgische tijd van dit jaar, als tijdstip (ms). In juli geldt de zomertijd: UTC+2. */
+const eersteJuli = (jaar: number) => Date.UTC(jaar, 5, 30, 22)
+
+/** Begin (ms) van het competitieseizoen waarin `d` valt. */
+export const seizoenBegin = (d: Date): number => eersteJuli(seizoenStartJaar(d))
+/** Einde (ms, exclusief) van het competitieseizoen waarin `d` valt: 1 juli van het volgende jaar. */
+export const seizoenEinde = (d: Date): number => eersteJuli(seizoenStartJaar(d) + 1)
 
 /** Vanaf deze leeftijd is een e-mailadres verplicht (instelbaar: Settings.emailVerplichtVanaf). */
 export const EMAIL_VERPLICHT_VANAF = 13
@@ -65,13 +82,14 @@ export type RegistratieInput = {
 
 const leeg = (v: unknown) => v == null || String(v).trim() === ''
 
-/** Is de keuring (datum) nog geldig op `nu`? Zonder datum: nee. */
+/** Is de keuring (datum) nog geldig op `nu`? Ze geldt het seizoen waarin ze valt. Zonder datum: nee. */
 export function keuringGeldig(op: string | Date | null | undefined, nu: Date = new Date()): boolean {
   if (!op) return false
   const d = new Date(op)
   if (Number.isNaN(d.getTime())) return false
-  const dagen = (nu.getTime() - d.getTime()) / 86_400_000
-  return dagen >= -1 && dagen <= KEURING_GELDIG_DAGEN
+  // Een datum in de toekomst (meer dan een dag) is een tikfout, geen keuring.
+  if (d.getTime() > nu.getTime() + 86_400_000) return false
+  return nu.getTime() < seizoenEinde(d)
 }
 
 /** Wat ontbreekt er nog voor de club kan indienen? Lege lijst = klaar om in te dienen. */

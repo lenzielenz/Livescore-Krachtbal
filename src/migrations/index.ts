@@ -153,6 +153,7 @@ import * as migration_20261112_120000_rapport_uitlening from './20261112_120000_
 import * as migration_20261112_180000_keuring_verlopen from './20261112_180000_keuring_verlopen'
 import * as migration_20261112_200000_oauth_identiteiten from './20261112_200000_oauth_identiteiten'
 import * as migration_20261113_080000_kaart_qr from './20261113_080000_kaart_qr'
+import * as migration_20261113_140000_attest_nakijken from './20261113_140000_attest_nakijken'
 
 export const migrations = [
   {
@@ -924,5 +925,10 @@ export const migrations = [
     up: migration_20261113_080000_kaart_qr.up,
     down: migration_20261113_080000_kaart_qr.down,
     name: '20261113_080000_kaart_qr',
+  },
+  {
+    up: migration_20261113_140000_attest_nakijken.up,
+    down: migration_20261113_140000_attest_nakijken.down,
+    name: '20261113_140000_attest_nakijken',
   },
 ];

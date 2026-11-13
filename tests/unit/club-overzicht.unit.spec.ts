@@ -55,13 +55,14 @@ describe('ledenCsv', () => {
     status: 'Mag spelen',
     email: 'jan@voorbeeld.be',
     ouderEmail: '',
+    ouder2Email: '',
     login: true,
   }
 
   it('puntkomma, BOM en kop', () => {
     const csv = ledenCsv([lid])
     expect(csv.startsWith('﻿Naam;Voornaam;Ploeg;')).toBe(true)
-    expect(csv).toContain('Peeters;Jan;Heren;7;2001-03-04;M;speler;Mag spelen;jan@voorbeeld.be;;ja')
+    expect(csv).toContain('Peeters;Jan;Heren;7;2001-03-04;M;speler;Mag spelen;jan@voorbeeld.be;;;ja')
   })
 
   it('beschermt tegen formules en escapet puntkomma en aanhalingstekens', () => {

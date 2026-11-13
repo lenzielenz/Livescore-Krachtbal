@@ -40,9 +40,12 @@ describe('spelersregistratie', () => {
     ])
   })
 
-  it('een keuring ouder dan een jaar is verlopen', () => {
-    expect(keuringGeldig('2025-10-01', nu)).toBe(false)
-    expect(keuringGeldig('2025-11-01', nu)).toBe(true)
+  it('een keuring geldt het competitieseizoen waarin ze valt (1 juli tot 30 juni)', () => {
+    expect(keuringGeldig('2026-06-30', nu)).toBe(false) // vorig seizoen
+    expect(keuringGeldig('2026-07-01', nu)).toBe(true)
+    expect(keuringGeldig('2026-03-01', new Date('2026-06-30T20:00:00Z'))).toBe(true) // 30 juni, 22u Belgische tijd
+    expect(keuringGeldig('2026-03-01', new Date('2026-06-30T22:30:00Z'))).toBe(false) // 1 juli, 0u30 Belgische tijd
+    expect(keuringGeldig('2026-12-01', nu)).toBe(false) // in de toekomst: tikfout
     expect(ontbreektVoorIndienen({ ...volledig, medischeKeuringOp: '2025-01-01' }, nu)).toEqual(['geldige keuringsdatum'])
   })
 

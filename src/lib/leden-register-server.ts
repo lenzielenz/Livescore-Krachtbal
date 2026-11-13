@@ -221,6 +221,7 @@ export type LidDossier = {
   geslacht: string
   email: string
   ouderEmail: string
+  ouder2Email: string
   club: { id: number | null; naam: string }
   ploeg: { id: number | null; naam: string }
   rugnummer: number | null
@@ -275,6 +276,7 @@ export async function lidDossier(payload: Payload, id: number, nu: Date = new Da
     geslacht: String(p.geslacht ?? ''),
     email: String(p.email ?? ''),
     ouderEmail: String(p.ouderEmail ?? ''),
+    ouder2Email: String(p.ouder2Email ?? ''),
     club: { id: relId(club) ?? relId(ploeg?.club), naam: String(club?.name ?? '') },
     ploeg: { id: relId(ploeg), naam: String(ploeg?.name ?? '') },
     rugnummer: p.shirtNumber != null ? Number(p.shirtNumber) : null,

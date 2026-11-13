@@ -15,7 +15,8 @@ import { DATUM_HOKJE, DATUM_Y, HANDTEKENING, MERKEN, ONTVANGEN, PAGINA, QR, QR_M
 // WinAnsi-fonts: enkel Latijnse tekens (CLAUDE.md) — `veilig()` haalt de rest weg.
 
 export type MedischeKaartData = {
-  playerId: number
+  /** null = het blanco attest: geen lid, de QR wijst naar de publieke oplaadpagina (lid in te vullen met de hand). */
+  playerId: number | null
   naam: string
   geboortedatum: string | null
   club: string | null
@@ -71,12 +72,13 @@ async function kaartBlad(doc: PDFDocument, d: MedischeKaartData, f: { r: PDFFont
 
   const qrPng = await QRCode.toBuffer(d.link, { errorCorrectionLevel: 'M', margin: QR_MARGE, width: 640 })
   p.drawImage(await doc.embedPng(qrPng), { x: X(QR.x), y: Y(QR.y + QR.h), width: X(QR.b), height: X(QR.h) })
-  tekst(d.code, QR.x + (QR.b - breedte(d.code, 10, true)) / 2, QR.y + QR.h + 4, { size: 10, b: true })
+  const onder = d.playerId == null ? 'BLANCO ATTEST' : d.code
+  tekst(onder, QR.x + (QR.b - breedte(onder, 10, true)) / 2, QR.y + QR.h + 4, { size: 10, b: true })
   const hint = 'QR niet beschrijven of afdekken'
   tekst(hint, QR.x + (QR.b - breedte(hint, 6.5)) / 2, QR.y + QR.h + 8, { size: 6.5, kleur: GRIJS })
 
   // ── 1. Het lid ──
-  tekst('1. HET LID', 20, 80, { size: 10.5, b: true, kleur: ROOD })
+  tekst(d.playerId == null ? '1. HET LID (in drukletters)' : '1. HET LID', 20, 80, { size: 10.5, b: true, kleur: ROOD })
   lijn(20, 82, 190, 1, ROOD)
   const veld = (label: string, waarde: string | null, x: number, y: number, b: number) => {
     tekst(label, x, y - 6, { size: 7.5, kleur: GRIJS })
@@ -124,9 +126,9 @@ async function kaartBlad(doc: PDFDocument, d: MedischeKaartData, f: { r: PDFFont
   const stappen = [
     'Neem een foto van het HELE blad: de vier zwarte hoeken en de',
     'QR-code moeten in beeld staan. Of scan het.',
-    'Laad de foto op: scan de QR-code met je gsm, of via "Mijn profiel"',
-    'of je club. Het systeem herkent het lid en leest de vakjes.',
-    'Geldig 365 dagen. Bewaar het origineel.',
+    'Scan de QR-code met je gsm en kies "Foto nemen met kader". Of laad',
+    'de foto op via "Mijn profiel" of de club. Het systeem leest de vakjes.',
+    'Geldig voor het hele seizoen, tot 30 juni. Bewaar het origineel.',
   ]
   stappen.forEach((s, i) => tekst(s, 20, 249 + i * 4.6, { size: 8.5 }))
   kader(ONTVANGEN, { kleur: LIJN })
@@ -136,10 +138,15 @@ async function kaartBlad(doc: PDFDocument, d: MedischeKaartData, f: { r: PDFFont
   tekst('Medisch document - vertrouwelijk. Enkel de federatie, de club en het lid (of de ouder) zien het opgeladen attest.', 22, 287, { size: 6.5, kleur: GRIJS })
 }
 
+/** Het blanco attest: hetzelfde blad, zonder lid. De QR wijst naar `${basis}/attest`, zo herkent het systeem het blad. */
+export function blancoAttest(basis: string, seizoen: string): MedischeKaartData {
+  return { playerId: null, naam: '', geboortedatum: null, club: null, vergunningsnummer: null, categorie: null, seizoen, code: '', link: `${basis.replace(/\/+$/, '')}/attest` }
+}
+
 /** Eén PDF met een attest per lid (de federatie of de club drukt er meerdere tegelijk af). */
 export async function generateMedischeKaartPdf(kaarten: MedischeKaartData[]): Promise<Uint8Array> {
   const doc = await PDFDocument.create()
-  doc.setTitle(kaarten.length === 1 ? `Medisch attest ${veilig(kaarten[0]!.naam)}` : `Medische attesten (${kaarten.length})`)
+  doc.setTitle(kaarten.length === 1 ? `Medisch attest ${veilig(kaarten[0]!.naam || 'blanco')}` : `Medische attesten (${kaarten.length})`)
   doc.setAuthor('KVKBF')
   const f = { r: await doc.embedFont(StandardFonts.Helvetica), b: await doc.embedFont(StandardFonts.HelveticaBold) }
   for (const k of kaarten) await kaartBlad(doc, k, f)

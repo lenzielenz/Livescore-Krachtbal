@@ -282,6 +282,14 @@ export const Players: CollectionConfig = {
           admin: { description: 'Voor jeugd: de ouder ziet het dossier van het kind in zijn eigen login.' },
         },
         {
+          // Een tweede ouder: krijgt net zo goed een login met het dossier van het kind (lib/ouders.ts).
+          name: 'ouder2Email',
+          label: 'E-mailadres tweede ouder',
+          type: 'email',
+          access: { read: sensitiveFieldRead },
+          admin: { description: 'Beide ouders zien het dossier en kunnen het medisch attest opladen.' },
+        },
+        {
           type: 'row',
           fields: [
             {
