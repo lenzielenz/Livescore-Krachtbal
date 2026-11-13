@@ -18,6 +18,8 @@ import { OngevalDocumenten } from './collections/OngevalDocumenten'
 import { AfgelastingFotos, Afgelastingen } from './collections/Afgelastingen'
 import { AftrapWijzigingen } from './collections/AftrapWijzigingen'
 import { BoeteSoorten, Boetes } from './collections/Boetes'
+import { Betalingen } from './collections/Betalingen'
+import { Facturen } from './collections/Facturen'
 import { InschrijvingsRondes, Inschrijvingen } from './collections/Inschrijvingen'
 import { Verplaatsingsaanvragen } from './collections/Verplaatsingsaanvragen'
 import { Dossiers } from './collections/Dossiers'
@@ -142,6 +144,8 @@ export default buildConfig({
     AftrapWijzigingen,
     BoeteSoorten,
     Boetes,
+    Facturen,
+    Betalingen,
     InschrijvingsRondes,
     Inschrijvingen,
     Verplaatsingsaanvragen,

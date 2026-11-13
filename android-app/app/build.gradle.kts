@@ -42,8 +42,8 @@ android {
         create("federatie") {
             dimension = "product"
             applicationId = "be.krachtbal.federatie"
-            versionCode = 3
-            versionName = "0.2.1"
+            versionCode = 4
+            versionName = "0.2.2"
             buildConfigField("boolean", "FEDERATIE", "true")
             // De demoruimte (eigen Railway-project "Krachtbal-demo"); later het officiële adres van het pakket.
             buildConfigField("String", "DEFAULT_SERVER", "\"https://krachtbal-demo-production.up.railway.app\"")

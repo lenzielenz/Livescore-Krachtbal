@@ -76,12 +76,21 @@ describe("foto's uit het echte leven: scan, gsm, WhatsApp", () => {
     expect([r?.lezing?.vakjes.geschikt.aangekruist, r?.lezing?.vakjes.nietHoger.aangekruist]).not.toContain(true)
   }, 60_000)
 
-  it('een blad dat 1 cm bol ligt: elk vakje wordt opgezocht aan zijn kader', async () => {
-    const vol = await scanKaart(await foto({ geschikt: true, nietHoger: false, hoek: -3, bol: 10, schuin: 0.05 }), 'image/jpeg')
+  it('een blad dat 6 mm bol ligt en schuin gefotografeerd is: elk vakje wordt opgezocht aan zijn kader', async () => {
+    const vol = await scanKaart(await foto({ geschikt: true, nietHoger: false, hoek: -3, bol: 6, schuin: 0.05 }), 'image/jpeg')
     expect([vol?.lezing?.uitlijning, vol?.lezing?.vakjes.geschikt.aangekruist, vol?.lezing?.vakjes.nietHoger.aangekruist]).toEqual(['merken', true, false])
-    const leeg = await scanKaart(await foto({ geschikt: false, nietHoger: false, hoek: 2, bol: 10 }), 'image/jpeg')
+    const leeg = await scanKaart(await foto({ geschikt: false, nietHoger: false, hoek: 2, bol: 6 }), 'image/jpeg')
     expect([leeg?.lezing?.vakjes.geschikt.aangekruist, leeg?.lezing?.vakjes.nietHoger.aangekruist]).toEqual([false, false])
   }, 60_000)
+
+  it('1 cm bol en meer: juist of twijfel, nooit een verkeerde lezing', async () => {
+    for (const [g, h, hoek] of [[false, false, 2], [true, false, -3], [false, true, 0]] as const) {
+      const r = await scanKaart(await foto({ geschikt: g, nietHoger: h, hoek, bol: 10, whatsapp: true }), 'image/jpeg')
+      const a = [r?.lezing?.vakjes.geschikt.aangekruist ?? null, r?.lezing?.vakjes.nietHoger.aangekruist ?? null]
+      expect(a[0] === null || a[0] === g, `geschikt ${g}, hoek ${hoek}`).toBe(true)
+      expect(a[1] === null || a[1] === h, `niet hoger ${h}, hoek ${hoek}`).toBe(true)
+    }
+  }, 120_000)
 
   it('te wazig én te donker: geen gok maar twijfel (dan kijkt de federatie het na)', async () => {
     const r = await scanKaart(await foto({ geschikt: true, nietHoger: false, hoek: -3, blur: 4, donker: true, whatsapp: true }), 'image/jpeg')

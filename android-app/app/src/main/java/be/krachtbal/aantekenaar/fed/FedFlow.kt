@@ -20,14 +20,22 @@ fun routeFor(step: StepId): String = when (step) {
  * terugknop van Android) gaat altijd naar de hub; van de hub naar de lijst.
  */
 @Composable
-fun FedFlow(matchId: Int, route: String?, setRoute: (String?) -> Unit, onBackToList: () -> Unit, onSettings: () -> Unit) {
+fun FedFlow(
+    matchId: Int,
+    route: String?,
+    setRoute: (String?) -> Unit,
+    onBackToList: () -> Unit,
+    onSettings: () -> Unit,
+    onMeldingen: () -> Unit = {},
+    ongelezen: Int = 0,
+) {
     val toHub = { setRoute(null) }
     when {
-        route == null -> MatchDayScreen(matchId, onBack = onBackToList, onOpenStep = { setRoute(routeFor(it)) }, onSettings = onSettings)
+        route == null -> MatchDayScreen(matchId, onBack = onBackToList, onOpenStep = { setRoute(routeFor(it)) }, onSettings = onSettings, onMeldingen = onMeldingen, ongelezen = ongelezen)
         route.startsWith("lineup:") -> LineupScreen(matchId, Side.fromWire(route.removePrefix("lineup:")) ?: Side.HOME, "", onBack = toHub)
         route.startsWith("ref:") -> RefereeScreen(matchId, route.removePrefix("ref:"), onBack = toHub, onEditLineup = { setRoute("lineup:${it.wire}") })
         route == "deelname" -> DeelnameScreen(matchId, onBack = toHub)
         route == "aftekenen" -> AftekenenScreen(matchId, onBack = toHub)
-        else -> MatchDayScreen(matchId, onBack = onBackToList, onOpenStep = { setRoute(routeFor(it)) }, onSettings = onSettings)
+        else -> MatchDayScreen(matchId, onBack = onBackToList, onOpenStep = { setRoute(routeFor(it)) }, onSettings = onSettings, onMeldingen = onMeldingen, ongelezen = ongelezen)
     }
 }

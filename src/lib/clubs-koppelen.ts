@@ -34,6 +34,9 @@ export const CLUB_VERWIJZINGEN: { collection: CollectionSlug; veld: string }[] =
   { collection: 'virtuele-sporen', veld: 'club' },
   { collection: 'uitleningen', veld: 'vanClub' },
   { collection: 'uitleningen', veld: 'naarClub' },
+  // Facturen en betalingen: dubbele clubrecords zijn dezelfde vereniging, de factuur hoort bij de club die blijft.
+  { collection: 'facturen', veld: 'club' },
+  { collection: 'betalingen', veld: 'club' },
 ]
 
 // Ploegen aan hun echte club koppelen.

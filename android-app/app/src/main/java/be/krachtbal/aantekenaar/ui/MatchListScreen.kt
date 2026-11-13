@@ -92,7 +92,14 @@ private fun rowTime(r: MatchRow): String = try {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MatchListScreen(onOpen: (Int) -> Unit, onSettings: () -> Unit) {
+fun MatchListScreen(
+    onOpen: (Int) -> Unit,
+    onSettings: () -> Unit,
+    /** Federatie-app: de meldingen (🔔 met het aantal ongelezen) en het medisch attest bezorgen. */
+    onMeldingen: (() -> Unit)? = null,
+    onAttest: (() -> Unit)? = null,
+    ongelezen: Int = 0,
+) {
     val model = remember { MatchListModel() }
     val st by model.state.collectAsState()
     val attention by Graph.attention.collectAsState()
@@ -149,10 +156,17 @@ fun MatchListScreen(onOpen: (Int) -> Unit, onSettings: () -> Unit) {
                     Title("Kies een wedstrijd")
                     Dim(Graph.authRepo.userName?.let { "Ingelogd als $it" } ?: (Graph.authRepo.email ?: ""))
                 }
+                if (onMeldingen != null) {
+                    TextButton(onClick = onMeldingen) {
+                        Text(if (ongelezen > 0) "🔔 $ongelezen" else "🔔", color = if (ongelezen > 0) Pal.Accent else Pal.Dim, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
                 TextButton(onClick = { model.reload() }) { Text("↻", color = Pal.Accent, fontSize = 22.sp) }
                 Column {
                     TextButton(onClick = { menu = true }) { Text("⋮", color = Pal.Text, fontSize = 22.sp) }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        if (onAttest != null) DropdownMenuItem(text = { Text("🩺 Medisch attest bezorgen") }, onClick = { menu = false; onAttest() })
+                        if (onMeldingen != null) DropdownMenuItem(text = { Text("🔔 Meldingen") }, onClick = { menu = false; onMeldingen() })
                         DropdownMenuItem(text = { Text("⚙ Instellingen") }, onClick = { menu = false; onSettings() })
                         DropdownMenuItem(text = { Text("Uitloggen") }, onClick = { menu = false; Graph.authRepo.logout() })
                     }

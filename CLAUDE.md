@@ -151,6 +151,8 @@ Optioneel, app draait zonder. Zie `.env.example`:
   (`docs/CHROMECAST.md`).
 - **Media** — clublogo's op een Railway-Volume (`MEDIA_DIR` / `RAILWAY_VOLUME_MOUNT_PATH`).
 - **ffmpeg-static** — webm→mp4 voor replay-clips (`serverExternalPackages`).
+- **Online betalen (Mollie)** — `MOLLIE_API_KEY`; zonder sleutel: overschrijving + bankafschrift-import
+  (`src/lib/facturatie-server.ts`).
 - **Inloggen met Google / Microsoft / Apple** — `GOOGLE_*`, `MICROSOFT_*`, `APPLE_*`; elke knop verschijnt pas
   met zijn sleutels (`src/lib/oauth.ts`, `docs/INLOGGEN.md`).
 

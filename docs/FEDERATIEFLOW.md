@@ -268,6 +268,42 @@ vernietigt. In de instellingen kiest de federatie wie de **scheidsrechterskosten
 thuisclub of gedeeld; bij forfait de ploeg die forfait gaf); de club ziet per wedstrijd wat ze verschuldigd
 is (€13 + km-vergoeding, zoals op de kwitantie). Code: `src/lib/boetes.ts`.
 
+### Facturen en betalingen
+
+- **Facturen aan de clubs** (`/beheer/facturen`, menu "Facturen & betalingen"). De federatie maakt met één knop
+  per club een **concept** uit wat de club verschuldigd is en nog niet gefactureerd werd:
+  - aansluitingen (tarief per speler met geldige vergunning en per goedgekeurd gewoon lid, per seizoen),
+  - opgelegde boetes,
+  - scheidsrechterskosten (volgens de instelling wie betaalt).
+
+  Elke lijn draagt sleutels (`aansluiting:<seizoen>:<lid>`, `boete:<id>`, `scheidsrechter:<soort>:<wedstrijd>`):
+  niets komt twee keer op een factuur. Een concept kan aangepast worden (lijn weg, extra lijn, ook een negatieve
+  "creditlijn"), met PDF-voorbeeld.
+- **Versturen**: doorlopend nummer per jaar zonder gaten (onder een Postgres-slot), een **gestructureerde
+  mededeling** (+++…+++, modulo 97) en een vervaldatum na de betaaltermijn; de club krijgt een melding. Daarna
+  verandert de factuur niet meer; rechtzetten = annuleren (het nummer blijft, als geannuleerd) en een nieuwe maken.
+- **Betalingen zijn onveranderlijk** (collection `betalingen`, zoals de worpen). Of een factuur open, deels
+  betaald, betaald of vervallen is, wordt telkens **berekend** uit de betalingen (`betaalstand` in
+  `src/lib/facturatie.ts`), nooit opgeslagen. Drie manieren:
+  1. **bankafschrift (CSV)**: de kolommen worden herkend aan hun kop (KBC, BNP Paribas Fortis, Belfius, ING…);
+     elke binnenkomende betaling met de mededeling van een factuur wordt eraan gekoppeld. Eerst een voorbeeld,
+     dan boeken; dezelfde regel telt nooit twee keer;
+  2. **manueel** (cash, een betaling zonder mededeling);
+  3. **online via Mollie** (Bancontact e.d.), enkel met `MOLLIE_API_KEY`. De webhook vraagt de betaling zelf op
+     bij Mollie en boekt ze één keer.
+
+  Is een factuur volledig betaald, dan worden de boetes erop afgeboekt en hoort de club het.
+- **De club** (`/club/facturen`, tegel "Facturen"): wat te betalen is, met bedrag, rekening, mededeling en een
+  **betaal-QR** (EPC/SEPA: de bank-app vult alles in), de PDF, en eventueel "Online betalen"; daaronder de
+  eerdere facturen.
+- **Opvolging**: vervallen facturen op het dashboard; de club krijgt één herinnering per week
+  (`lib/termijnen.ts`). **Boekhoudexport**: CSV met per factuur totaal, betaald en open.
+- **Instellingen** (Federatie-instellingen → Facturatie aan de clubs): naam, adres, ondernemingsnummer, IBAN, BIC,
+  btw-vermelding (laat de boekhouder die invullen), betaaltermijn, tarieven van de aansluitingen.
+- Code: `src/lib/facturatie.ts` (puur: mededeling, bedragen in centen, betaalstand, bankafschrift),
+  `facturatie-server.ts`, `submit/pdf-factuur.ts`. Tests: `tests/unit/facturatie.unit.spec.ts`,
+  `tests/int/facturatie.int.spec.ts`.
+
 ### Termijnen en herinneringen
 
 Elke ochtend loopt `/api/cron/recap` (GitHub-workflow *Dagelijks onderhoud*, `lib/termijnen.ts`): het maakt de

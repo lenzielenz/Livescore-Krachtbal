@@ -8,6 +8,8 @@ import { ploegenEnClubs } from './leden-register-server'
 import { ONGEVAL_TERMIJN_DAGEN } from './federatie-aanvragen'
 import { aanleidingenVanBlad, scheidsrechterAccounts } from './sr-rapport'
 import { isWerkdag } from './voorbehoud'
+import { vervallenFacturen } from './facturatie-server'
+import { formatEuro } from './vergoeding'
 
 // De dagelijkse ronde langs de termijnen van het reglement (aangeroepen door /api/cron/recap, elke
 // ochtend). Niets hier beslist iets: de termijnen zelf staan al op het bord (deadlineAuto) en de
@@ -44,10 +46,10 @@ export function werkdagenTussen(van: Date, tot: Date): number {
   return n
 }
 
-export type TermijnRonde = { boetes: number; voorbehoud: number; ongeval: number; rapport: number; uitlening: number; keuring: number }
+export type TermijnRonde = { boetes: number; voorbehoud: number; ongeval: number; rapport: number; uitlening: number; keuring: number; facturen: number }
 
 export async function dagelijkseTermijnen(payload: Payload, nu: Date = new Date()): Promise<TermijnRonde> {
-  const uit: TermijnRonde = { boetes: 0, voorbehoud: 0, ongeval: 0, rapport: 0, uitlening: 0, keuring: 0 }
+  const uit: TermijnRonde = { boetes: 0, voorbehoud: 0, ongeval: 0, rapport: 0, uitlening: 0, keuring: 0, facturen: 0 }
   const vandaag = dateStrBE(nu)
 
   uit.boetes = await boeteVoorstellen(payload, 120, nu.getTime()).catch(() => 0)
@@ -142,6 +144,7 @@ export async function dagelijkseTermijnen(payload: Payload, nu: Date = new Date(
   }
 
   uit.keuring = await keuringHerinneringen(payload, nu)
+  uit.facturen = await factuurHerinneringen(payload, nu).catch(() => 0)
   return uit
 }
 
@@ -187,6 +190,26 @@ async function keuringHerinneringen(payload: Payload, nu: Date): Promise<number>
       titel: `🩺 ${regels.length} medische keuring${regels.length === 1 ? '' : 'en'} (bijna) verlopen`,
       tekst: [...regels.slice(0, 40), ...(regels.length > 40 ? [`… en nog ${regels.length - 40}`] : [])].join('\n'),
       url: '/club/leden',
+    })
+    if (k) n++
+  }
+  return n
+}
+
+/** Vervallen facturen: de club één keer per week een herinnering, met wat er open staat. */
+async function factuurHerinneringen(payload: Payload, nu: Date): Promise<number> {
+  const vervallen = await vervallenFacturen(payload, nu)
+  const perClub = new Map<number, typeof vervallen>()
+  for (const f of vervallen) perClub.set(f.club.id, [...(perClub.get(f.club.id) ?? []), f])
+  const week = weekVan(nu)
+  let n = 0
+  for (const [club, lijst] of perClub) {
+    const open = lijst.reduce((t, f) => t + f.beeld.open, 0)
+    const k = await meldEenmalig(payload, await clubStaf(payload, club), {
+      sleutel: `herinnering:facturen:${club}:${week}`,
+      titel: `🧾 ${lijst.length === 1 ? 'Een factuur is' : `${lijst.length} facturen zijn`} vervallen`,
+      tekst: `Nog te betalen: ${formatEuro(open)} (${lijst.map((f) => `${f.nummer}, mededeling ${f.ogm}`).join('; ')}).`,
+      url: '/club/facturen',
     })
     if (k) n++
   }

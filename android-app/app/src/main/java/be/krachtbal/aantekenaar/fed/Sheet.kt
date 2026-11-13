@@ -33,6 +33,20 @@ data class LineupRow(
 
 data class Signature(val akkoord: Boolean, val naam: String?)
 
+/**
+ * Een voorbehoud of uitsluiting op het blad (RCVK items 25, 27; src/lib/voorbehoud.ts). [side] is "thuis" of "uit";
+ * [onderwerp] enkel bij een voorbehoud (bepaalt het comité), [player] enkel bij een uitsluiting van een lid.
+ */
+data class BladRij(
+    val side: String,
+    val naam: String?,
+    val reden: String,
+    val onderwerp: String?,
+    val player: Int?,
+    val score: String?,
+    val speeltijd: String?,
+)
+
 /** Het blad van één wedstrijd (de velden die `select` ophaalt; de handtekening-afbeeldingen blijven weg: tientallen KB). */
 data class SheetView(
     val id: Int,
@@ -57,6 +71,10 @@ data class SheetView(
     val backupReferee: Int?,
     /** De vrijgavecode (backup) die de federatie aan de scheidsrechter doorgeeft; enkel voor de federatie leesbaar. */
     val vrijgaveCode: String? = null,
+    val voorbehoud: List<BladRij> = emptyList(),
+    val uitsluitingen: List<BladRij> = emptyList(),
+    /** "Zie scheidsrechtersrapport" (RCVK item 27): er volgt een rapport over een andere onregelmatigheid. */
+    val rapportVolgt: Boolean = false,
 ) {
     fun lineup(side: Side): List<LineupRow> = if (side == Side.HOME) home else away
     val ingediend: Boolean get() = status == "ingediend"
@@ -79,6 +97,9 @@ internal val SHEET_SELECT: List<Pair<String, String>> = listOf(
     "select[assignedReferee]" to "true",
     "select[backupReferee]" to "true",
     "select[vrijgaveCode]" to "true",
+    "select[voorbehoud]" to "true",
+    "select[uitsluitingen]" to "true",
+    "select[rapportVolgt]" to "true",
     "select[kapiteinThuis][akkoord]" to "true",
     "select[kapiteinThuis][naam]" to "true",
     "select[kapiteinUit][akkoord]" to "true",
@@ -104,6 +125,20 @@ private fun lineupOf(el: JsonElement?): List<LineupRow> =
         val o = r.obj() ?: return@mapNotNull null
         val player = o["player"].relId() ?: return@mapNotNull null
         LineupRow(player, o["rugnummer"].int(), o["deelgenomen"].bool(), o["ibGecontroleerd"].bool())
+    }
+
+private fun bladRijen(el: JsonElement?): List<BladRij> =
+    (el as? JsonArray).orEmpty().mapNotNull { r ->
+        val o = r.obj() ?: return@mapNotNull null
+        BladRij(
+            side = o["side"].str() ?: "thuis",
+            naam = o["naam"].str(),
+            reden = o["reden"].str().orEmpty(),
+            onderwerp = o["onderwerp"].str(),
+            player = o["player"].relId(),
+            score = o["score"].str(),
+            speeltijd = o["speeltijd"].str(),
+        )
     }
 
 private fun signatureOf(el: JsonElement?): Signature = Signature(el.obj()?.get("akkoord").bool(), el.obj()?.get("naam").str())
@@ -136,6 +171,9 @@ fun parseSheet(body: String): SheetView? {
             assignedReferee = d["assignedReferee"].relId(),
             backupReferee = d["backupReferee"].relId(),
             vrijgaveCode = d["vrijgaveCode"].str(),
+            voorbehoud = bladRijen(d["voorbehoud"]),
+            uitsluitingen = bladRijen(d["uitsluitingen"]),
+            rapportVolgt = d["rapportVolgt"].bool(),
         )
     }
 } catch (_: Exception) {

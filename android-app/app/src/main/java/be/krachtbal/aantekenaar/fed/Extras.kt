@@ -173,20 +173,38 @@ fun BlessureForm(matchId: Int, ui: HubModel.UI, reload: suspend () -> Unit) {
 private val AFGELAST_REDENEN = listOf("terrein" to "Terrein onbespeelbaar", "weer" to "Weersomstandigheden", "ander" to "Andere reden")
 private const val FOTO_MAX = 6
 
-/** Leest een gekozen foto en verkleint ze (lange zijde ≤ 1600 px, JPEG): een telefoonfoto van 8 MB hoeft niet mee. */
-private suspend fun leesFoto(ctx: Context, uri: Uri, nr: Int): Foto? = withContext(Dispatchers.IO) {
+/**
+ * Leest een gekozen foto en verkleint ze (lange zijde ≤ [maxZijde] px, JPEG): een telefoonfoto van 8 MB hoeft niet
+ * mee. Ook gebruikt voor het rapport en de medische kaart (daar groter: de QR-code moet leesbaar blijven).
+ */
+internal suspend fun leesFoto(ctx: Context, uri: Uri, nr: Int, prefix: String = "afgelasting", maxZijde: Int = 1600): Foto? = withContext(Dispatchers.IO) {
     try {
         val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         ctx.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }
         var sample = 1
-        while (maxOf(opts.outWidth, opts.outHeight) / sample > 3200) sample *= 2
-        val bmp = ctx.contentResolver.openInputStream(uri)?.use {
+        while (maxOf(opts.outWidth, opts.outHeight) / sample > maxOf(3200, maxZijde * 2)) sample *= 2
+        val ruw = ctx.contentResolver.openInputStream(uri)?.use {
             BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
         } ?: return@withContext null
-        val scale = 1600f / maxOf(bmp.width, bmp.height)
+        // Een gsm bewaart een rechtopstaande foto vaak liggend met een EXIF-draaiing; BitmapFactory negeert die en de
+        // JPEG die we maken heeft geen EXIF meer. Dus hier zelf rechtzetten.
+        val graden = try {
+            ctx.contentResolver.openInputStream(uri)?.use {
+                when (android.media.ExifInterface(it).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, android.media.ExifInterface.ORIENTATION_NORMAL)) {
+                    android.media.ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                    android.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                    android.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                    else -> 0f
+                }
+            } ?: 0f
+        } catch (_: Exception) {
+            0f
+        }
+        val bmp = if (graden == 0f) ruw else Bitmap.createBitmap(ruw, 0, 0, ruw.width, ruw.height, android.graphics.Matrix().apply { postRotate(graden) }, true)
+        val scale = maxZijde.toFloat() / maxOf(bmp.width, bmp.height)
         val out = if (scale < 1f) Bitmap.createScaledBitmap(bmp, (bmp.width * scale).toInt(), (bmp.height * scale).toInt(), true) else bmp
         val bytes = ByteArrayOutputStream().also { out.compress(Bitmap.CompressFormat.JPEG, 85, it) }.toByteArray()
-        Foto("afgelasting-$nr.jpg", "image/jpeg", bytes)
+        Foto("$prefix-$nr.jpg", "image/jpeg", bytes)
     } catch (_: Exception) {
         null
     }
