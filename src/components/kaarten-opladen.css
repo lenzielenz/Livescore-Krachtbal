@@ -11,3 +11,4 @@
 .ko-bestand { color: var(--dim); overflow-wrap: anywhere; }
 .kq { max-width: 640px; }
 .kq-acties { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px; }
+.ko-let { flex-basis: 100%; color: #c98a1f; }

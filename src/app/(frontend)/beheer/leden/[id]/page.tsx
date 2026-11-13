@@ -21,6 +21,9 @@ const VERGUNNING: Record<string, string> = { geen: 'Geen', aangevraagd: 'Aangevr
 // met het attest, logins, en wat er aan het lid hangt (medische kaarten, ongevallen, uitleningen,
 // sancties). De federatie past hier vergunning, keuring en doktersverbod aan of beslist over een
 // ingediende registratie.
+/** Een gelezen aankruisvakje: ✓ aangekruist, — leeg, ? twijfel (nakijken). */
+const vak = (v: boolean | null) => (v === true ? '✓' : v === false ? '—' : '? nakijken')
+
 export default async function LidDossierPage({ params }: { params: Promise<{ id: string }> }) {
   const me = await getAuthUser()
   const payload = await getPayloadClient()
@@ -136,6 +139,13 @@ export default async function LidDossierPage({ params }: { params: Promise<{ id:
                   'Geen attest opgeladen'
                 )}
                 {lid.attest?.viaQr && <span className="led-chip ok"> herkend via QR</span>}
+                {lid.attest?.lezing && (
+                  <span className="led-sub">
+                    {' '}
+                    Gelezen{lid.attest.lezing.uitlijning === 'qr' ? ' (enkel op de QR uitgelijnd — nakijken)' : ''}: geschikt{' '}
+                    {vak(lid.attest.lezing.vakjes.geschikt.aangekruist)} · mag niet hoger {vak(lid.attest.lezing.vakjes.nietHoger.aangekruist)}
+                  </span>
+                )}
               </dd>
               <dt>Medische kaart</dt>
               <dd>

@@ -726,6 +726,18 @@ export interface MedischeAttesten {
    * De foto of scan toonde de QR-code van de medische kaart van dit lid.
    */
   herkendViaQr?: boolean | null;
+  /**
+   * De aankruisvakjes zoals het systeem ze las bij het opladen.
+   */
+  lezing?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -3348,6 +3360,7 @@ export interface MedischeAttestenSelect<T extends boolean = true> {
   club?: T;
   geuploadDoor?: T;
   herkendViaQr?: T;
+  lezing?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

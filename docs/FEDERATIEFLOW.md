@@ -391,12 +391,21 @@ Details en aannames: [REGELS-CONFORMITEIT.md §6](REGELS-CONFORMITEIT.md).
 - Het lid vraagt zijn medische kaart aan vanuit *Mijn profiel*; de club kan het ook voor het lid doen.
   De aanvraag gaat naar de federatie (`/beheer/leden`); de andere partij krijgt een melding (🔔).
 
-### Medische kaart met QR-code
+### Medisch attest met QR-code
 
-- De kaart is een PDF (één A4 per lid): gegevens van het lid, het deel van de arts (geschikt / niet
-  geschikt / onder voorwaarde, datum, stempel en handtekening) en rechtsboven een **QR-code** met de code
-  ook leesbaar eronder (bv. `KYA-RWAXQPCD`). De QR bevat enkel een ondertekende code (dossiernummer +
-  handtekening met het server-geheim): geen naam, niet te raden of te vervalsen.
+- Het **medisch attest** is het formulier van de federatie (krachtbal.be → formulieren → medisch attest),
+  machineleesbaar gemaakt: één A4 per lid met de gegevens al ingevuld, "Geschikt voor de krachtbalsport",
+  "Mag NIET 1 categorie hoger spelen" (aankruisen i.p.v. schrappen — zonder kruisje mag de speler volgens de
+  spelregels 1 categorie hoger), datumhokjes, stempel en handtekening, en het vak "Ontvangen" voor de
+  federatie. Rechtsboven een **QR-code** (ook leesbaar eronder, bv. `KYA-RWAXQPCD`): enkel een ondertekende
+  code (dossiernummer + handtekening met het server-geheim), geen naam, niet te raden of te vervalsen.
+- **Uitlijning**: vier zwarte hoekmerken. Bij het importeren vindt het systeem de QR (van wie), zoekt de vier
+  merken (alle volle zwarte vierkanten op de foto; per hoek het dichtste bij wat de QR voorspelt) en rekent de
+  foto recht. Dan leest het de aankruisvakjes (inkt tegenover het papier ernaast, dus ook met schaduw).
+  Gevolgen: "mag niet hoger" duidelijk aangekruist → het doktersverbod staat meteen in het dossier (nooit
+  vanzelf opgeheven); "geschikt" niet aangekruist → geen keuringsdatum en een waarschuwing; twijfel → niets
+  beslist, het dossier toont wat gelezen werd ("? nakijken"). De maten staan op één plek
+  (`src/lib/medische-kaart-layout.ts`) voor de PDF én de lezer (`src/lib/medische-kaart-lezen.ts`).
 - **Afdrukken**: de federatie (per aanvraag of alle open aanvragen in één PDF, en in het dossier), de club
   voor de eigen leden, het lid of de ouder zodra de federatie de aanvraag *verstuurd* zette
   (`/api/medische-kaart/pdf?ids=…`).

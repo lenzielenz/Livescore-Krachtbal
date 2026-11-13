@@ -21,6 +21,8 @@ import { kaartLink } from '@/lib/medische-kaart-code'
 import { kaartenOpladen } from '@/lib/medische-kaart-server'
 import { attestOpslaan } from '@/lib/registratie-server'
 
+import { attestFoto } from '../fixtures/attest-foto'
+
 // De medische kaart met QR, van begin tot eind: een foto van de ingevulde kaart komt bij het juiste
 // lid, zonder dat iemand dat lid kiest — en nooit bij een ander lid of buiten de eigen club.
 
@@ -92,6 +94,21 @@ describe('medische kaart met QR', () => {
     const ok = await attestOpslaan(payload, { playerId: ids.p1, clubId: ids.clubA, userId: ids.staf, bestand: await foto(ids.p1), vorige: null })
     const a = await payload.findByID({ collection: 'medische-attesten', id: ok, depth: 0, overrideAccess: true })
     expect(a.herkendViaQr).toBe(true)
+  }, 120_000)
+
+  it('de vakjes van de arts: "mag niet hoger" zet het verbod, "niet geschikt" zet geen keuringsdatum', async () => {
+    const bestand = (buf: Buffer, n: string) => new File([new Uint8Array(buf)], n, { type: 'image/jpeg' })
+    const ok = await kaartenOpladen(payload, wie.club as never, [bestand(await attestFoto({ playerId: ids.p1, geschikt: true, nietHoger: true, hoek: 5 }), 'a.jpg')], { datum: '2026-11-12' })
+    expect(ok[0]).toMatchObject({ ok: true, playerId: ids.p1, meldingen: [expect.stringContaining('doktersverbod')] })
+    const p1 = await payload.findByID({ collection: 'players', id: ids.p1, depth: 1, overrideAccess: true })
+    expect([p1.hogerSpelenVerbod, String(p1.medischeKeuringOp).slice(0, 10)]).toEqual([true, '2026-11-12'])
+    expect((p1.medischAttestBestand as { lezing?: { uitlijning?: string } }).lezing?.uitlijning).toBe('merken')
+
+    const niet = await kaartenOpladen(payload, wie.club as never, [bestand(await attestFoto({ playerId: ids.p1, geschikt: false, nietHoger: false, hoek: -4 }), 'b.jpg')], { datum: '2026-11-13' })
+    expect(niet[0]).toMatchObject({ ok: true, meldingen: [expect.stringContaining('niet aangekruist')] })
+    const na = await payload.findByID({ collection: 'players', id: ids.p1, depth: 0, overrideAccess: true })
+    // Datum blijft de vorige; het verbod wordt nooit vanzelf opgeheven.
+    expect([String(na.medischeKeuringOp).slice(0, 10), na.hogerSpelenVerbod]).toEqual(['2026-11-12', true])
   }, 120_000)
 
   it('afdrukken: de club voor eigen leden; het lid pas na "verstuurd"', async () => {

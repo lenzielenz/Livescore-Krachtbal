@@ -7,7 +7,7 @@ import { scanKaart } from './medische-kaart-scan'
 import { clubStaf, meld, relId } from './meldingen'
 import { isOuderVan } from './ouders'
 import { clubMagBewerken } from './registratie'
-import { attestFout, attestOpslaan, clubPloegen } from './registratie-server'
+import { attestFout, attestOpslaan, clubPloegen, lezingToepassen } from './registratie-server'
 import type { MedischeKaartData } from './submit/pdf-medische-kaart'
 import { huidigSeizoen } from './uitlening'
 
@@ -84,7 +84,7 @@ export async function kaartGegevens(payload: Payload, playerIds: number[], basis
 }
 
 export type OpgeladenKaart =
-  | { bestand: string; ok: true; playerId: number; naam: string; viaQr: boolean }
+  | { bestand: string; ok: true; playerId: number; naam: string; viaQr: boolean; meldingen: string[] }
   | { bestand: string; ok: false; fout: string }
 
 /**
@@ -133,9 +133,11 @@ export async function kaartenOpladen(
       continue
     }
     const club = relId(sp.club)
-    await attestOpslaan(payload, { playerId, clubId: club, userId: Number(user.id), bestand: b, vorige: relId(sp.medischAttestBestand), herkendViaQr: scan != null })
-    if (datum) await payload.update({ collection: 'players', id: playerId, data: { medischeKeuringOp: datum }, overrideAccess: true })
-    uit.push({ bestand: b.name, ok: true, playerId, naam: String(sp.name ?? ''), viaQr: scan != null })
+    await attestOpslaan(payload, { playerId, clubId: club, userId: Number(user.id), bestand: b, vorige: relId(sp.medischAttestBestand), herkendViaQr: scan != null, lezing: scan?.lezing ?? null })
+    // De vakjes van de arts (geschikt, mag niet hoger): een duidelijk "niet geschikt" zet geen keuringsdatum.
+    const gelezen = scan?.lezing ? await lezingToepassen(payload, playerId, scan.lezing) : { geschikt: null, meldingen: [] as string[] }
+    if (datum && gelezen.geschikt !== false) await payload.update({ collection: 'players', id: playerId, data: { medischeKeuringOp: datum }, overrideAccess: true })
+    uit.push({ bestand: b.name, ok: true, playerId, naam: String(sp.name ?? ''), viaQr: scan != null, meldingen: gelezen.meldingen })
     gemeld.set(playerId, { naam: String(sp.name ?? ''), club, rol })
   }
 

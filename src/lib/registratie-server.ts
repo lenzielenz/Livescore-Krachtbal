@@ -3,6 +3,7 @@ import type { Payload } from 'payload'
 import { randomBytes } from 'node:crypto'
 
 import { stuurMail, uitnodigingHtml } from './mail'
+import type { AttestLezing } from './medische-kaart-lezen'
 import { scanKaart } from './medische-kaart-scan'
 import { accountsVanSpeler, clubStaf, meld } from './meldingen'
 import { zorgVoorOuderLogin } from './ouders'
@@ -375,6 +376,8 @@ export async function attestOpslaan(
     vorige: number | null
     /** Al gescand (lib/medische-kaart-server.ts)? Anders leest deze functie de QR zelf. */
     herkendViaQr?: boolean
+    /** Wat er op de vakjes gelezen werd (bij een eigen scan vult deze functie het zelf in). */
+    lezing?: AttestLezing | null
   },
 ): Promise<number> {
   const ext = o.bestand.type === 'application/pdf' ? 'pdf' : o.bestand.type.split('/')[1]
@@ -382,16 +385,19 @@ export async function attestOpslaan(
   // De medische kaart draagt een QR (lib/medische-kaart-code.ts): staat er een op de foto, dan moet het
   // de kaart van dít lid zijn. Een kaart van een ander lid bij het verkeerde kind opladen kan zo niet.
   let viaQr = o.herkendViaQr
+  let lezing = o.lezing ?? null
   if (viaQr === undefined) {
     const scan = await scanKaart(data, o.bestand.type)
     if (scan && scan.playerId !== o.playerId) {
       throw new Error('Dit is de medische kaart van een ander lid (zie de QR-code). Laad ze op bij dat lid, of via "Kaarten opladen".')
     }
     viaQr = scan != null
+    lezing = scan?.lezing ?? null
+    if (lezing) await lezingToepassen(payload, o.playerId, lezing)
   }
   const attest = await payload.create({
     collection: 'medische-attesten',
-    data: { player: o.playerId, club: o.clubId, geuploadDoor: o.userId, herkendViaQr: viaQr },
+    data: { player: o.playerId, club: o.clubId, geuploadDoor: o.userId, herkendViaQr: viaQr, lezing: lezing as never },
     // Geen originele bestandsnaam: die bevat vaak de naam van het kind of de dokter.
     file: {
       data,
@@ -404,4 +410,26 @@ export async function attestOpslaan(
   await payload.update({ collection: 'players', id: o.playerId, data: { medischAttestBestand: attest.id }, overrideAccess: true })
   if (o.vorige != null) await payload.delete({ collection: 'medische-attesten', id: o.vorige, overrideAccess: true }).catch(() => null)
   return Number(attest.id)
+}
+
+/**
+ * Wat het systeem op het medisch attest las, toepassen (lib/medische-kaart-lezen.ts). Enkel wat de arts duidelijk
+ * aankruiste en enkel bij een uitlijning op de vier hoekmerken: dan staat het doktersverbod om hoger te spelen
+ * meteen in het dossier. Een verbod wordt nooit vanzelf opgeheven (dat beslist de federatie). Geeft wat de
+ * uploader moet weten.
+ */
+export async function lezingToepassen(payload: Payload, playerId: number, lezing: AttestLezing): Promise<{ geschikt: boolean | null; meldingen: string[] }> {
+  const zeker = lezing.uitlijning === 'merken'
+  const g = zeker ? lezing.vakjes.geschikt.aangekruist : null
+  const h = zeker ? lezing.vakjes.nietHoger.aangekruist : null
+  const meldingen: string[] = []
+  if (g === false) meldingen.push('Het vakje "geschikt" is niet aangekruist: de keuring telt niet. Kijk het attest na.')
+  else if (g === null) meldingen.push('Het vakje "geschikt" kon niet duidelijk gelezen worden: kijk het attest na.')
+  if (h === true) {
+    await payload.update({ collection: 'players', id: playerId, data: { hogerSpelenVerbod: true }, overrideAccess: true })
+    meldingen.push('De arts kruiste "mag niet 1 categorie hoger spelen" aan: het doktersverbod staat nu in het dossier.')
+  } else if (h === null) {
+    meldingen.push('Het vakje "mag niet hoger spelen" kon niet duidelijk gelezen worden: de federatie kijkt het na.')
+  }
+  return { geschikt: g, meldingen }
 }

@@ -7,7 +7,7 @@ import { toast } from '@/components/Toaster'
 import { dateStrBE } from '@/lib/datetime'
 import './kaarten-opladen.css'
 
-type Resultaat = { bestand: string; ok: true; playerId: number; naam: string; viaQr: boolean } | { bestand: string; ok: false; fout: string }
+type Resultaat = { bestand: string; ok: true; playerId: number; naam: string; viaQr: boolean; meldingen?: string[] } | { bestand: string; ok: false; fout: string }
 
 // Ingevulde medische kaarten opladen (/api/medische-kaart/opladen). De QR op elke foto zegt bij welk lid
 // de kaart hoort — niemand hoeft te kiezen. Twee vormen:
@@ -77,10 +77,17 @@ export function KaartenOpladen({ voorLid, naam }: { voorLid?: number; naam?: str
             <li key={i} className={r.ok ? 'ko-ok' : 'ko-fout'}>
               <span className="ko-bestand">{r.bestand}</span>
               {r.ok ? (
-                <strong>
-                  ✅ {r.naam}
-                  {r.viaQr ? ' · herkend via QR' : ''}
-                </strong>
+                <>
+                  <strong>
+                    ✅ {r.naam}
+                    {r.viaQr ? ' · herkend via QR' : ''}
+                  </strong>
+                  {r.meldingen?.map((m) => (
+                    <span key={m} className="ko-let">
+                      ⚠️ {m}
+                    </span>
+                  ))}
+                </>
               ) : (
                 <span>⚠️ {r.fout}</span>
               )}

@@ -15,6 +15,7 @@ import {
   type Toon,
 } from './leden-register'
 import { huidigSeizoen } from './uitlening'
+import type { AttestLezing } from './medische-kaart-lezen'
 
 // Serverkant van het ledenregister (lib/leden-register.ts). Ontworpen voor duizenden leden:
 //   · zoeken en bladeren: één query met paginering en enkel de nodige kolommen, plus één query voor
@@ -238,7 +239,7 @@ export type LidDossier = {
   keuringOp: string
   keuringDagen: number | null
   vernieuwdNaBeoordeling: boolean
-  attest: { url: string; op: string; viaQr: boolean } | null
+  attest: { url: string; op: string; viaQr: boolean; lezing: AttestLezing | null } | null
   login: boolean
   ouderLogin: boolean
   kaarten: { status: string; op: string }[]
@@ -293,7 +294,7 @@ export async function lidDossier(payload: Payload, id: number, nu: Date = new Da
     keuringDagen: keuringDagen(p, nu),
     // Een keuring die de club na de goedkeuring vernieuwde: de federatie zag dat attest nog niet.
     vernieuwdNaBeoordeling: Boolean(p.beoordeeldOp && p.medischeKeuringOp && dag(p.medischeKeuringOp) > dag(p.beoordeeldOp)),
-    attest: attest?.filename ? { url: `/api/medische-attesten/file/${encodeURIComponent(String(attest.filename))}`, op: dag(attest.createdAt), viaQr: Boolean(attest.herkendViaQr) } : null,
+    attest: attest?.filename ? { url: `/api/medische-attesten/file/${encodeURIComponent(String(attest.filename))}`, op: dag(attest.createdAt), viaQr: Boolean(attest.herkendViaQr), lezing: (attest.lezing as AttestLezing | null) ?? null } : null,
     login: users.totalDocs > 0,
     ouderLogin: ouders.totalDocs > 0,
     kaarten: kaarten.docs.map((k) => ({ status: String(k.status ?? ''), op: dag(k.createdAt) })),

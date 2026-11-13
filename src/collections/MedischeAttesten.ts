@@ -44,6 +44,14 @@ export const MedischeAttesten: CollectionConfig = {
       defaultValue: false,
       admin: { readOnly: true, description: 'De foto of scan toonde de QR-code van de medische kaart van dit lid.' },
     },
+    {
+      // Wat het systeem op het attest las (lib/medische-kaart-lezen.ts): { uitlijning, vakjes: { geschikt,
+      // nietHoger: { aangekruist: true|false|null, inkt } } }. Een vaststelling bij het opladen, geen afgeleide staat.
+      name: 'lezing',
+      label: 'Automatisch gelezen',
+      type: 'json',
+      admin: { readOnly: true, description: 'De aankruisvakjes zoals het systeem ze las bij het opladen.' },
+    },
   ],
   upload: {
     staticDir: uploadDirFor('medische-attesten'),
