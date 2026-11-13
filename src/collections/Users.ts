@@ -123,6 +123,22 @@ export const Users: CollectionConfig = {
   },
   fields: [
     {
+      // Inloggen met Google, Microsoft of Apple (lib/oauth.ts, lib/oauth-login.ts): welke externe accounts
+      // aan dit account gekoppeld zijn. Sleutel = 'dienst:sub' (het vaste id bij die dienst). Enkel de
+      // server schrijft dit; de gebruiker zelf en de admin zien het.
+      name: 'oauthIdentiteiten',
+      label: 'Inloggen via',
+      type: 'array',
+      access: { create: () => false, update: () => false },
+      admin: { readOnly: true, initCollapsed: true },
+      fields: [
+        { name: 'sleutel', type: 'text', required: true, index: true },
+        { name: 'dienst', type: 'select', required: true, options: [{ label: 'Google', value: 'google' }, { label: 'Microsoft', value: 'microsoft' }, { label: 'Apple', value: 'apple' }] },
+        { name: 'email', type: 'text' },
+        { name: 'gekoppeldOp', type: 'date' },
+      ],
+    },
+    {
       name: 'name',
       label: 'Naam',
       type: 'text',

@@ -4,6 +4,7 @@
 
 import { categorieVoorGeboortedatum, magSpelen, type AgeCategory } from './age-categories'
 import type { Category } from './categories'
+import { keuringStand } from './leden-register'
 
 export type Selectability = {
   /** 'ok' = vrij selecteerbaar, 'warn' = mag met waarschuwing, 'block' = standaard geblokkeerd voor clubs. */
@@ -21,6 +22,10 @@ export type SelectablePlayerInput = {
   soortLid?: string | null
   /** Geblokkeerd door administratieve knipjes (fase 8). */
   knipjesGeblokkeerd?: boolean
+  /** Datum van de medische keuring; ze geldt 365 dagen (lib/leden-register.ts). */
+  medischeKeuringOp?: string | Date | null
+  /** Wat een verlopen keuring doet (Settings.keuringVerlopen); standaard waarschuwen. */
+  keuringBeleid?: 'waarschuwen' | 'blokkeren' | null
 }
 
 const worst = (a: Selectability['level'], b: Selectability['level']): Selectability['level'] => {
@@ -36,6 +41,7 @@ export function playerSelectability(
   player: SelectablePlayerInput,
   teamCategory: Category,
   seasonStartYear: number,
+  nu: Date = new Date(),
 ): Selectability {
   let level: Selectability['level'] = 'ok'
   const reasons: string[] = []
@@ -60,6 +66,13 @@ export function playerSelectability(
         ? 'Vergunning aangevraagd — nog niet goedgekeurd door de federatie.'
         : 'Nog niet gekeurd door de federatie (geen geldige vergunning).',
     )
+  }
+
+  // Medische keuring verlopen (365 dagen): waarschuwen of blokkeren, naar keuze van de federatie.
+  // Zonder keuringsdatum geen oordeel hier: dat zijn oudere leden, het register toont ze apart.
+  if (player.soortLid !== 'lid' && keuringStand({ ...player, actief: true }, nu) === 'verlopen') {
+    level = worst(level, player.keuringBeleid === 'blokkeren' ? 'block' : 'warn')
+    reasons.push('Medische keuring verlopen — nieuwe keuring nodig.')
   }
 
   if (player.knipjesGeblokkeerd) {

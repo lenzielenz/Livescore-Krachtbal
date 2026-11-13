@@ -41,8 +41,8 @@ const dagenTot = (op: string, nu: Date) => KEURING_GELDIG_DAGEN - Math.floor((nu
 
 export function keuringVerlooptBinnenkort(op: string, nu: Date = new Date(), binnen = KEURING_HERINNER_DAGEN): boolean {
   if (!op) return false
-  const d = dagenTot(op, nu)
-  return d >= 0 && d <= binnen
+  // Ook een keuring die al verlopen is: die moet de club net zo goed vernieuwen.
+  return dagenTot(op, nu) <= binnen
 }
 
 export function ledenPerClub(leden: OverzichtLid[], nu: Date = new Date()): { clubs: ClubLedenRij[]; totaal: Omit<ClubLedenRij, 'clubId' | 'clubNaam' | 'teDoen'> } {
@@ -86,6 +86,7 @@ export function herinneringVoor(club: ClubLedenRij, nu: Date = new Date()): Heri
   const regels = club.teDoen.map((l) => {
     if (l.toon === 'ok') {
       const d = dagenTot(l.keuringOp, nu)
+      if (d < 0) return `${l.naam} — medische keuring verlopen sinds ${-d === 1 ? 'gisteren' : `${-d} dagen`}`
       return `${l.naam} — medische keuring verloopt ${d === 0 ? 'vandaag' : d === 1 ? 'morgen' : `over ${d} dagen`}`
     }
     if (l.toon === 'fout') return `${l.naam} — afgekeurd${l.reden ? `: ${l.reden}` : ''}`
@@ -94,7 +95,7 @@ export function herinneringVoor(club: ClubLedenRij, nu: Date = new Date()): Heri
   const delen = [
     club.todo && meervoud(club.todo, 'lid nog aan te vullen of in te dienen', 'leden nog aan te vullen of in te dienen'),
     club.afgekeurd && meervoud(club.afgekeurd, 'lid afgekeurd', 'leden afgekeurd'),
-    club.keuringVerloopt && meervoud(club.keuringVerloopt, 'keuring verloopt binnenkort', 'keuringen verlopen binnenkort'),
+    club.keuringVerloopt && meervoud(club.keuringVerloopt, 'keuring (bijna) verlopen', 'keuringen (bijna) verlopen'),
   ].filter(Boolean)
   return {
     titel: `Herinnering van de federatie: ${meervoud(club.teDoen.length, 'lid', 'leden')} niet in orde`,

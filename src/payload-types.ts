@@ -345,6 +345,15 @@ export interface Media {
  */
 export interface User {
   id: number;
+  oauthIdentiteiten?:
+    | {
+        sleutel: string;
+        dienst: 'google' | 'microsoft' | 'apple';
+        email?: string | null;
+        gekoppeldOp?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   name?: string | null;
   /**
    * Elke rol geeft eigen rechten. Hiërarchie: Admin (volledige toegang, beheert gebruikers) staat boven Federatie (beheert competitie/vergunningen). Supporters registreren zichzelf; enkel een admin kent hier hogere rollen toe.
@@ -4387,6 +4396,15 @@ export interface MatchInstantsSelect<T extends boolean = true> {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  oauthIdentiteiten?:
+    | T
+    | {
+        sleutel?: T;
+        dienst?: T;
+        email?: T;
+        gekoppeldOp?: T;
+        id?: T;
+      };
   name?: T;
   roles?: T;
   club?: T;
@@ -4788,6 +4806,10 @@ export interface Setting {
    */
   emailVerplichtVanaf?: number | null;
   /**
+   * Een keuring geldt 365 dagen. Het ledenregister toont hoeveel spelers blokkeren zou raken.
+   */
+  keuringVerlopen?: ('waarschuwen' | 'blokkeren') | null;
+  /**
    * Bij dit aantal of meer openstaande knipjes kan een speler niet geselecteerd worden.
    */
   knipjesDrempel: number;
@@ -4847,6 +4869,7 @@ export interface SettingsSelect<T extends boolean = true> {
   kantineMatchIds?: T;
   veldMatchId?: T;
   emailVerplichtVanaf?: T;
+  keuringVerlopen?: T;
   knipjesDrempel?: T;
   scheidsrechterKostenBetaler?: T;
   forfaitKostenBetaler?: T;

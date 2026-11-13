@@ -73,6 +73,21 @@ export const Settings: GlobalConfig = {
       admin: { description: 'Jonger dan deze leeftijd mag een lid zonder e-mailadres geregistreerd worden.' },
     },
     {
+      // Een medische keuring geldt 365 dagen (lib/registratie.ts). Wat als ze verlopen is? Eerst
+      // waarschuwen (de opstelling toont het, het ledenregister telt wie het zou raken); de federatie
+      // zet blokkeren aan wanneer de clubs hun keuringen bijgewerkt hebben. Zonder keuringsdatum: geen
+      // blokkade (oudere leden), wel zichtbaar in het register als "geen keuringsdatum".
+      name: 'keuringVerlopen',
+      label: 'Verlopen medische keuring',
+      type: 'select',
+      defaultValue: 'waarschuwen',
+      options: [
+        { label: 'Waarschuwen (mag nog spelen)', value: 'waarschuwen' },
+        { label: 'Blokkeren (kan niet opgesteld worden)', value: 'blokkeren' },
+      ],
+      admin: { description: 'Een keuring geldt 365 dagen. Het ledenregister toont hoeveel spelers blokkeren zou raken.' },
+    },
+    {
       // Drempel waarboven een speler door administratieve knipjes geblokkeerd wordt (fase 8).
       // Defaults; echte waarde komt van de federatie-boetelijst.
       name: 'knipjesDrempel',

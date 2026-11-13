@@ -83,3 +83,42 @@
 .lo-melding ul { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 2px; }
 .lo-melding-link { font-size: 0.76rem; color: #3060c0; font-weight: 700; margin-top: 4px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ── Ledenregister (2026-11): tegels, tabbladen, register-tabel, dossier ─────────────────────── */
+.led-tegels { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; margin: 12px 0; }
+.led-tegel { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--txt); text-decoration: none; }
+.led-tegel:hover { border-color: var(--accent); }
+.led-tegel-n { font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.led-tegel-l { font-size: 0.74rem; color: var(--dim); }
+.led-t-ok .led-tegel-n { color: #0fe0a6; }
+.led-t-todo .led-tegel-n, .led-t-verloopt .led-tegel-n { color: #f6c544; }
+.led-t-fout .led-tegel-n, .led-t-verlopen .led-tegel-n { color: #e0533d; }
+.led-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 6px 0 12px; overflow-x: auto; }
+.led-tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; color: var(--dim); text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; font-weight: 600; font-size: 0.88rem; }
+.led-tab.on { color: var(--txt); border-bottom-color: var(--accent); }
+.led-filter select { max-width: 200px; }
+.led-tabel td { vertical-align: middle; }
+.led-tabel th { white-space: nowrap; font-size: 0.76rem; color: var(--dim); font-weight: 600; }
+.led-naam { font-weight: 700; color: var(--txt); }
+.led-dim { color: var(--dim); font-size: 0.8rem; }
+.led-nul { color: var(--dim); opacity: 0.6; }
+.led-cel { font-weight: 700; font-variant-numeric: tabular-nums; }
+.led-cel.ok { color: #0fe0a6; }
+.led-cel.let { color: #f6c544; }
+.led-cel.fout { color: #e0533d; }
+.led-chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: 700; border: 1px solid var(--line); white-space: nowrap; }
+.led-chip.ok { color: #0fe0a6; border-color: color-mix(in srgb, #0fe0a6 45%, transparent); }
+.led-chip.wacht { color: #6aa8ff; border-color: color-mix(in srgb, #6aa8ff 45%, transparent); }
+.led-chip.let { color: #f6c544; border-color: color-mix(in srgb, #f6c544 45%, transparent); }
+.led-chip.fout { color: #e0533d; border-color: color-mix(in srgb, #e0533d 45%, transparent); }
+.led-chip.nul { color: var(--dim); }
+.led-paginas { display: flex; gap: 14px; justify-content: center; align-items: center; margin: 12px 0; font-size: 0.88rem; }
+.led-herinner { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.led-dossier { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.led-dossier dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; font-size: 0.86rem; }
+.led-dossier dt { color: var(--dim); }
+.led-dossier dd { margin: 0; overflow-wrap: anywhere; }
+.led-dossier ul { margin: 0; padding-left: 18px; font-size: 0.86rem; }
+@media (max-width: 640px) {
+  .led-filter select { max-width: none; flex: 1 1 45%; }
+}
