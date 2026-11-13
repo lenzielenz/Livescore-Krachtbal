@@ -78,3 +78,38 @@ suspend fun Api.fetchCancelled(matchId: Int): Boolean {
         false
     }
 }
+
+/** Een al ingediend scheidsrechtersrapport (kort): status en waarover. */
+data class RapportKort(val id: Int, val status: String, val aanleidingen: List<String>, val op: String?)
+
+/**
+ * De rapporten van deze wedstrijd die jij mag zien (je eigen, of als federatie alle). Bij een fout: leeg — het
+ * formulier blijft gewoon bruikbaar.
+ */
+suspend fun Api.fetchRapporten(matchId: Int): List<RapportKort> {
+    val params = listOf(
+        "where[match][equals]" to matchId.toString(),
+        "depth" to "0",
+        "limit" to "20",
+        "sort" to "createdAt",
+        "select[status]" to "true",
+        "select[aanleidingen]" to "true",
+        "select[createdAt]" to "true",
+    )
+    val r = authed { builder(path("/api/sr-rapporten", params)).get().build() }
+    if (r !is Http.Ok) return emptyList()
+    return try {
+        (AppJson.parseToJsonElement(r.body).jsonObject["docs"] as? kotlinx.serialization.json.JsonArray).orEmpty().mapNotNull { d ->
+            val o = d as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+            val id = (o["id"] as? JsonPrimitive)?.content?.toIntOrNull() ?: return@mapNotNull null
+            RapportKort(
+                id = id,
+                status = (o["status"] as? JsonPrimitive)?.content ?: "ingediend",
+                aanleidingen = (o["aanleidingen"] as? kotlinx.serialization.json.JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.content },
+                op = (o["createdAt"] as? JsonPrimitive)?.content,
+            )
+        }
+    } catch (_: Exception) {
+        emptyList()
+    }
+}

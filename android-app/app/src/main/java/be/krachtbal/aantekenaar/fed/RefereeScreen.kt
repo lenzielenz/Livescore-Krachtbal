@@ -136,12 +136,46 @@ fun RefereeScreen(matchId: Int, focus: String, onBack: () -> Unit, onEditLineup:
                     onToggle = { toggle("vrijgave") },
                 ) { VrijgaveBody(matchId, ui, vrijgave, locked, actVrijgave, scope, reload) }
 
+                val aantal = sheet.voorbehoud.size + sheet.uitsluitingen.size
+                Section(
+                    title = "Voorbehoud & uitsluiting",
+                    summary = if (aantal == 0) "niets genoteerd" else "${sheet.voorbehoud.size} voorbehoud · ${sheet.uitsluitingen.size} uitsluiting",
+                    open = "voorbehoud" in open,
+                    onToggle = { toggle("voorbehoud") },
+                ) {
+                    VoorbehoudBody(matchId, ui, reload)
+                    RapportVolgtRow(matchId, sheet, reload)
+                }
+
+                Section(
+                    title = "Forfait ter plaatse",
+                    summary = when (sheet.forfait) {
+                        "thuis" -> "${st.teams.home.name} gaf forfait"
+                        "uit" -> "${st.teams.away.name} gaf forfait"
+                        "dubbel" -> "dubbel forfait"
+                        else -> "geen"
+                    },
+                    open = "forfait" in open,
+                    onToggle = { toggle("forfait") },
+                ) { ForfaitBody(matchId, ui, reload) }
+
+                val rapportNodig = aantal > 0 || sheet.isForfait || sheet.rapportVolgt
+                Section(
+                    title = "Scheidsrechtersrapport",
+                    summary = if (rapportNodig) "verplicht voor deze wedstrijd" else "enkel bij een onregelmatigheid",
+                    open = "rapport" in open,
+                    onToggle = { toggle("rapport") },
+                ) { RapportBody(matchId, ui) }
+
                 Section(
                     title = "Meer",
-                    summary = "aftrap verschuiven · blessure · afgelasten",
+                    summary = "aftrap verschuiven · blessure · afgelasten · blad (PDF)",
                     open = "extras" in open,
                     onToggle = { toggle("extras") },
-                ) { Extras(matchId, ui, reload) }
+                ) {
+                    BladPdfKnop(matchId)
+                    Extras(matchId, ui, reload)
+                }
             }
         }
     }

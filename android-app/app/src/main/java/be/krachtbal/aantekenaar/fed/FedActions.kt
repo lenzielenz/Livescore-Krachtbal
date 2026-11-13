@@ -223,3 +223,99 @@ suspend fun Api.afgelasten(matchId: Int, reden: String, toelichting: String?, fo
         is Http.Net -> Act.Fail("Geen verbinding met de server.")
     }
 }
+
+// ── Onregelmatigheden op het blad: voorbehoud, uitsluiting, rapport, forfait (RCVK items 25, 27, 34) ───────────
+
+/** Waarover een voorbehoud gaat; bepaalt welk comité het behandelt (spiegel van src/lib/voorbehoud-onderwerpen.ts). */
+val VOORBEHOUD_ONDERWERPEN: List<Pair<String, String>> = listOf(
+    "inrichting" to "Materiële inrichting niet in orde",
+    "speelduur_tijdopnemer" to "Speelduur — fout van de tijdopnemer",
+    "officials" to "Officials ontbreken",
+    "leeftijd" to "Twijfel over de leeftijdscategorie",
+    "aantekenblad" to "Aantekenblad verkeerd ingevuld",
+    "identiteit" to "Twijfel over de identiteit van spelers",
+    "doelpunt" to "Doelpunt niet toegekend",
+    "sr_afwezig" to "Scheidsrechter niet opgekomen",
+    "sr_te_laat" to "Scheidsrechter te laat",
+    "spelregels" to "Spelregels verkeerd toegepast",
+    "speelduur_scheidsrechter" to "Speelduur — fout van de scheidsrechter",
+    "ander" to "Iets anders",
+)
+
+/** "thuis"/"uit" zoals het blad ze voor voorbehoud en uitsluiting bewaart. */
+val Side.bladKant: String get() = if (this == Side.HOME) "thuis" else "uit"
+
+/** Een voorbehoud noteren: wie het vroeg (kapitein; U12–U16 de coach), waarover, de feiten, stand en speeltijd. */
+suspend fun Api.voorbehoud(matchId: Int, side: Side, naam: String, onderwerp: String, reden: String, score: String?, speeltijd: String?): Act =
+    referee(
+        matchId,
+        buildJsonObject {
+            put("action", "voorbehoud")
+            put("side", side.bladKant)
+            put("naam", naam.trim())
+            put("onderwerp", onderwerp)
+            put("reden", reden.trim())
+            if (!score.isNullOrBlank()) put("score", score.trim())
+            if (!speeltijd.isNullOrBlank()) put("speeltijd", speeltijd.trim())
+        },
+    )
+
+/** Een uitsluiting noteren: een speler van het blad ([playerId]) of een naam, met de reden, stand en speeltijd. */
+suspend fun Api.uitsluiting(matchId: Int, side: Side, playerId: Int?, naam: String?, reden: String, score: String?, speeltijd: String?): Act =
+    referee(
+        matchId,
+        buildJsonObject {
+            put("action", "uitsluiting")
+            put("side", side.bladKant)
+            if (playerId != null) put("playerId", playerId)
+            if (!naam.isNullOrBlank()) put("naam", naam.trim())
+            put("reden", reden.trim())
+            if (!score.isNullOrBlank()) put("score", score.trim())
+            if (!speeltijd.isNullOrBlank()) put("speeltijd", speeltijd.trim())
+        },
+    )
+
+/** Een verkeerd genoteerde regel schrappen ([voorbehoud] true = voorbehoud, anders uitsluiting), zolang de scheidsrechter niet aftekende. */
+suspend fun Api.blokSchrappen(matchId: Int, voorbehoud: Boolean, index: Int): Act =
+    referee(
+        matchId,
+        buildJsonObject {
+            put("action", if (voorbehoud) "voorbehoud-schrappen" else "uitsluiting-schrappen")
+            put("index", index)
+        },
+    )
+
+/** "Zie scheidsrechtersrapport" aan of uit: er volgt een rapport over een andere onregelmatigheid. */
+suspend fun Api.rapportVolgt(matchId: Int, aan: Boolean): Act =
+    referee(matchId, buildJsonObject { put("action", "rapport-volgt"); put("aan", aan) })
+
+/** Forfait ter plaatse: "thuis", "uit" of "dubbel" (wie forfait geeft), of "geen" om het terug te draaien. */
+suspend fun Api.forfait(matchId: Int, uitslag: String): Act =
+    referee(matchId, buildJsonObject { put("action", "forfait"); put("uitslag", uitslag) })
+
+/** Waarover een scheidsrechtersrapport gaat (src/lib/sr-rapport.ts). */
+val RAPPORT_AANLEIDINGEN: List<Pair<String, String>> = listOf(
+    "voorbehoud" to "Voorbehoud aangetekend",
+    "uitsluiting" to "Uitsluiting",
+    "niet_gespeeld" to "Wedstrijd niet (volledig) gespeeld",
+    "incident" to "Incident of onsportief gedrag",
+    "ander" to "Andere onregelmatigheid",
+)
+const val RAPPORT_MIN_TEKENS = 30
+const val RAPPORT_MAX_BIJLAGEN = 5
+
+/** Het scheidsrechtersrapport indienen (multipart), ondertekend met [naam]; foto's als bijlage. */
+suspend fun Api.srRapport(matchId: Int, aanleidingen: Set<String>, relaas: String, naam: String, bijlagen: List<Foto>): Act {
+    val body = MultipartBody.Builder().setType(MultipartBody.FORM).apply {
+        addFormDataPart("matchId", matchId.toString())
+        aanleidingen.forEach { addFormDataPart("aanleidingen", it) }
+        addFormDataPart("relaas", relaas.trim())
+        addFormDataPart("naam", naam.trim())
+        bijlagen.forEach { addFormDataPart("bijlagen", it.name, it.bytes.toRequestBody(it.mime.toMediaType())) }
+    }.build()
+    return when (val r = authed { builder("/api/sr-rapport").post(body).build() }) {
+        is Http.Ok -> Act.Ok(parseObject(r.body))
+        is Http.Fail -> Act.Fail(if (r.code == 401) "Je bent uitgelogd. Log opnieuw in." else r.message, r.code)
+        is Http.Net -> Act.Fail("Geen verbinding met de server.")
+    }
+}

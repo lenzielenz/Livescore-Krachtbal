@@ -78,6 +78,8 @@ fun MatchDayScreen(
     /** Opent het scherm van een stap (de tafel is het bestaande aantekenscherm). */
     onOpenStep: (StepId) -> Unit,
     onSettings: () -> Unit,
+    onMeldingen: () -> Unit = {},
+    ongelezen: Int = 0,
 ) {
     val model = remember(matchId) { HubModel(matchId) }
     val ui by model.ui.collectAsState()
@@ -112,6 +114,9 @@ fun MatchDayScreen(
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = onBack) { Text("← Wedstrijden", color = Pal.Accent, fontWeight = FontWeight.Bold) }
                 Box(Modifier.weight(1f))
+                TextButton(onClick = onMeldingen) {
+                    Text(if (ongelezen > 0) "🔔 $ongelezen" else "🔔", color = if (ongelezen > 0) Pal.Accent else Pal.Dim, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                }
                 TextButton(onClick = { scope.launch { model.reload() } }) { Text("↻", color = Pal.Accent, fontSize = 20.sp) }
                 TextButton(onClick = onSettings) { Text("⚙", color = Pal.Dim, fontSize = 20.sp) }
             }
@@ -138,6 +143,8 @@ fun MatchDayScreen(
                             onOpen = if (step.state != StepState.NA) ({ onOpenStep(step.id) }) else null,
                         )
                     }
+                    // Het blad als PDF: voor iedereen die bij de wedstrijd betrokken is (de server beslist).
+                    Card(Modifier.fillMaxWidth(), radius = 12.dp) { Column(Modifier.padding(12.dp)) { BladPdfKnop(matchId) } }
                     VSpace(24)
                 }
             }

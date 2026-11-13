@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wat de FileProvider deelt: enkel tijdelijke bestanden in de cache (camerafoto's, de wedstrijdblad-PDF). -->
+<paths>
+    <cache-path name="foto" path="foto/" />
+    <cache-path name="pdf" path="pdf/" />
+</paths>
