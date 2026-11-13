@@ -7,10 +7,12 @@ import { useMemo, useState } from 'react'
 import { toast } from '@/components/Toaster'
 import { brusselsParts, brusselsWallUtc, dateStrBE, formatDateBE, formatDateTimeBE, formatTimeBE, shiftDateStr, zaterdagVan } from '@/lib/datetime'
 import type { VerplaatsingRij } from '@/lib/verplaatsing'
+import { type PlannerRef, WedstrijdPaneel } from './WedstrijdPaneel'
 
-// De planner: speelweekends als kolommen. Een wedstrijd verplaatsen = slepen naar een ander weekend,
-// of aantikken en dan het weekend aantikken (werkt ook op een tablet). Dag en uur blijven; enkel het
-// weekend verandert. Gekoppelde wedstrijden (zelfde clubs, zelfde terrein, zelfde weekend) gaan mee.
+// De planner: speelweekends als kolommen. Een wedstrijd verplaatsen = slepen naar een ander weekend
+// (dag en uur blijven; enkel het weekend verandert). Een wedstrijd aantikken opent het paneel om ze aan
+// te passen: datum en uur, ander weekend (daarna een kolom aantikken — werkt ook op een tablet),
+// scheidsrechter, afgelasten. Gekoppelde wedstrijden (zelfde clubs, zelfde terrein, zelfde weekend) gaan mee.
 // Weekends waar het niet kan, worden grijs met de reden; wat botst, staat rood in de kaart.
 
 export type PlannerWedstrijd = {
@@ -18,6 +20,8 @@ export type PlannerWedstrijd = {
   reeks: string
   datum: string
   afgelast: boolean
+  /** Toegewezen scheidsrechter (officials-id), of null. */
+  scheidsrechter: number | null
   thuis: { id: number; naam: string; club: number; clubNaam: string }
   uit: { id: number; naam: string; club: number; clubNaam: string }
 }
@@ -31,8 +35,10 @@ export function Planner({
   onbeschikbaar,
   vrijeWeekends,
   aanvragen,
+  refs,
 }: {
   wedstrijden: PlannerWedstrijd[]
+  refs: PlannerRef[]
   onbeschikbaar: Onb[]
   vrijeWeekends: { weekend: string; reden: string | null }[]
   aanvragen: VerplaatsingRij[]
@@ -42,6 +48,8 @@ export function Planner({
   const [wijz, setWijz] = useState<Record<number, string>>({})
   const [geschiedenis, setGeschiedenis] = useState<Record<number, string>[]>([])
   const [gekozen, setGekozen] = useState<number | null>(null)
+  /** De wedstrijd waarvan het paneel open staat. */
+  const [open, setOpen] = useState<number | null>(null)
   const [samen, setSamen] = useState(true)
   const [reeks, setReeks] = useState<string>('')
   const [club, setClub] = useState<string>('')
@@ -142,6 +150,17 @@ export function Planner({
     setGekozen(null)
   }
 
+  /** Exacte datum en uur uit het paneel: één wedstrijd, als wijziging in de planner (ongedaan maken werkt). */
+  const zetDatum = (id: number, iso: string) => {
+    const w = wedstrijden.find((x) => x.id === id)
+    if (!w || datumVan(w) === iso) return
+    const nieuw = { ...wijz }
+    if (iso === w.datum) delete nieuw[id]
+    else nieuw[id] = iso
+    setGeschiedenis([...geschiedenis, wijz])
+    setWijz(nieuw)
+  }
+
   const zichtbaar = (w: PlannerWedstrijd) => (!reeks || w.reeks === reeks) && (!club || String(w.thuis.club) === club || String(w.uit.club) === club)
   const gewijzigd = wedstrijden.filter((w) => wijz[w.id])
   const alleProblemen = wedstrijden.filter((w) => problemenVan(w).some((p) => p.hard))
@@ -197,6 +216,7 @@ export function Planner({
   const gekozenAanvragen = aanvragen.filter((a) => aanvraagKeuze.has(a.id))
 
   const gekozenGroep = gekozen != null ? groepVan(gekozen) : []
+  const openW = open != null ? (wedstrijden.find((w) => w.id === open) ?? null) : null
 
   return (
     <div className="pl">
@@ -279,9 +299,19 @@ export function Planner({
                     draggable
                     onDragStart={() => setGekozen(w.id)}
                     onClick={(e) => {
+                      // Bezig met verplaatsen: de tik gaat naar de kolom (naar dit weekend), behalve op
+                      // de gekozen kaart zelf — dat annuleert.
+                      if (gekozen != null) {
+                        if (gekozenGroep.some((g) => g.id === w.id)) {
+                          e.stopPropagation()
+                          setGekozen(null)
+                        }
+                        return
+                      }
                       e.stopPropagation()
-                      setGekozen(gekozen === w.id ? null : w.id)
+                      setOpen(w.id)
                     }}
+                    title="Aantikken om aan te passen · slepen om te verplaatsen"
                     className={`pl-kaart ${gekozenGroep.some((g) => g.id === w.id) ? 'pl-gekozen' : ''} ${probs.some((p) => p.hard) ? 'pl-botst' : probs.length ? 'pl-let' : ''} ${wijz[w.id] ? 'pl-nieuw' : ''}`}
                   >
                     <span className="pl-r1">
@@ -290,6 +320,7 @@ export function Planner({
                     <span className="pl-r2">
                       {w.thuis.naam} – {w.uit.naam}
                     </span>
+                    {w.scheidsrechter == null && <span className="pl-oranje">🧑‍⚖️ nog geen scheidsrechter</span>}
                     {probs.map((p) => (
                       <span key={p.t} className={p.hard ? 'pl-rood' : 'pl-oranje'}>
                         {p.hard ? '⛔' : '⚠️'} {p.t}
@@ -303,6 +334,22 @@ export function Planner({
           )
         })}
       </div>
+
+      {openW && (
+        <WedstrijdPaneel
+          w={openW}
+          huidig={datumVan(openW)}
+          problemen={problemenVan(openW)}
+          refs={refs}
+          onDatum={(iso) => zetDatum(openW.id, iso)}
+          onWeekend={() => {
+            setGekozen(openW.id)
+            setOpen(null)
+          }}
+          onSluit={() => setOpen(null)}
+          onVernieuw={() => router.refresh()}
+        />
+      )}
 
       <h2 style={{ margin: '20px 0 8px', fontSize: '1.05rem' }}>🔁 Verplaatsingsaanvragen van clubs</h2>
       {aanvragen.length === 0 ? (

@@ -40,6 +40,7 @@ export default async function PlannerPage() {
     reeks: String(m.reeks ?? ''),
     datum: String(m.date),
     afgelast: Boolean(m.afgelast),
+    scheidsrechter: null,
     thuis: ploeg(m.homeTeam),
     uit: ploeg(m.awayTeam),
   }))
@@ -50,6 +51,21 @@ export default async function PlannerPage() {
     w.thuis.clubNaam ||= clubNaam[w.thuis.club] ?? ''
     w.uit.clubNaam ||= clubNaam[w.uit.club] ?? ''
   }
+
+  // Scheidsrechters: de toegewezen per wedstrijd (op het wedstrijdblad) en de lijst om uit te kiezen.
+  const ids = wedstrijden.map((w) => w.id)
+  const [sheets, officials] = await Promise.all([
+    ids.length
+      ? payload.db.find<{ match?: unknown; assignedReferee?: unknown }>({ collection: 'matchsheets', where: { match: { in: ids } }, limit: 0, pagination: false, select: { match: true, assignedReferee: true } })
+      : Promise.resolve({ docs: [] as { match?: unknown; assignedReferee?: unknown }[] }),
+    payload.find({ collection: 'officials', where: { type: { equals: 'scheidsrechter' } }, sort: 'name', depth: 1, limit: 500, pagination: false, overrideAccess: true }),
+  ])
+  const refVan = new Map(sheets.docs.map((s) => [relId(s.match), relId(s.assignedReferee)]))
+  for (const w of wedstrijden) w.scheidsrechter = refVan.get(w.id) ?? null
+  const refs = officials.docs.map((o) => {
+    const user = o.user && typeof o.user === 'object' ? (o.user as { club?: unknown }) : null
+    return { id: Number(o.id), naam: String(o.name ?? ''), club: relId(user?.club) ?? null }
+  })
 
   // Terrein niet vrij (uit de inschrijvingen van de jongste ronde) en de weekends van die ronde.
   const ronde = await laatsteRonde(payload)
@@ -70,7 +86,7 @@ export default async function PlannerPage() {
       <SiteHeader active="federatie" />
       <div className="site site-breed">
         <h1 className="page-title">🗓️ Planner</h1>
-        <Planner wedstrijden={wedstrijden} onbeschikbaar={onbeschikbaar} vrijeWeekends={vrijeWeekends} aanvragen={aanvragen} />
+        <Planner wedstrijden={wedstrijden} onbeschikbaar={onbeschikbaar} vrijeWeekends={vrijeWeekends} aanvragen={aanvragen} refs={refs} />
       </div>
     </>
   )
