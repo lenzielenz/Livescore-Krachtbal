@@ -1,0 +1,13 @@
+/* Medische kaarten opladen (KaartenOpladen.tsx). */
+.ko { display: flex; flex-direction: column; gap: 12px; }
+.ko-veld { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
+.ko-veld span { font-weight: 700; }
+.ko-veld small { color: var(--dim); }
+.ko-veld input[type='date'] { min-height: 42px; max-width: 220px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--txt); padding: 0 8px; }
+.ko-lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ko-lijst li { display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); font-size: 0.86rem; }
+.ko-ok { border-color: color-mix(in srgb, #2e9d57 50%, var(--line)) !important; }
+.ko-fout { border-color: color-mix(in srgb, #e0533d 50%, var(--line)) !important; }
+.ko-bestand { color: var(--dim); overflow-wrap: anywhere; }
+.kq { max-width: 640px; }
+.kq-acties { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px; }

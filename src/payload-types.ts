@@ -722,6 +722,10 @@ export interface MedischeAttesten {
   player?: (number | null) | Player;
   club?: (number | null) | Club;
   geuploadDoor?: (number | null) | User;
+  /**
+   * De foto of scan toonde de QR-code van de medische kaart van dit lid.
+   */
+  herkendViaQr?: boolean | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -3343,6 +3347,7 @@ export interface MedischeAttestenSelect<T extends boolean = true> {
   player?: T;
   club?: T;
   geuploadDoor?: T;
+  herkendViaQr?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

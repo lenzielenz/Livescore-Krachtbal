@@ -3,6 +3,7 @@ import type { Payload } from 'payload'
 import { randomBytes } from 'node:crypto'
 
 import { stuurMail, uitnodigingHtml } from './mail'
+import { scanKaart } from './medische-kaart-scan'
 import { accountsVanSpeler, clubStaf, meld } from './meldingen'
 import { zorgVoorOuderLogin } from './ouders'
 import {
@@ -366,15 +367,34 @@ export function attestFout(bestand: unknown): string | null {
  */
 export async function attestOpslaan(
   payload: Payload,
-  o: { playerId: number; clubId: number | null; userId: number; bestand: File; vorige: number | null },
+  o: {
+    playerId: number
+    clubId: number | null
+    userId: number
+    bestand: File
+    vorige: number | null
+    /** Al gescand (lib/medische-kaart-server.ts)? Anders leest deze functie de QR zelf. */
+    herkendViaQr?: boolean
+  },
 ): Promise<number> {
   const ext = o.bestand.type === 'application/pdf' ? 'pdf' : o.bestand.type.split('/')[1]
+  const data = Buffer.from(await o.bestand.arrayBuffer())
+  // De medische kaart draagt een QR (lib/medische-kaart-code.ts): staat er een op de foto, dan moet het
+  // de kaart van dít lid zijn. Een kaart van een ander lid bij het verkeerde kind opladen kan zo niet.
+  let viaQr = o.herkendViaQr
+  if (viaQr === undefined) {
+    const scan = await scanKaart(data, o.bestand.type)
+    if (scan && scan.playerId !== o.playerId) {
+      throw new Error('Dit is de medische kaart van een ander lid (zie de QR-code). Laad ze op bij dat lid, of via "Kaarten opladen".')
+    }
+    viaQr = scan != null
+  }
   const attest = await payload.create({
     collection: 'medische-attesten',
-    data: { player: o.playerId, club: o.clubId, geuploadDoor: o.userId },
+    data: { player: o.playerId, club: o.clubId, geuploadDoor: o.userId, herkendViaQr: viaQr },
     // Geen originele bestandsnaam: die bevat vaak de naam van het kind of de dokter.
     file: {
-      data: Buffer.from(await o.bestand.arrayBuffer()),
+      data,
       mimetype: o.bestand.type,
       name: `attest-${o.playerId}-${Date.now()}.${ext}`,
       size: o.bestand.size,

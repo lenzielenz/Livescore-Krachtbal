@@ -391,6 +391,26 @@ Details en aannames: [REGELS-CONFORMITEIT.md §6](REGELS-CONFORMITEIT.md).
 - Het lid vraagt zijn medische kaart aan vanuit *Mijn profiel*; de club kan het ook voor het lid doen.
   De aanvraag gaat naar de federatie (`/beheer/leden`); de andere partij krijgt een melding (🔔).
 
+### Medische kaart met QR-code
+
+- De kaart is een PDF (één A4 per lid): gegevens van het lid, het deel van de arts (geschikt / niet
+  geschikt / onder voorwaarde, datum, stempel en handtekening) en rechtsboven een **QR-code** met de code
+  ook leesbaar eronder (bv. `KYA-RWAXQPCD`). De QR bevat enkel een ondertekende code (dossiernummer +
+  handtekening met het server-geheim): geen naam, niet te raden of te vervalsen.
+- **Afdrukken**: de federatie (per aanvraag of alle open aanvragen in één PDF, en in het dossier), de club
+  voor de eigen leden, het lid of de ouder zodra de federatie de aanvraag *verstuurd* zette
+  (`/api/medische-kaart/pdf?ids=…`).
+- **Opladen**: wie een foto of scan van de ingevulde kaart oplaadt, hoeft niet te zeggen van wie ze is —
+  het systeem leest de QR. Een stapel tegelijk via `/medische-kaart/opladen` (club of federatie, optioneel
+  één keuringsdatum voor allemaal); de QR scannen met de gsm opent `/k/<code>` met meteen de camera
+  (enkel voor het lid, een ouder, de club of de federatie; anderen zien niets over het lid).
+- **Controle**: elke upload van een attest (ook bij het lid zelf, in `/club/leden` of *Mijn profiel*)
+  leest de QR. Een kaart van een ánder lid wordt geweigerd; een foto zonder leesbare QR blijft gewoon
+  mogelijk bij het gekozen lid. In het dossier staat "herkend via QR".
+- Code: `src/lib/medische-kaart-code.ts` (code), `medische-kaart-scan.ts` (QR lezen uit foto of PDF:
+  sharp + jsQR), `medische-kaart-server.ts` (wie mag wat, opladen), `submit/pdf-medische-kaart.ts`.
+  Tests: `tests/unit/medische-kaart-qr.unit.spec.ts`, `tests/int/medische-kaart-qr.int.spec.ts`.
+
 ### Ouders van jeugdspelers
 
 - De club vult bij een jeugdspeler het **e-mailadres van een ouder** in (`/club/leden`). Dat account

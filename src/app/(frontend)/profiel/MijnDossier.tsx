@@ -29,6 +29,8 @@ export async function MijnDossier({ payload, playerId, ouder }: { payload: Paylo
     overrideAccess: true,
   })
   const open = aanvragen.docs.some((a) => a.status === 'aangevraagd')
+  // Na "verstuurd" kan het lid (of de ouder) de kaart met QR ook zelf afdrukken (lib/medische-kaart-server.ts).
+  const verstuurd = aanvragen.docs.some((a) => a.status === 'verstuurd')
   const clubId = team?.club != null ? Number(typeof team.club === 'object' ? team.club.id : team.club) : null
   const knipjes = clubId != null ? knipjesTekst((await vastspelenVoorClub(payload, clubId).catch(() => null))?.get(playerId)) : null
 
@@ -76,6 +78,11 @@ export async function MijnDossier({ payload, playerId, ouder }: { payload: Paylo
       {p.soortLid !== 'lid' && (
         <div className="pf-dossier-acties">
           <KaartAanvragen open={open} playerId={ouder ? playerId : undefined} voor={ouder ? 'kind' : 'zelf'} />
+          {verstuurd && (
+            <a className="wb-btn" href={`/api/medische-kaart/pdf?ids=${playerId}`} target="_blank" rel="noopener">
+              🖨️ Kaart afdrukken
+            </a>
+          )}
           <KeuringInvoeren playerId={ouder ? playerId : undefined} heeftAttest={p.medischAttestBestand != null} />
         </div>
       )}

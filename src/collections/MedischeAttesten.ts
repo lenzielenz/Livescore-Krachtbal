@@ -37,6 +37,13 @@ export const MedischeAttesten: CollectionConfig = {
     { name: 'player', label: 'Speler', type: 'relationship', relationTo: 'players', index: true },
     { name: 'club', label: 'Club', type: 'relationship', relationTo: 'clubs', index: true },
     { name: 'geuploadDoor', label: 'Opgeladen door', type: 'relationship', relationTo: 'users' },
+    {
+      name: 'herkendViaQr',
+      label: 'Herkend via de QR-code',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: { readOnly: true, description: 'De foto of scan toonde de QR-code van de medische kaart van dit lid.' },
+    },
   ],
   upload: {
     staticDir: uploadDirFor('medische-attesten'),

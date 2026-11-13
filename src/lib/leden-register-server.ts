@@ -238,7 +238,7 @@ export type LidDossier = {
   keuringOp: string
   keuringDagen: number | null
   vernieuwdNaBeoordeling: boolean
-  attest: { url: string; op: string } | null
+  attest: { url: string; op: string; viaQr: boolean } | null
   login: boolean
   ouderLogin: boolean
   kaarten: { status: string; op: string }[]
@@ -293,7 +293,7 @@ export async function lidDossier(payload: Payload, id: number, nu: Date = new Da
     keuringDagen: keuringDagen(p, nu),
     // Een keuring die de club na de goedkeuring vernieuwde: de federatie zag dat attest nog niet.
     vernieuwdNaBeoordeling: Boolean(p.beoordeeldOp && p.medischeKeuringOp && dag(p.medischeKeuringOp) > dag(p.beoordeeldOp)),
-    attest: attest?.filename ? { url: `/api/medische-attesten/file/${encodeURIComponent(String(attest.filename))}`, op: dag(attest.createdAt) } : null,
+    attest: attest?.filename ? { url: `/api/medische-attesten/file/${encodeURIComponent(String(attest.filename))}`, op: dag(attest.createdAt), viaQr: Boolean(attest.herkendViaQr) } : null,
     login: users.totalDocs > 0,
     ouderLogin: ouders.totalDocs > 0,
     kaarten: kaarten.docs.map((k) => ({ status: String(k.status ?? ''), op: dag(k.createdAt) })),

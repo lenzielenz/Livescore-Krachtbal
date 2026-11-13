@@ -135,9 +135,15 @@ export default async function LidDossierPage({ params }: { params: Promise<{ id:
                 ) : (
                   'Geen attest opgeladen'
                 )}
+                {lid.attest?.viaQr && <span className="led-chip ok"> herkend via QR</span>}
               </dd>
               <dt>Medische kaart</dt>
-              <dd>{lid.kaarten.length ? lid.kaarten.map((k) => `${k.status} (${d(k.op)})`).join(', ') : '—'}</dd>
+              <dd>
+                {lid.kaarten.length ? lid.kaarten.map((k) => `${k.status} (${d(k.op)})`).join(', ') : '—'} ·{' '}
+                <a href={`/api/medische-kaart/pdf?ids=${lid.id}`} target="_blank" rel="noopener">
+                  🖨️ kaart met QR afdrukken
+                </a>
+              </dd>
             </dl>
           </section>
 
